@@ -1,0 +1,52 @@
+{
+  "log": {
+    "loglevel": "debug"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 10808,
+      "protocol": "socks",
+      "settings": {
+        "udp": true
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"],
+        "routeOnly": true
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "139.162.124.39",
+            "port": 443,
+            "users": [
+              {
+                "id": "", // match uuid in server-config.json
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "fingerprint": "chrome",
+          "serverName": "",
+          "publicKey": "", // generated from `xray x25519`
+          "spiderX": "",
+          "shortId": "0123456789abcdef" // match in server-config.json
+        }
+      },
+      "tag": "proxy"
+    }
+  ]
+}
