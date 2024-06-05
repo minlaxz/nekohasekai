@@ -23,8 +23,8 @@
       "settings": {
         "vnext": [
           {
-            "address": "139.162.124.39",
-            "port": 443,
+            "address": "IP_OF_YOUR_VPS",
+            "port": 1443,
             "users": [
               {
                 "id": "", // match uuid in server-config.json
