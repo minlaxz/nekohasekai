@@ -1,0 +1,44 @@
+{
+  "log": {
+    "level": "info"
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "0.0.0.0",
+      "listen_port": 19443,
+      "users": [
+        {
+          "name": "*-user-name-*",
+          "uuid": "*-uuid-for-this-user-*",
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "www.google.com",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "www.google.com",
+            "server_port": 443
+          },
+          "private_key": "*-private-key-*",
+          "short_id": [
+            "*-short-id-*"
+          ]
+        }
+      },
+      "multiplex": {
+        "enabled": false
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ]
+}
