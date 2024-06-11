@@ -1,0 +1,91 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "cloudflare-doh",
+        "address": "https://1.1.1.2/dns-query",
+        "address_resolver": "cloudflare-direct",
+        "address_strategy": "prefer_ipv4",
+        "detour": "direct"
+      },
+      {
+        "tag": "cloudflare-direct",
+        "address": "1.1.1.1",
+        "address_strategy": "prefer_ipv4",
+        "detour": "direct"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "tun0",
+      "inet4_address": "172.28.0.1/30",
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system",
+      "sniff": true
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-out",
+      "server": "*-your-server-domain-name-or-ip-*",
+      "server_port": *-your-server-port-example-like-9123-*,
+      "uuid": "***",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.google.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "*-private-key-*",
+          "short_id": "*-short-id-*"
+        }
+      },
+      "packet_encoding": "xudp",
+      "multiplex": {
+        "enabled": false
+      }
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "dns",
+      "tag": "dns-out"
+    }
+  ],
+  "route": {
+    "geoip": {
+      "download_url": "https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db",
+      "download_detour": "vless-out"
+    },
+    "geosite": {
+      "download_url": "https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db",
+      "download_detour": "vless-out"
+    },
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "dns-out"
+      },
+      {
+        "geoip": ["private"],
+        "outbound": "direct"
+      }
+    ],
+    "auto_detect_interface": true
+  }
+}
