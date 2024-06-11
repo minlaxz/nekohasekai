@@ -1,0 +1,19 @@
+networks:
+  default:
+    external: true
+    name: proxy-net
+
+services:
+  sing-box:
+    image: ghcr.io/sagernet/sing-box
+    container_name: sing-box
+    restart: unless-stopped
+    expose:
+      - 443
+    environment:
+      VIRTUAL_HOST: singbox.developers.engineerforce.io
+      VIRTUAL_PORT: 443
+      LETSENCRYPT_HOST: singbox.developers.engineerforce.io
+    volumes:
+      - .:/etc/sing-box/
+    command: -D /var/lib/sing-box -C /etc/sing-box/ run
