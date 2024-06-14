@@ -1,0 +1,32 @@
+{
+    "log": {
+        "level": "info",
+        "timestamp": true
+    },
+    "inbounds": [
+        {
+            "type": "hysteria2",
+            "listen": "0.0.0.0",
+            "listen_port": 19443,
+            "up_mbps": 100,
+            "down_mbps": 100,
+            "users": [
+                {
+                    "name": "sekai",
+                    "password": "123123123"
+                }
+            ],
+            "tls": {
+                "enabled": true,
+                "server_name": "anything.yourdomain.tld", 
+                "certificate_path": "/cert.pem",
+                "key_path": "/key.pem"
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "type": "direct"
+        }
+    ]
+}
