@@ -1,13 +1,14 @@
 {
     "log": {
         "level": "info",
-        "timestamp": true
+        "timestamp": true,
+        "output": "/etc/sing-box/hy2.log"
     },
     "inbounds": [
         {
             "type": "hysteria2",
             "listen": "0.0.0.0",
-            "listen_port": 19443,
+            "listen_port": 29443,
             "up_mbps": 100,
             "down_mbps": 100,
             "users": [
@@ -18,9 +19,7 @@
             ],
             "tls": {
                 "enabled": true,
-                "server_name": "anything.yourdomain.tld", 
-                "certificate_path": "/cert.pem",
-                "key_path": "/key.pem"
+                "server_name": "google.com",
             }
         }
     ],
