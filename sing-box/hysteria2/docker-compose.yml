@@ -1,16 +1,15 @@
+networks:
+  default:
+    name: proxy-net
+    external: true
+
 services:
   sing-box:
     image: ghcr.io/sagernet/sing-box
-    container_name: sing-box
     restart: unless-stopped
-    ports:
-      - "19443:19443/udp"
-      - "19444:19444/udp"
-      - "19445:19445"
-      - "19446:19446"
-      - "19447:19447"
+    expose:
+      - "29443/udp"
     volumes:
       - ./config.json:/etc/sing-box/config.json
-      - ./cert.pem:/cert.pem
-      - ./key.pem:/key.pem
+      - ./hy2.log:/etc/sing-box/hy2.log
     command: -D /var/lib/sing-box -C /etc/sing-box/ run
