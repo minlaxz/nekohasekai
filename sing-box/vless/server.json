@@ -1,0 +1,49 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "listen": "0.0.0.0",
+      "listen_port": 3002,
+      "users": [
+        {
+          "name": "user",
+          "uuid": "uuiduuid-uuid-uuid-uuid-uuiduuiduuid",
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "google.com",
+        "certificate_path": "/google.com.cert.pem",
+        "key_path": "/google.com.key.pem",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "google.com",
+            "server_port": 443
+          },
+          "private_key": "***",
+          "short_id": ["***"],
+          "max_time_difference": "1m"
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "brutal": {
+          "enabled": true,
+          "up_mbps": 10,
+          "down_mbps": 10
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct"
+    }
+  ]
+}

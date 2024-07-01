@@ -5,27 +5,24 @@
   },
   "inbounds": [
     {
-      "type": "hysteria2",
+      "type": "tuic",
       "listen": "0.0.0.0",
-      "listen_port": 2001,
-      "up_mbps": 10,
-      "down_mbps": 10,
+      "listen_port": 2002,
       "users": [
         {
           "name": "user",
+          "uuid": "uuiduuid-uuid-uuid-uuid-uuiduuiduuid",
           "password": "password"
         }
       ],
-      "ignore_client_bandwidth": true,
+      "congestion_control": "bbr",
       "tls": {
         "enabled": true,
-        "alpn": ["h3"],
         "server_name": "google.com",
+        "alpn": ["h3"],
         "key_path": "/google.com.key.pem",
         "certificate_path": "/google.com.cert.pem"
-      },
-      "masquerade": "https://google.com",
-      "brutal_debug": false
+      }
     }
   ],
   "outbounds": [

@@ -1,0 +1,23 @@
+networks:
+  default:
+    external: true
+    name: proxy-net
+
+# https://sing-box.sagernet.org/installation/docker/
+services:
+  sing-box:
+    image: ghcr.io/sagernet/sing-box
+    container_name: sing-box
+    restart: unless-stopped
+    ports:
+      - "2001:2001/udp"
+      - "2002:2002/udp"
+      - "2003:2003/udp"
+      - "3001:3001"
+      - "3002:3002"
+      - "3003:3003"
+    volumes:
+      - ./my-config.json:/etc/sing-box/config.json
+      - ./google.com.cert.pem:/google.com.cert.pem
+      - ./google.com.key.pem:/google.com.key.pem
+    command: -D /var/lib/sing-box -C /etc/sing-box/ run

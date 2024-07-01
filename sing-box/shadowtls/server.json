@@ -1,0 +1,46 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "inbounds": [
+    {
+      "type": "shadowtls",
+      "listen": "0.0.0.0",
+      "listen_port": 3003,
+      "detour": "shadowsocks-in",
+      "version": 3,
+      "users": [
+        {
+          "name": "user",
+          "password": "password"
+        }
+      ],
+      "handshake": {
+        "server": "google.com",
+        "server_port": 443
+      },
+      "strict_mode": true
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks-in",
+      "listen": "127.0.0.1",
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "sing-box generate rand --base64 16",
+      "multiplex": {
+        "enabled": true,
+        "brutal": {
+          "enabled": true,
+          "up_mbps": 10,
+          "down_mbps": 10
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct"
+    }
+  ]
+}

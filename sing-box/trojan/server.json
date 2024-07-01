@@ -5,27 +5,29 @@
   },
   "inbounds": [
     {
-      "type": "hysteria2",
+      "type": "trojan",
       "listen": "0.0.0.0",
-      "listen_port": 2001,
-      "up_mbps": 10,
-      "down_mbps": 10,
+      "listen_port": 3001,
       "users": [
         {
           "name": "user",
           "password": "password"
         }
       ],
-      "ignore_client_bandwidth": true,
       "tls": {
         "enabled": true,
-        "alpn": ["h3"],
         "server_name": "google.com",
-        "key_path": "/google.com.key.pem",
-        "certificate_path": "/google.com.cert.pem"
+        "certificate_path": "/google.com.cert.pem",
+        "key_path": "/google.com.key.pem"
       },
-      "masquerade": "https://google.com",
-      "brutal_debug": false
+      "multiplex": {
+        "enabled": true,
+        "brutal": {
+          "enabled": true,
+          "up_mbps": 10,
+          "down_mbps": 10
+        }
+      }
     }
   ],
   "outbounds": [
