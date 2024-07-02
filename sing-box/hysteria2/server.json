@@ -6,6 +6,7 @@
   "inbounds": [
     {
       "type": "hysteria2",
+      "tag": "hysteria2-in",
       "listen": "0.0.0.0",
       "listen_port": 2001,
       "up_mbps": 10,
@@ -17,20 +18,38 @@
         }
       ],
       "ignore_client_bandwidth": true,
+      "masquerade": "https://google.com",
+      "brutal_debug": false,
       "tls": {
         "enabled": true,
-        "alpn": ["h3"],
+        "alpn": ["h3", "h2", "http/1.1"],
         "server_name": "google.com",
         "key_path": "/google.com.key.pem",
         "certificate_path": "/google.com.cert.pem"
       },
-      "masquerade": "https://google.com",
-      "brutal_debug": false
+      "obfs": {
+        "type": "salamander",
+        "password": "obfs-password"
+      }
     }
   ],
   "outbounds": [
     {
-      "type": "direct"
+      "type": "direct",
+      "tag": "direct-out"
+    },
+    {
+      "type": "dns",
+      "tag": "dns-out"
     }
-  ]
+  ],
+  "route": {
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "dns-out"
+      }
+    ],
+    "rule_set": []
+  }
 }

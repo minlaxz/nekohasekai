@@ -17,9 +17,8 @@
       ],
       "tls": {
         "enabled": true,
+        "alpn": ["http/1.1", "h2", "h3"],
         "server_name": "google.com",
-        "certificate_path": "/google.com.cert.pem",
-        "key_path": "/google.com.key.pem",
         "reality": {
           "enabled": true,
           "handshake": {
@@ -43,7 +42,21 @@
   ],
   "outbounds": [
     {
-      "type": "direct"
+      "type": "direct",
+      "tag": "direct-out"
+    },
+    {
+      "type": "dns",
+      "tag": "dns-out"
     }
-  ]
+  ],
+  "route": {
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "dns-out"
+      }
+    ],
+    "rule_set": []
+  }
 }

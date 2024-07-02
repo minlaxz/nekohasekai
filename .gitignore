@@ -1,4 +1,4 @@
 *.key
 *.crt
 my-config.json
-my-client.json
+my-config.bak.json
