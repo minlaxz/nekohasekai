@@ -53,7 +53,7 @@ jobs:
         id: metadata
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/sagernet/sing-box
+          images: ghcr.io/minlaxz/nekohasekai
       - name: Build and release Docker images
         uses: docker/build-push-action@v6
         with:
@@ -63,6 +63,6 @@ jobs:
           build-args: |
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           tags: |
-            ghcr.io/sagernet/sing-box:${{ steps.ref.outputs.latest }}
-            ghcr.io/sagernet/sing-box:${{ steps.ref.outputs.ref }}
+            ghcr.io/minlaxz/nekohasekai:${{ steps.ref.outputs.latest }}
+            ghcr.io/minlaxz/nekohasekai:${{ steps.ref.outputs.ref }}
           push: true
