@@ -12,6 +12,8 @@ wget -qO- get.docker.com | bash
 sudo groupadd docker || true
 sudo usermod -aG docker $USER
 newgrp docker
+
+docker network create proxy-net
 ```
 
 ### First, setup a Nginx Reverse Proxy (Auto SSL)
@@ -22,6 +24,24 @@ Go [here](/reverse-proxy/)
 ### Second, setup sing-box
 
 Go [here](/sing-box/)
+
+
+### TCP Brutal Multiplexing
+
+```sh
+bash <(curl -fsSL https://tcp.hy2.sh/)
+```
+
+
+### BRR congestion control
+```sh
+sudo nano /etc/sysctl.conf
+
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+
+sudo sysctl -p
+```
 
 
 <!-- bash <(curl -fsSL https://tcp.hy2.sh/) -->

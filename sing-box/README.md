@@ -26,14 +26,3 @@ List of tested proxy protols
 ```sh
 ./generate-certificate.sh
 ```
-
-### For TUIC
-```sh
-sudo nano /etc/sysctl.conf
-
-net.core.default_qdisc=fq
-net.ipv4.tcp_congestion_control=bbr
-
-sudo sysctl -p
-```
-
