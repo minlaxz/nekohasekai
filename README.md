@@ -33,7 +33,7 @@ bash <(curl -fsSL https://tcp.hy2.sh/)
 ```
 
 
-### BRR congestion control
+### BBR congestion control
 ```sh
 sudo nano /etc/sysctl.conf
 
