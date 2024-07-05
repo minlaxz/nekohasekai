@@ -9,6 +9,12 @@ on:
       tag:
         description: "The tag version you want to build"
 
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,30 +45,57 @@ jobs:
         run: |
           cd sing-box
           sed -i 's/with_gvisor,with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_reality_server,with_acme,with_clash_api/with_gvisor,with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_reality_server,with_acme,with_clash_api,with_v2ray_api,with_grpc/' Dockerfile
-      - name: Setup Docker Buildx
+
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 #v3.1.1
+        with:
+          cosign-release: "v2.1.1"
+
+      # Set up BuildKit Docker container builder to be able to build
+      # multi-platform images and export cache
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      # Set up QEMU for Docker Buildx to be able to build multi-platform images
+      # https://github.com/docker/setup-qemu-action
       - name: Setup QEMU for Docker Buildx
         uses: docker/setup-qemu-action@v3
-      - name: Login to GitHub Container Registry
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Docker metadata
-        id: metadata
-        uses: docker/metadata-action@v5
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
-          images: ghcr.io/minlaxz/nekohasekai
-      - name: Build and release Docker images
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        id: build-and-push
         uses: docker/build-push-action@v6
         with:
           platforms: linux/386,linux/amd64,linux/arm64,linux/s390x
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           context: sing-box
           target: dist
           build-args: |
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
-          tags: |
-            ghcr.io/minlaxz/nekohasekai:${{ steps.ref.outputs.latest }}
-            ghcr.io/minlaxz/nekohasekai:${{ steps.ref.outputs.ref }}
-          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
