@@ -17,7 +17,7 @@ services:
       - "3002:3002"
       - "3003:3003"
     volumes:
-      - ./my-config.json:/etc/sing-box/config.json
+      - ../controller/my-config.json:/etc/sing-box/config.json
       - ./google.com.cert.pem:/google.com.cert.pem
       - ./google.com.key.pem:/google.com.key.pem
     command: -D /var/lib/sing-box -C /etc/sing-box/ run

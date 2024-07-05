@@ -1,0 +1,37 @@
+{
+  "log": {
+    "level": "info"
+  },
+  "inbounds": [
+    {
+      "type": "trojan",
+      "listen": "0.0.0.0",
+      "listen_port": 3004,
+      "users": [
+        {
+          "name": "user",
+          "password": "password"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "google.com",
+        "alpn": ["h3", "h2", "http/1.1"],
+        "key_path": "/google.com.key.pem",
+        "certificate_path": "/google.com.cert.pem"
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/letsfuck",
+        "max_early_data": 0,
+        "early_data_header_name": "Sec-WebSocket-Protocol"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ]
+}

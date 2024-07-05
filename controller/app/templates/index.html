@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>{{title}}</title>
+    <meta name="description" content="nekohasekai - Configuration Generator" />
+    <meta name="HandheldFriendly" content="True" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#5eb9d7" />
+    <link
+      rel="shortcut icon"
+      href="{{ url_for('static', filename='img/favicon.png') }}"
+      type="image/x-icon"
+    />
+    <meta property="og:site_name" content="nekohasekai" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="nekohasekai - Configuration Generator" />
+    <meta
+      property="og:description"
+      content="nekohasekai - Configuration Generator"
+    />
+    <meta property="og:url" content="https://sb1.minlaxz.lol/" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Poppins:300,400,500"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='css/style.css') }}"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <meta name="theme-color" content="#5eb9d7" />
+    <link
+      rel="shortcut icon"
+      href="{{ url_for('static', filename='img/logo@2x.png') }}"
+      type="image/x-icon"
+    />
+  </head>
+
+  <body>
+    <h3>
+      <a
+        href="https://github.com/minlaxz/nekohasekai"
+        rel="noopener"
+        target="_blank"
+        >nekohasekai</a
+      >
+      - Configuration Generator
+    </h3>
+    <div class="container">
+      <form action="/" style="margin: 5%" method="post">
+        <div class="row" style="color: yellowgreen">
+          <div class="col">
+            <input
+              type="email"
+              id="emial"
+              name="email"
+              placeholder="Your email"
+            />
+            <input style="margin-left: 3%" type="submit" />
+            <pre>Be aware! I will send configuration link to your email</pre>
+            <small>{{ message if message != None }} </small>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="container fixed-bottom">
+      <pre>created by minlaxz</pre>
+    </div>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
