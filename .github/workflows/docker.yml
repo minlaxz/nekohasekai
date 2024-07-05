@@ -30,15 +30,15 @@ jobs:
           fi
           echo "latest=$latest"
           echo "latest=$latest" >> $GITHUB_OUTPUT
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.ref.outputs.ref }}
-      - name: Clone sing-box repository
-        run: git clone https://github.com/sagernet/sing-box.git
+      - name: Checkout main branch of sing-box repository
+        run: |
+          git clone https://github.com/sagernet/sing-box.git
+          cd sing-box
+          git checkout main
       - name: Modify Dockerfile
         run: |
-          cp ./Dockerfile ./sing-box/Dockerfile
+          cd sing-box
+          sed -i 's/with_gvisor,with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_reality_server,with_acme,with_clash_api/with_gvisor,with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_reality_server,with_acme,with_clash_api,with_v2ray_api,with_grpc/' Dockerfile
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Setup QEMU for Docker Buildx
