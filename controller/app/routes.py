@@ -1,6 +1,6 @@
 """Application routes."""
 
-from json import dump
+from json import dumps
 from flask import current_app as app
 from flask import make_response, render_template, request
 
@@ -27,8 +27,7 @@ def root():
                 modifier.add_client(**modifier.user)
                 configs = modifier.generate_config()
                 return make_response(
-                    f"User {new_user.short_id} has been created. "
-                    f"Here are the configs: {dump(configs)}"
+                    configs, 200, {"Content-Type": "application/json"}
                 )
             # redirect(url_for("generate_configs"))
     return render_template("index.html", message=None, host=request.host_url)

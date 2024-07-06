@@ -264,4 +264,4 @@ pyrightconfig.json
 *.key
 *.crt
 my-config.json
-my-config.bak.json
+my-client.json
