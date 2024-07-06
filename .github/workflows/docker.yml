@@ -6,9 +6,9 @@ on:
       tag:
         description: "The tag version you want to build"
       apps:
-        description: "Comma-separated list of apps to build (e.g., [sing-box,app])"
+        description: "Comma-separated list of apps to build (e.g., ['sing-box','app'])"
         required: true
-        default: "[sing-box,app]"
+        default: "['sing-box','app']"
 
 env:
   # Use docker.io for Docker Hub if empty
