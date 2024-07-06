@@ -16,19 +16,24 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
       id-token: write
 
+    strategy:
+      matrix:
+        app: [sing-box, app]
+
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Get commit to build
         id: ref
-        run: |-
+        run: |
           if [[ -z "${{ github.event.inputs.tag }}" ]]; then
             ref="${{ github.ref_name }}"
           else
@@ -43,37 +48,28 @@ jobs:
           fi
           echo "latest=$latest"
           echo "latest=$latest" >> $GITHUB_OUTPUT
-      - name: Checkout main branch of sing-box repository
-        run: |
-          git clone https://github.com/sagernet/sing-box.git
-          cd sing-box
-          git checkout main
-      - name: Modify Dockerfile
-        run: |
-          cd sing-box
-          sed -i 's/with_gvisor,with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_reality_server,with_acme,with_clash_api/with_gvisor,with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_reality_server,with_acme,with_clash_api,with_v2ray_api,with_grpc/' Dockerfile
 
-      # Install the cosign tool except on PR
-      # https://github.com/sigstore/cosign-installer
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 #v3.1.1
-        with:
-          cosign-release: "v2.1.1"
+      - name: Setup environment variables
+        run: |
+          if [ "${{ matrix.app }}" == "sing-box" ]; then
+            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-sb"
+            CONTEXT_DIR="sing-box"
+          else
+            IMAGE_TAG="ghcr.io/sigstore/sample-honk"
+            CONTEXT_DIR="./controller"
+          fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "CONTEXT_DIR=$CONTEXT_DIR" >> $GITHUB_ENV
 
-      # Set up BuildKit Docker container builder to be able to build
-      # multi-platform images and export cache
-      # https://github.com/docker/setup-buildx-action
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Set up QEMU for Docker Buildx to be able to build multi-platform images
-      # https://github.com/docker/setup-qemu-action
       - name: Setup QEMU for Docker Buildx
         uses: docker/setup-qemu-action@v3
 
-      # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -82,27 +78,49 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extract metadata (tags, labels) for Docker
-      # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_TAG }}
 
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/386,linux/amd64,linux/arm64,linux/s390x
+          platforms: linux/amd64,linux/arm64,linux/386,linux/s390x
           push: ${{ github.event_name != 'pull_request' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          context: sing-box
+          context: ${{ env.CONTEXT_DIR }}
           target: dist
           build-args: |
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Sign image with a key
+        if: ${{ matrix.app == 'app' }}
+        run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY ${images}
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+
+      - name: Sign the images with GitHub OIDC Token
+        if: ${{ matrix.app == 'app' }}
+        run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign sign --yes ${images}
+        env:
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}

@@ -5,8 +5,20 @@ networks:
 
 # https://sing-box.sagernet.org/installation/docker/
 services:
+  app: 
+    image: ghcr.io/minlaxz/nekohasekai:main
+    container_name: sing-box-app
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - ./controller/my-config.json:/home/app/config.json
+    environment:
+      - VIRTUAL_HOST=sub.domain.tld
+      - LETSENCRYPT_HOST=sub.domain.tld
+
   sing-box:
-    image: ghcr.io/sagernet/sing-box
+    image: ghcr.io/minlaxz/nekohasekai-sb:main
     container_name: sing-box
     restart: unless-stopped
     ports:
@@ -17,7 +29,7 @@ services:
       - "3002:3002"
       - "3003:3003"
     volumes:
-      - ./sample-config.json:/etc/sing-box/config.json
+      - ./controller/my-config.json:/etc/sing-box/config.json
       - ./google.com.cert.pem:/google.com.cert.pem
       - ./google.com.key.pem:/google.com.key.pem
     command: -D /var/lib/sing-box -C /etc/sing-box/ run

@@ -1,0 +1,126 @@
+{
+  "log": { "level": "warn", "timestamp": true },
+  "inbounds": [
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2-in",
+      "listen": "0.0.0.0",
+      "listen_port": 2001,
+      "up_mbps": 10,
+      "down_mbps": 10,
+      "users": [],
+      "ignore_client_bandwidth": true,
+      "masquerade": "https://google.com",
+      "brutal_debug": false,
+      "obfs": { "type": "salamander", "password": "sample" },
+      "tls": {
+        "enabled": true,
+        "alpn": ["http/1.1", "h2", "h3"],
+        "server_name": "google.com",
+        "key_path": "/google.com.key.pem",
+        "certificate_path": "/google.com.cert.pem"
+      }
+    },
+    {
+      "type": "tuic",
+      "tag": "tuic-in",
+      "listen": "0.0.0.0",
+      "listen_port": 2002,
+      "users": [],
+      "congestion_control": "bbr",
+      "tls": {
+        "enabled": true,
+        "alpn": ["http/1.1", "h2", "h3"],
+        "server_name": "google.com",
+        "key_path": "/google.com.key.pem",
+        "certificate_path": "/google.com.cert.pem"
+      }
+    },
+    {
+      "type": "naive",
+      "tag": "naive-in",
+      "listen": "0.0.0.0",
+      "listen_port": 2003,
+      "network": "udp",
+      "users": [],
+      "tls": {
+        "enabled": true,
+        "alpn": ["http/1.1", "h2", "h3"],
+        "server_name": "google.com",
+        "key_path": "/google.com.key.pem",
+        "certificate_path": "/google.com.cert.pem"
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "trojan-in",
+      "listen": "0.0.0.0",
+      "listen_port": 3001,
+      "users": [],
+      "tls": {
+        "enabled": true,
+        "alpn": ["http/1.1", "h2", "h3"],
+        "server_name": "google.com",
+        "certificate_path": "/google.com.cert.pem",
+        "key_path": "/google.com.key.pem"
+      },
+      "multiplex": {
+        "enabled": true,
+        "brutal": { "enabled": true, "up_mbps": 10, "down_mbps": 10 }
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "0.0.0.0",
+      "listen_port": 3002,
+      "users": [],
+      "tls": {
+        "enabled": true,
+        "alpn": ["http/1.1", "h2", "h3"],
+        "server_name": "google.com",
+        "reality": {
+          "enabled": true,
+          "handshake": { "server": "google.com", "server_port": 443 },
+          "private_key": "use generate-reality_kp.sh",
+          "short_id": [],
+          "max_time_difference": "1m"
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "brutal": { "enabled": true, "up_mbps": 10, "down_mbps": 10 }
+      }
+    },
+    {
+      "type": "shadowtls",
+      "tag": "shadowtls-in",
+      "listen": "0.0.0.0",
+      "listen_port": 3003,
+      "detour": "shadowsocks-in",
+      "version": 3,
+      "users": [],
+      "handshake": { "server": "google.com", "server_port": 443 },
+      "strict_mode": true
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks-in",
+      "listen": "127.0.0.1",
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "use generate-hex_8.sh",
+      "multiplex": {
+        "enabled": true,
+        "brutal": { "enabled": true, "up_mbps": 10, "down_mbps": 10 }
+      }
+    }
+  ],
+  "outbounds": [
+    { "type": "direct", "tag": "direct-out" },
+    { "type": "dns", "tag": "dns-out" }
+  ],
+  "route": {
+    "rules": [{ "protocol": "dns", "outbound": "dns-out" }],
+    "rule_set": []
+  }
+}
