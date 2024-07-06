@@ -52,7 +52,7 @@ jobs:
             IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-sb"
             CONTEXT_DIR="sing-box"
           else
-            IMAGE_TAG="ghcr.io/sigstore/sample-honk"
+            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-app"
             CONTEXT_DIR="./controller"
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
