@@ -53,7 +53,7 @@ jobs:
       - name: Setup environment variables
         run: |
           if [ "${{ matrix.app }}" == "sing-box" ]; then
-            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-sb"
+            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-singbox"
             CONTEXT_DIR="sing-box"
           else
             IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-app"
