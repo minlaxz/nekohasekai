@@ -32,7 +32,7 @@ services:
       - "3003:3003"
     volumes:
       - ./my-config.json:/etc/sing-box/config.json
-      - certs_vol:/certs
+      - certs_vol:/certs:ro
     depends_on:
       - sing-box-app
     # this entrypoint is using /usr/bin/sing-box
