@@ -9,6 +9,7 @@ from sqlalchemy import modifier
 class Modifier:
     def __init__(self):
         self.config_file = "my-config.json"
+        self.client_file = "my-client.json"
         self.user = {}
 
     def generate(self):
@@ -74,6 +75,46 @@ class Modifier:
             dump(configs, f)
         print("Client added successfully!")
 
+
+    def generate_config(self):
+        with open(self.client_file, "r") as f:
+            configs = load(f)
+
+        sb1_hysteria2 = configs["outbounds"][6]
+        sb1_hysteria2["password"] = self.user["password"]
+
+        sb1_tuic = configs["outbounds"][7]
+        sb1_tuic["uuid"] = self.user["uuid"]
+        sb1_tuic["password"] = self.user["password"]
+
+        sb1_trojan = configs["outbounds"][8]
+        sb1_trojan["password"] = self.user["password"]
+
+        sb1_vless = configs["outbounds"][9]
+        sb1_vless["uuid"] = self.user["uuid"]
+        sb1_vless["reality"]["short_id"] = self.user["short_id"]
+
+        sb1_stls = configs["outbounds"][11]
+        sb1_stls["password"] = self.user["password"]
+
+        sb2_hysteria2 = configs["outbounds"][12]
+        sb2_hysteria2["password"] = self.user["password"]
+
+        sb2_tuic = configs["outbounds"][13]
+        sb2_tuic["uuid"] = self.user["uuid"]
+        sb2_tuic["password"] = self.user["password"]
+
+        sb2_trojan = configs["outbounds"][14]
+        sb2_trojan["password"] = self.user["password"]
+
+        sb2_vless = configs["outbounds"][15]
+        sb2_vless["uuid"] = self.user["uuid"]
+        sb2_vless["reality"]["short_id"] = self.user["short_id"]
+
+        sb2_stls = configs["outbounds"][17]
+        sb2_stls["password"] = self.user["password"]
+
+        return configs
 
 if __name__ == "__main__":
     modifier = Modifier()

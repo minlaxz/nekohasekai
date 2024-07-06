@@ -1,4 +1,6 @@
 """Application routes."""
+
+from json import dump
 from flask import current_app as app
 from flask import make_response, render_template, request
 
@@ -23,6 +25,10 @@ def root():
                 db.session.add(new_user)  # Adds new User record to database
                 db.session.commit()  # Commits all changes
                 modifier.add_client(**modifier.user)
+                configs = modifier.generate_config()
+                return make_response(
+                    f"User {new_user.short_id} has been created. "
+                    f"Here are the configs: {dump(configs)}"
+                )
             # redirect(url_for("generate_configs"))
-            return render_template("index.html", message=f"User {new_user.short_id} has been created", host=request.host_url)
     return render_template("index.html", message=None, host=request.host_url)
