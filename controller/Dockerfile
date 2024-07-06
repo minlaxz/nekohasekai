@@ -19,7 +19,6 @@ RUN pip install --upgrade pip \
 FROM --platform=linux/amd64 python:3.11.9-slim as dist
 
 WORKDIR /home/app
-
 RUN apt-get update -q \
     && apt-get install --no-install-recommends \
     ncat gcc g++ make \
@@ -32,9 +31,8 @@ COPY --from=base /usr/src/app/requirements.txt .
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
 COPY . .
-RUN sed -i 's/\r$//g' ./entrypoint.sh \
-    && chmod +x ./entrypoint.sh
-RUN chown -R app:app .
+RUN sed -i 's/\r$//g' ./entrypoint.sh && chmod +x ./entrypoint.sh
+RUN mkdir -p certs && chown -R app:app .
 USER app
 
 ENTRYPOINT ["/home/app/entrypoint.sh"]

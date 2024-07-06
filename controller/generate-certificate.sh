@@ -14,7 +14,7 @@ echo "Generating a self-signed certificate for 'google.com'..."
 
 openssl req -new -newkey rsa:4096 -days 36500 -nodes -x509 \
     -subj "/C=GB/ST=London/L=London/O=Global Security/OU=R&D Department/CN=google.com" \
-    -keyout /home/app/certs/google.com.key.pem -out /home/app/certs/google.com.cert.pem
+    -keyout certs/google.com.key.pem -out certs/google.com.cert.pem
 
 
 # # https://www.baeldung.com/openssl-self-signed-cert
