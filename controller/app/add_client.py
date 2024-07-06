@@ -92,7 +92,7 @@ class Modifier:
 
         sb1_vless = configs["outbounds"][9]
         sb1_vless["uuid"] = self.user["uuid"]
-        sb1_vless["reality"]["short_id"] = self.user["short_id"]
+        sb1_vless["tls"]["reality"]["short_id"] = self.user["short_id"]
 
         sb1_stls = configs["outbounds"][11]
         sb1_stls["password"] = self.user["password"]
@@ -109,7 +109,7 @@ class Modifier:
 
         sb2_vless = configs["outbounds"][15]
         sb2_vless["uuid"] = self.user["uuid"]
-        sb2_vless["reality"]["short_id"] = self.user["short_id"]
+        sb2_vless["tls"]["reality"]["short_id"] = self.user["short_id"]
 
         sb2_stls = configs["outbounds"][17]
         sb2_stls["password"] = self.user["password"]
