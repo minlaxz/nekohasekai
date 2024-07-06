@@ -8,21 +8,18 @@ services:
   sing-box-app: 
     image: ghcr.io/minlaxz/nekohasekai-app:main
     container_name: sing-box-app
-    restart: unless-stopped
     expose:
       - "8000"
     volumes:
       - ./my-config.json:/home/app/config.json
-      - certs_vol:/home/app/certs
+      - ./entrypoint.sh:/home/app/entrypoint.sh
+      - ./certs:/home/app/certs
     env_file:
       - .env
-    # this entrypoint is using maybe bash?
-    command: python3 -m gunicorn -w 3 wsgi:app -b 0.0.0.0:8000
 
   sing-box:
     image: ghcr.io/minlaxz/nekohasekai-singbox:main
     container_name: sing-box
-    restart: unless-stopped
     ports:
       - "2001:2001/udp"
       - "2002:2002/udp"
@@ -32,11 +29,7 @@ services:
       - "3003:3003"
     volumes:
       - ./my-config.json:/etc/sing-box/config.json
-      - certs_vol:/certs:ro
-    depends_on:
-      - sing-box-app
+      - ./certs:/certs:ro
     # this entrypoint is using /usr/bin/sing-box
     command: -D /var/lib/sing-box -C /etc/sing-box/ run
 
-volumes:
-  certs_vol:

@@ -31,8 +31,10 @@ COPY --from=base /usr/src/app/requirements.txt .
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
 COPY . .
-RUN sed -i 's/\r$//g' ./entrypoint.sh && chmod +x ./entrypoint.sh
-RUN mkdir -p certs && chown -R app:app .
+# RUN sed -i 's/\r$//g' ./entrypoint.sh && chmod +x ./entrypoint.sh
+RUN chown -R app:app .
 USER app
 
-ENTRYPOINT ["/home/app/entrypoint.sh"]
+EXPOSE 8000
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "wsgi:app"]
