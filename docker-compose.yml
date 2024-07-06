@@ -12,8 +12,6 @@ services:
       - "8000"
     volumes:
       - ./my-config.json:/home/app/config.json
-      - ./entrypoint.sh:/home/app/entrypoint.sh
-      - ./certs:/home/app/certs
     env_file:
       - .env
 
