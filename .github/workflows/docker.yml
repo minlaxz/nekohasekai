@@ -8,6 +8,10 @@ on:
     inputs:
       tag:
         description: "The tag version you want to build"
+      apps:
+        description: "Comma-separated list of apps to build (e.g., sing-box,app)"
+        required: true
+        default: "sing-box,app"
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -25,7 +29,7 @@ jobs:
 
     strategy:
       matrix:
-        app: [sing-box, app]
+        app: ${{ fromJson(format('[{0}]', join(',', fromInputs.github.event.inputs.apps.split(',')))) }}
 
     steps:
       - name: Get commit to build
@@ -107,7 +111,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       # - name: Sign image with a key
-      #   if: ${{ matrix.app == 'app' }}
       #   run: |
       #     images=""
       #     for tag in ${TAGS}; do
@@ -121,13 +124,23 @@ jobs:
       #     DIGEST: ${{ steps.build-and-push.outputs.digest }}
 
       - name: Sign the images with GitHub OIDC Token
-        if: ${{ matrix.app == 'app' }}
         run: |
           images=""
           for tag in ${TAGS}; do
             images+="${tag}@${DIGEST} "
           done
           cosign sign --yes ${images}
+        env:
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+
+      - name: Verify the images
+        run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign verify ${images}
         env:
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
