@@ -13,8 +13,7 @@ services:
       - "8000"
     volumes:
       - ./my-config.json:/home/app/config.json
-      - ./database.db:/home/app/database.db
-      - certs:/home/app/certs
+      - certs_vol:/home/app/certs
     env_file:
       - .env
     # this entrypoint is using maybe bash?
@@ -33,11 +32,11 @@ services:
       - "3003:3003"
     volumes:
       - ./my-config.json:/etc/sing-box/config.json
-      - certs:/certs
+      - certs_vol:/certs
     depends_on:
       - sing-box-app
     # this entrypoint is using /usr/bin/sing-box
     command: -D /var/lib/sing-box -C /etc/sing-box/ run
 
 volumes:
-  certs:
+  certs_vol:

@@ -44,5 +44,13 @@ sudo sysctl -p
 ```
 
 
+```sh
+git clone --single-branch --branch release https://github.com/minlaxz/nekohasekai.git
+cd nekohasekai
+mv .env.sample .env
+docker compose up -d
+```
+
+
 <!-- bash <(curl -fsSL https://tcp.hy2.sh/) -->
 <!-- bash <(wget -qO- https://raw.githubusercontent.com/GFW4Fun/S-UI-PRO/master/s-ui-pro.sh) -install yes -->
