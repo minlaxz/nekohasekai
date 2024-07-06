@@ -32,7 +32,7 @@ COPY --from=base /usr/src/app/requirements.txt .
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
 COPY . .
-RUN chown -R app:app $APP_HOME
+RUN chown -R app:app /home/app
 USER app
 
 CMD [ "python3", "-m" , "gunicorn", "-w", "4", "wsgi:app", "-b", "0.0.0.0:8000"]
