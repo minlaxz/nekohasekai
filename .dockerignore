@@ -265,3 +265,4 @@ pyrightconfig.json
 *.crt
 my-config.json
 my-config.bak.json
+*.db

@@ -5,20 +5,23 @@ networks:
 
 # https://sing-box.sagernet.org/installation/docker/
 services:
-  app: 
-    image: ghcr.io/minlaxz/nekohasekai:main
+  sing-box-app: 
+    image: ghcr.io/minlaxz/nekohasekai-app:main
     container_name: sing-box-app
     restart: unless-stopped
     expose:
       - "8000"
     volumes:
-      - ./controller/my-config.json:/home/app/config.json
-    environment:
-      - VIRTUAL_HOST=sub.domain.tld
-      - LETSENCRYPT_HOST=sub.domain.tld
+      - ./my-config.json:/home/app/config.json
+      - ./database.db:/home/app/database.db
+      - certs:/home/app/certs
+    env_file:
+      - .env
+    # this entrypoint is using maybe bash?
+    command: python3 -m gunicorn -w 3 wsgi:app -b 0.0.0.0:8000
 
   sing-box:
-    image: ghcr.io/minlaxz/nekohasekai-sb:main
+    image: ghcr.io/minlaxz/nekohasekai-singbox:main
     container_name: sing-box
     restart: unless-stopped
     ports:
@@ -29,7 +32,12 @@ services:
       - "3002:3002"
       - "3003:3003"
     volumes:
-      - ./controller/my-config.json:/etc/sing-box/config.json
-      - ./google.com.cert.pem:/google.com.cert.pem
-      - ./google.com.key.pem:/google.com.key.pem
+      - ./my-config.json:/etc/sing-box/config.json
+      - certs:/certs
+    depends_on:
+      - sing-box-app
+    # this entrypoint is using /usr/bin/sing-box
     command: -D /var/lib/sing-box -C /etc/sing-box/ run
+
+volumes:
+  certs:

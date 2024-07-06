@@ -32,7 +32,9 @@ COPY --from=base /usr/src/app/requirements.txt .
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
 COPY . .
-RUN chown -R app:app /home/app
+RUN sed -i 's/\r$//g' ./entrypoint.sh \
+    && chmod +x ./entrypoint.sh
+RUN chown -R app:app .
 USER app
 
-CMD [ "python3", "-m" , "gunicorn", "-w", "4", "wsgi:app", "-b", "0.0.0.0:8000"]
+ENTRYPOINT ["/home/app/entrypoint.sh"]
