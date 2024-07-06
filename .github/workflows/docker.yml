@@ -28,9 +28,6 @@ jobs:
         app: [sing-box, app]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Get commit to build
         id: ref
         run: |
@@ -60,6 +57,22 @@ jobs:
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
           echo "CONTEXT_DIR=$CONTEXT_DIR" >> $GITHUB_ENV
+
+      - name: Checkout or clone repository
+        run: |
+          if [ "${{ matrix.app }}" == "sing-box" ]; then
+            git clone https://github.com/sagernet/sing-box.git
+            cd sing-box
+            git checkout main
+          else
+            uses: actions/checkout@v4
+          fi
+
+      - name: Modify Dockerfile
+        if: ${{ matrix.app == 'sing-box' }}
+        run: |
+          cd sing-box
+          sed -i 's/with_gvisor,with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_reality_server,with_acme,with_clash_api/with_gvisor,with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_reality_server,with_acme,with_clash_api,with_v2ray_api,with_grpc/' Dockerfile
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.5.0
