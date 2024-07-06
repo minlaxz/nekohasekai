@@ -12,18 +12,10 @@ wget -qO- get.docker.com | bash
 sudo groupadd docker || true
 sudo usermod -aG docker $USER
 newgrp docker
-
-docker network create proxy-net
 ```
 
-### First, setup a Nginx Reverse Proxy (Auto SSL)
 
-Go [here](/reverse-proxy/)
-
-
-### Second, setup sing-box
-
-Go [here](/sing-box/)
+[sing-box configuration examples](/sing-box/)
 
 
 ### TCP Brutal Multiplexing
@@ -43,12 +35,12 @@ net.ipv4.tcp_congestion_control=bbr
 sudo sysctl -p
 ```
 
+### My example setup
 
 ```sh
 git clone --single-branch --branch release https://github.com/minlaxz/nekohasekai.git
-cd nekohasekai
+cd nekohasekai/reverse-proxy && ./setup.sh && cd ../..
 mv .env.sample .env
-docker compose up -d
 ```
 
 
