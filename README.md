@@ -12,6 +12,7 @@ wget -qO- get.docker.com | bash
 sudo groupadd docker || true
 sudo usermod -aG docker $USER
 newgrp docker
+docker network create proxy-net
 ```
 
 
