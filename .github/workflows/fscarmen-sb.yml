@@ -1,4 +1,4 @@
-name: "Build and push images"
+name: "Build and push fscarmen-sb image"
 
 on:
   workflow_dispatch:
@@ -14,13 +14,10 @@ jobs:
         contents: read
         packages: write
         id-token: write
-      name: "Build fscarmen-sb image"
 
       steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: fscarmen-sb
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.0.0
@@ -35,10 +32,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push images to Docker hub
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           push: true
           platforms: linux/amd64, linux/arm64, linux/arm/v7
+          context: ./fscarmen-sb
           target: dist
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:fscarmen-sb
