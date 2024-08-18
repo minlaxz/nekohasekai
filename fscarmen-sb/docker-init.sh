@@ -938,9 +938,7 @@ $(info "$(echo "{ \"outbounds\":[ ${INBOUND_REPLACE%,} ] }" | $WORK_DIR/jq)
 https://github.com/chika0801/sing-box-examples/tree/main/Tun")
 "
 
-EXPORT_LIST_FILE+="
-
-*******************************************
+EXPORT_LIST_FILE+="*******************************************
 
 $(hint "Index:
 https://${ARGO_DOMAIN}/${UUID}/
@@ -968,13 +966,9 @@ $(hint "模版:")
 $($WORK_DIR/qrencode https://${ARGO_DOMAIN}/${UUID}/auto)
 "
 
-  # 生成并显示节点信息
-  echo "$EXPORT_LIST_FILE" > $WORK_DIR/list
-  cat $WORK_DIR/list
+echo "$EXPORT_LIST_FILE" > $WORK_DIR/list
+cat $WORK_DIR/list
 
-  # 显示脚本使用情况数据
-  hint "\n*******************************************\n"
-}
 
 # Sing-box 的最新版本
 update_sing-box() {
