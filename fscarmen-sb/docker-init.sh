@@ -923,6 +923,7 @@ https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${ARGO_DOM
 
 $($WORK_DIR/qrencode "https://${ARGO_DOMAIN}/${UUID}/auto")
 EOF
+}
 
 # Sing-box 的最新版本
 update_sing-box() {
