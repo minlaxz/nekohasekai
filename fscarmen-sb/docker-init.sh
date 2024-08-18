@@ -924,52 +924,6 @@ https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${ARGO_DOM
 $($WORK_DIR/qrencode "https://${ARGO_DOMAIN}/${UUID}/auto")
 EOF
 
-  # 生成配置文件
-  EXPORT_LIST_FILE="*******************************************
-┌────────────────┐
-│                │
-│    $(warning "Sing-box")    │
-│                │
-└────────────────┘
-----------------------------
-
-$(info "$(echo "{ \"outbounds\":[ ${INBOUND_REPLACE%,} ] }" | $WORK_DIR/jq)
-
-https://github.com/chika0801/sing-box-examples/tree/main/Tun")
-"
-
-EXPORT_LIST_FILE+="*******************************************
-
-$(hint "Index:
-https://${ARGO_DOMAIN}/${UUID}/
-
-QR code:
-https://${ARGO_DOMAIN}/${UUID}/qr
-
-sing-box for pc:
-https://${ARGO_DOMAIN}/${UUID}/sing-box-pc
-
-sing-box for mobile:
-https://${ARGO_DOMAIN}/${UUID}/sing-box-phone
-
-*******************************************
-
-$(info " 自适应 Clash / V2rayN / NekoBox / ShadowRocket / SFI / SFA / SFM 客户端:
-模版:
-https://${ARGO_DOMAIN}/${UUID}/auto
-
- 订阅 QRcode:
-模版:
-https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${ARGO_DOMAIN}/${UUID}/auto")
-
-$(hint "模版:")
-$($WORK_DIR/qrencode https://${ARGO_DOMAIN}/${UUID}/auto)
-"
-
-echo "$EXPORT_LIST_FILE" > $WORK_DIR/list
-cat $WORK_DIR/list
-
-
 # Sing-box 的最新版本
 update_sing-box() {
   local ONLINE=$(check_latest_sing-box)
