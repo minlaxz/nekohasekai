@@ -3,7 +3,7 @@
 # 2024.08.18
 WORK_DIR=/sing-box
 PORT=$START_PORT
-SUBSCRIBE_TEMPLATE="https://raw.githubusercontent.com/minlaxz/nekohasekai/fscarmen-sb"
+SUBSCRIBE_TEMPLATE="https://raw.githubusercontent.com/minlaxz/nekohasekai/main/fscarmen-sb"
 
 warning() { echo -e "\033[31m\033[01m$*\033[0m"; }
 info() { echo -e "\033[32m\033[01m$*\033[0m"; }
