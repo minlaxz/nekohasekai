@@ -10,7 +10,12 @@ env:
 jobs:
   Build:
       runs-on: ubuntu-latest
-      name: "Build Sing-box image"
+      permissions:
+        contents: read
+        packages: write
+        id-token: write
+      name: "Build fscarmen-sb image"
+
       steps:
       - name: Checkout code
         uses: actions/checkout@v4
