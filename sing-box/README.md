@@ -24,5 +24,5 @@ List of tested proxy protols
 
 ### Generate SSC (self signed certificate)
 ```sh
-./generate-certificate.sh
+./scripts/generate-certificate.sh
 ```

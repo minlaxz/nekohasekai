@@ -9,24 +9,23 @@ A working configurations for sing-box (with docker)
 wget -qO- get.docker.com | bash
 
 # Just add USER to docker group. :)
+
 sudo groupadd docker || true
 sudo usermod -aG docker $USER
 newgrp docker
+
+# Optional
 docker network create proxy-net
 ```
 
-
-[sing-box configuration examples](/sing-box/)
-
-
-### TCP Brutal Multiplexing
+### TCP Brutal Multiplexing for TCP proxies
 
 ```sh
 bash <(curl -fsSL https://tcp.hy2.sh/)
 ```
 
 
-### BBR congestion control
+### BBR congestion control for TUIC proxy
 ```sh
 sudo nano /etc/sysctl.conf
 
@@ -36,14 +35,15 @@ net.ipv4.tcp_congestion_control=bbr
 sudo sysctl -p
 ```
 
-### My example setup
-
-```sh
-git clone --single-branch --branch release https://github.com/minlaxz/nekohasekai.git
-cd nekohasekai/reverse-proxy && ./setup.sh && cd ../..
-mv .env.sample .env
-```
+- [sing-box examples](/sing-box/)
+- [fscarmen-sing-box examples](/fscarmen-sb/)
 
 
+<!-- ### My example setup -->
+<!-- ```sh -->
+<!-- git clone --single-branch --branch release https://github.com/minlaxz/nekohasekai.git -->
+<!-- cd nekohasekai/reverse-proxy && ./setup.sh && cd ../.. -->
+<!-- mv .env.sample .env -->
+<!-- ``` -->
 <!-- bash <(curl -fsSL https://tcp.hy2.sh/) -->
 <!-- bash <(wget -qO- https://raw.githubusercontent.com/GFW4Fun/S-UI-PRO/master/s-ui-pro.sh) -install yes -->
