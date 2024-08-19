@@ -1,0 +1,359 @@
+{
+    "family": "min-facarmansb-td",
+    "containerDefinitions": [
+        {
+            "name": "sb",
+            "image": "ghcr.io/minlaxz/nekohasekai:fscarmen-sb",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "sb-8800-tcp",
+                    "containerPort": 8800,
+                    "hostPort": 8800,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8801-tcp",
+                    "containerPort": 8801,
+                    "hostPort": 8801,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8802-tcp",
+                    "containerPort": 8802,
+                    "hostPort": 8802,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8803-tcp",
+                    "containerPort": 8803,
+                    "hostPort": 8803,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8804-tcp",
+                    "containerPort": 8804,
+                    "hostPort": 8804,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8805-tcp",
+                    "containerPort": 8805,
+                    "hostPort": 8805,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8806-tcp",
+                    "containerPort": 8806,
+                    "hostPort": 8806,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8807-tcp",
+                    "containerPort": 8807,
+                    "hostPort": 8807,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8808-tcp",
+                    "containerPort": 8808,
+                    "hostPort": 8808,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8809-tcp",
+                    "containerPort": 8809,
+                    "hostPort": 8809,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8810-tcp",
+                    "containerPort": 8810,
+                    "hostPort": 8810,
+                    "protocol": "tcp",
+                    "appProtocol": "grpc"
+                },
+                {
+                    "name": "sb-8811-tcp",
+                    "containerPort": 8811,
+                    "hostPort": 8811,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8812-tcp",
+                    "containerPort": 8812,
+                    "hostPort": 8812,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8813-tcp",
+                    "containerPort": 8813,
+                    "hostPort": 8813,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8814-tcp",
+                    "containerPort": 8814,
+                    "hostPort": 8814,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8815-tcp",
+                    "containerPort": 8815,
+                    "hostPort": 8815,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8816-tcp",
+                    "containerPort": 8816,
+                    "hostPort": 8816,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8817-tcp",
+                    "containerPort": 8817,
+                    "hostPort": 8817,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8818-tcp",
+                    "containerPort": 8818,
+                    "hostPort": 8818,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8819-tcp",
+                    "containerPort": 8819,
+                    "hostPort": 8819,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "name": "sb-8820-tcp",
+                    "containerPort": 8820,
+                    "hostPort": 8820,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                },
+                {
+                    "containerPort": 8800,
+                    "hostPort": 8800,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8801,
+                    "hostPort": 8801,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8802,
+                    "hostPort": 8802,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8803,
+                    "hostPort": 8803,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8804,
+                    "hostPort": 8804,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8805,
+                    "hostPort": 8805,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8806,
+                    "hostPort": 8806,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8807,
+                    "hostPort": 8807,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8808,
+                    "hostPort": 8808,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8809,
+                    "hostPort": 8809,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8810,
+                    "hostPort": 8810,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8811,
+                    "hostPort": 8811,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8812,
+                    "hostPort": 8812,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8813,
+                    "hostPort": 8813,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8814,
+                    "hostPort": 8814,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8815,
+                    "hostPort": 8815,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8816,
+                    "hostPort": 8816,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8817,
+                    "hostPort": 8817,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8818,
+                    "hostPort": 8818,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8819,
+                    "hostPort": 8819,
+                    "protocol": "udp"
+                },
+                {
+                    "containerPort": 8820,
+                    "hostPort": 8820,
+                    "protocol": "udp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "GRPC_REALITY",
+                    "value": "true"
+                },
+                {
+                    "name": "XTLS_REALITY",
+                    "value": "true"
+                },
+                {
+                    "name": "ARGO_DOMAIN",
+                    "value": "<<<YOUR-ARGO-DOMAIN>>>"
+                },
+                {
+                    "name": "CDN",
+                    "value": "www.csgo.com"
+                },
+                {
+                    "name": "ARGO_AUTH",
+                    "value": "<<<YOUR-ARGO-AUTH>>>"
+                },
+                {
+                    "name": "HYSTERIA2",
+                    "value": "true"
+                },
+                {
+                    "name": "SERVER_IP",
+                    "value": "localhost"
+                },
+                {
+                    "name": "H2_REALITY",
+                    "value": "true"
+                },
+                {
+                    "name": "NODE_NAME",
+                    "value": "sing-box"
+                },
+                {
+                    "name": "START_PORT",
+                    "value": "8800"
+                },
+                {
+                    "name": "SHADOWSOCKS",
+                    "value": "true"
+                },
+                {
+                    "name": "TROJAN",
+                    "value": "true"
+                },
+                {
+                    "name": "VLESS_WS",
+                    "value": "true"
+                },
+                {
+                    "name": "TUIC",
+                    "value": "true"
+                },
+                {
+                    "name": "UUID",
+                    "value": "3e85dce5-49dd-46c2-a0eb-14f643b5c539"
+                },
+                {
+                    "name": "SHADOWTLS",
+                    "value": "true"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/min-facarmansb-td",
+                    "mode": "non-blocking",
+                    "awslogs-create-group": "true",
+                    "max-buffer-size": "25m",
+                    "awslogs-region": "ap-northeast-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "executionRoleArn": "your-task-execution-role",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    }
+}
