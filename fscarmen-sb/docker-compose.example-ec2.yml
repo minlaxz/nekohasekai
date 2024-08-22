@@ -6,22 +6,5 @@ services:
         ports:
             - "8800-8820:8800-8820/tcp"
             - "8800-8820:8800-8820/udp"
-        environment:
-            - START_PORT=8800
-            - SERVER_IP=
-            - ARGO_DOMAIN=
-            - ARGO_AUTH=
-            - CDN=www.csgo.com
-            - CUSTOM_UUID=
-            - CUSTOM_REALITY_PRIVATE=
-            - CUSTOM_REALITY_PUBLIC=
-            - CUSTOM_SHADOWTLS_PASSWORD=
-            - XTLS_REALITYX=true
-            - HYSTERIA2=true
-            - TUIC=true
-            - SHADOWTLSX=true
-            - SHADOWSOCKSX=true
-            - TROJANX=true
-            - VLESS_WSX=true
-            - H2_REALITYX=true
-            - GRPC_REALITYX=true
+        env_file:
+            - .env
