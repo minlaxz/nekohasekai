@@ -62,8 +62,7 @@ install() {
   cat > $WORK_DIR/conf/00_log.json << EOF
   {
       "log":{
-          "level":"error",
-          "output":"$WORK_DIR/logs/box.log",
+          "level": "warn",
           "timestamp":true
       }
   }
