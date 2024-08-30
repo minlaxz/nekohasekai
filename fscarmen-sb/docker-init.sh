@@ -35,7 +35,7 @@ install() {
   echo "Installing sing-box ..."
   local ONLINE=$(check_latest_sing-box)
   wget https://github.com/SagerNet/sing-box/releases/download/v$ONLINE/sing-box-$ONLINE-linux-$SING_BOX_ARCH.tar.gz -O- | tar xz -C $WORK_DIR sing-box-$ONLINE-linux-$SING_BOX_ARCH/sing-box && mv $WORK_DIR/sing-box-$ONLINE-linux-$SING_BOX_ARCH/sing-box $WORK_DIR/sing-box && rm -rf $WORK_DIR/sing-box-$ONLINE-linux-$SING_BOX_ARCH && chmod +x $WORK_DIR/sing-box
-  $WORK_DIR/sing-box -v
+  $WORK_DIR/sing-box version
 
   echo "Installing jq ..."
   wget -O $WORK_DIR/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$JQ_ARCH && chmod +x $WORK_DIR/jq
