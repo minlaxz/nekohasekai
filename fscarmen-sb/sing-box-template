@@ -121,7 +121,6 @@
         "sing-box ShadowTLS",
         "sing-box shadowsocks",
         "sing-box trojan",
-        "sing-box vless-ws-tls",
         "sing-box h2-reality",
         "sing-box grpc-reality"
       ],
@@ -141,9 +140,9 @@
         "sing-box ShadowTLS",
         "sing-box shadowsocks",
         "sing-box trojan",
-        "sing-box vless-ws-tls",
         "sing-box h2-reality",
-        "sing-box grpc-reality"
+        "sing-box grpc-reality",
+        "direct"
       ],
       "default": "Auto"
     },
