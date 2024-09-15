@@ -125,15 +125,13 @@
         "sing-box grpc-reality"
       ],
       "url": "http://www.gstatic.com/generate_204",
-      "interval": "5m",
+      "interval": "1m",
       "tolerance": 50
     },
     {
       "type": "selector",
       "tag": "Manual",
       "outbounds": [
-        "direct",
-        "Auto",
         "sing-box xtls-reality",
         "sing-box hysteria2",
         "sing-box tuic",
@@ -141,10 +139,29 @@
         "sing-box shadowsocks",
         "sing-box trojan",
         "sing-box h2-reality",
-        "sing-box grpc-reality",
-        "direct"
+        "sing-box grpc-reality"
       ],
-      "default": "Auto"
+      "default": "sing-box hysteria2"
+    },
+    {
+      "type": "selector",
+      "tag": "Registered",
+      "outbounds": [
+        "direct",
+        "Auto",
+        "Manual"
+      ],
+      "default": "direct"
+    },
+    {
+      "type": "selector",
+      "tag": "Unregistered",
+      "outbounds": [
+        "direct",
+        "Auto",
+        "Manual"
+      ],
+      "default": "direct"
     },
     {
       "type": "selector",
@@ -339,7 +356,7 @@
             ]
           }
         ],
-        "outbound": "Auto"
+        "outbound": "Registered"
       },
       {
         "rule_set": [
@@ -349,7 +366,7 @@
         "outbound": "direct"
       }
     ],
-    "final": "Manual",
+    "final": "Ungistered",
     "override_android_vpn": true,
     "auto_detect_interface": true
   }
