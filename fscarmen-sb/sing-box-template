@@ -366,7 +366,7 @@
         "outbound": "direct"
       }
     ],
-    "final": "Ungistered",
+    "final": "Unregistered",
     "override_android_vpn": true,
     "auto_detect_interface": true
   }
