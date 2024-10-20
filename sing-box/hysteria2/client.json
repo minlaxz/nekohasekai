@@ -1,0 +1,158 @@
+{
+  "log": {
+    "level": "warn",
+    "timestamp": false
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "tun0",
+      "inet4_address": "10.69.69.0/28",
+      "inet6_address": "fd00::1/126",
+      "mtu": 1400,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "gvisor",
+      "sniff": true,
+      "sniff_override_destination": false
+    },
+    {
+      "domain_strategy": "ipv4_only",
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "0.0.0.0",
+      "listen_port": 2080,
+      "tcp_fast_open": false,
+      "sniff": true,
+      "set_system_proxy": false,
+      "sniff_override_destination": false
+    },
+    {
+      "type": "direct",
+      "tag": "dns-in",
+      "listen": "0.0.0.0",
+      "listen_port": 6450,
+      "override_address": "8.8.8.8",
+      "override_port": 53
+    }
+  ],
+  "dns": {
+    "servers": [
+      {
+        "address": "tls://8.8.8.8",
+        "strategy": "ipv4_only",
+        "address_resolver": "dns-local",
+        "detour": "direct",
+        "tag": "dns-remote"
+      },
+      {
+        "address": "local",
+        "detour": "direct",
+        "tag": "dns-local"
+      },
+      {
+        "tag": "dns-fakeip",
+        "address": "fakeip"
+      },
+      {
+        "address": "rcode://name_error",
+        "tag": "dns-block"
+      }
+    ],
+    "rules": [
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": "geosite-category-ads-all"
+          },
+          {
+            "domain_regex": ["^stun\\..+"]
+          }
+        ],
+        "disable_cache": true,
+        "server": "dns-block"
+      },
+      {
+        "query_type": ["A", "AAAA"],
+        "server": "dns-fakeip"
+      }
+    ],
+    "independent_cache": true,
+    "fakeip": {
+      "enabled": true,
+      "inet4_range": "198.18.0.0/15",
+      "inet6_range": "fc00::/18"
+    },
+    "strategy": "ipv4_only",
+    "final": "dns-remote"
+  },
+  "outbounds": [
+    {
+      "type": "hysteria2",
+      "tag": "sing-box hysteria2",
+      "server": "your-server-ip-address",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8802,
+      "up_mbps": 200,
+      "down_mbps": 1000,
+      "password": "uuiduuid-uuid-uuid-uuid-uuiduuiduuid",
+      "tls": {
+        "enabled": true,
+        "insecure": true,
+        "server_name": "",
+        "alpn": ["h3"]
+      }
+    }
+  ],
+  "route": {
+    "geoip": {
+      "download_url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geoip@release/geoip.db",
+      "download_detour": "sing-box hysteria2"
+    },
+    "geosite": {
+      "download_url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@release/geosite.db",
+      "download_detour": "sing-box hysteria2"
+    },
+    "rule_set": [
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-ads-all.srs",
+        "download_detour": "sing-box hysteria2",
+        "update_interval": "1d"
+      }
+    ],
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "dns"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": "geosite-category-ads-all"
+          },
+          {
+            "domain_regex": "^stun\\..+"
+          },
+          {
+            "domain_keyword": ["stun", "httpdns"]
+          },
+          {
+            "protocol": "stun"
+          }
+        ],
+        "outbound": "block"
+      }
+    ],
+    "final": "sing-box hysteria2",
+    "override_android_vpn": true,
+    "auto_detect_interface": true
+  }
+}
