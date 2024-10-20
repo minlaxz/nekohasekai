@@ -12,6 +12,64 @@
       "secret": "P@ssw0rd1234",
       "default_mode": "rule"
     },
+    "dns": {
+      "servers": [
+        {
+          "tag": "dns-remote",
+          "address": "quic://dns.adguard.com",
+          "address_resolver": "dns-local",
+          "address_strategy": "ipv4_only",
+          "strategy": "ipv4_only",
+          "detour": "direct"
+        },
+        {
+          "address": "local",
+          "detour": "direct",
+          "tag": "dns-local"
+        },
+        {
+          "tag": "dns-fakeip",
+          "address": "fakeip"
+        },
+        {
+          "address": "rcode://name_error",
+          "tag": "dns-block"
+        }
+      ],
+      "rules": [
+        {
+          "type": "logical",
+          "mode": "or",
+          "rules": [
+            {
+              "rule_set": "geosite-category-ads-all"
+            },
+            {
+              "domain_regex": [
+                "^stun\\..+"
+              ]
+            }
+          ],
+          "disable_cache": true,
+          "server": "dns-block"
+        },
+        {
+          "query_type": [
+            "A",
+            "AAAA"
+          ],
+          "server": "dns-fakeip"
+        }
+      ],
+      "independent_cache": true,
+      "fakeip": {
+        "enabled": true,
+        "inet4_range": "198.18.0.0/15",
+        "inet6_range": "fc00::/18"
+      },
+      "strategy": "ipv4_only",
+      "final": "dns-remote"
+    },
     "cache_file": {
       "enabled": true,
       "path": "cache.db",
@@ -52,63 +110,6 @@
       "override_port": 53
     }
   ],
-  "dns": {
-    "servers": [
-      {
-        "address": "tls://8.8.8.8",
-        "strategy": "ipv4_only",
-        "address_resolver": "dns-local",
-        "detour": "direct",
-        "tag": "dns-remote"
-      },
-      {
-        "address": "local",
-        "detour": "direct",
-        "tag": "dns-local"
-      },
-      {
-        "tag": "dns-fakeip",
-        "address": "fakeip"
-      },
-      {
-        "address": "rcode://name_error",
-        "tag": "dns-block"
-      }
-    ],
-    "rules": [
-      {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "rule_set": "geosite-category-ads-all"
-          },
-          {
-            "domain_regex": [
-              "^stun\\..+"
-            ]
-          }
-        ],
-        "disable_cache": true,
-        "server": "dns-block"
-      },
-      {
-        "query_type": [
-          "A",
-          "AAAA"
-        ],
-        "server": "dns-fakeip"
-      }
-    ],
-    "independent_cache": true,
-    "fakeip": {
-      "enabled": true,
-      "inet4_range": "198.18.0.0/15",
-      "inet6_range": "fc00::/18"
-    },
-    "strategy": "ipv4_only",
-    "final": "dns-remote"
-  },
   "outbounds": [
     "<INBOUND_REPLACE>",
     {

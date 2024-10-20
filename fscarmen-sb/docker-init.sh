@@ -5,13 +5,14 @@
 
 WORK_DIR=/sing-box
 PORT=$START_PORT
-SUBSCRIBE_TEMPLATE="https://raw.githubusercontent.com/minlaxz/nekohasekai/main/fscarmen-sb"
+TEMPLATE_PATH="https://raw.githubusercontent.com/minlaxz/nekohasekai/main/fscarmen-sb/sing-box-template"
 
 warning() { echo -e "\033[31m\033[01m$*\033[0m"; }
 info() { echo -e "\033[32m\033[01m$*\033[0m"; }
 hint() { echo -e "\033[33m\033[01m$*\033[0m"; }
 
 check_arch() {
+  hint "Checking system architecture ..."
   case "$ARCH" in
     arm64 )
       SING_BOX_ARCH=arm64; JQ_ARCH=arm64; QRENCODE_ARCH=arm64; ARGO_ARCH=arm64
@@ -24,6 +25,7 @@ check_arch() {
       SING_BOX_ARCH=armv7; JQ_ARCH=armhf; QRENCODE_ARCH=arm; ARGO_ARCH=arm
       ;;
   esac
+  hint "System architecture: $ARCH"
 }
 
 check_latest_sing-box() {
@@ -31,7 +33,7 @@ check_latest_sing-box() {
   wget -qO- "https://api.github.com/repos/SagerNet/sing-box/releases" | awk -F '["v]' -v var="tag_name.*$VERSION_LATEST" '$0 ~ var {print $5; exit}'
 }
 
-install() {
+install_everything() {
   echo "Installing sing-box ..."
   local ONLINE=$(check_latest_sing-box)
   wget https://github.com/SagerNet/sing-box/releases/download/v$ONLINE/sing-box-$ONLINE-linux-$SING_BOX_ARCH.tar.gz -O- | tar xz -C $WORK_DIR sing-box-$ONLINE-linux-$SING_BOX_ARCH/sing-box && mv $WORK_DIR/sing-box-$ONLINE-linux-$SING_BOX_ARCH/sing-box $WORK_DIR/sing-box && rm -rf $WORK_DIR/sing-box-$ONLINE-linux-$SING_BOX_ARCH && chmod +x $WORK_DIR/sing-box
@@ -41,13 +43,11 @@ install() {
   wget -O $WORK_DIR/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$JQ_ARCH && chmod +x $WORK_DIR/jq
   $WORK_DIR/jq --version
 
-  echo "Installing qrencode ..."
-  wget -O $WORK_DIR/qrencode https://github.com/fscarmen/client_template/raw/main/qrencode-go/qrencode-go-linux-$QRENCODE_ARCH && chmod +x $WORK_DIR/qrencode
-  $WORK_DIR/qrencode -v
-
   echo "Installing cloudflared ..."
   wget -O $WORK_DIR/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$ARGO_ARCH && chmod +x $WORK_DIR/cloudflared
   $WORK_DIR/cloudflared --version
+
+  SERVER_IP="$(wget -q -O- https://ipecho.net/plain)"
 
   if [[ "$SERVER_IP" =~ : ]]; then
     local DOMAIN_STRATEGY=prefer_ipv6
@@ -768,12 +768,12 @@ stdout_logfile=/dev/null
 
   http {
     map \$http_user_agent \$path {
-      default                    /;                # 默认路径
-      ~*v2rayN|Neko              /base64;          # 匹配 V2rayN / NekoBox 客户端
-      ~*clash                    /clash;           # 匹配 Clash 客户端
-      ~*ShadowRocket             /shadowrocket;    # 匹配 ShadowRocket  客户端
-      ~*SFM                      /sing-box-pc;     # 匹配 Sing-box pc 客户端
-      ~*SFI|SFA                  /sing-box-phone;  # 匹配 Sing-box phone 客户端
+      default                    /;                # default path
+      ~*v2rayN|Neko              /base64;          # V2rayN / NekoBox clients
+      ~*clash                    /clash;           # Clash
+      ~*ShadowRocket             /shadowrocket;    # ShadowRocket
+      ~*SFM                      /sing-box-pc;     # Sing-box pc
+      ~*SFI|SFA                  /sing-box-phone;  # Sing-box phone
    #   ~*Chrome|Firefox|Mozilla  /;                # 添加更多的分流规则
     }
 
@@ -914,25 +914,16 @@ stdout_logfile=/dev/null
   local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} grpc-reality\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_GRPC_REALITY}, \"uuid\":\"${UUID}\", \"tls\": { \"enabled\":true, \"server_name\":\"addons.mozilla.org\", \"utls\": { \"enabled\":true, \"fingerprint\":\"chrome\" }, \"reality\":{ \"enabled\":true, \"public_key\":\"${REALITY_PUBLIC}\", \"short_id\":\"\" } }, \"packet_encoding\": \"xudp\", \"transport\": { \"type\": \"grpc\", \"service_name\": \"grpc\" } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} grpc-reality\","
 
-  # 模板
-  local SING_BOX_JSON1=$(wget -qO- --tries=3 --timeout=2 ${SUBSCRIBE_TEMPLATE}/sing-box-template)
+  local SING_BOX_JSON1=$(wget -qO- --tries=3 --timeout=2 ${TEMPLATE_PATH})
 
   echo $SING_BOX_JSON1 | sed 's#, {[^}]\+"tun-in"[^}]\+}##' | sed "s#\"<INBOUND_REPLACE>\",#$INBOUND_REPLACE#; s#\"<NODE_REPLACE>\"#${NODE_REPLACE%,}#g" | $WORK_DIR/jq > $WORK_DIR/subscribe/sing-box-pc
 
   echo $SING_BOX_JSON1 | sed 's# {[^}]\+"mixed"[^}]\+},##; s#, "auto_detect_interface": true##' | sed "s#\"<INBOUND_REPLACE>\",#$INBOUND_REPLACE#; s#\"<NODE_REPLACE>\"#${NODE_REPLACE%,}#g" | $WORK_DIR/jq > $WORK_DIR/subscribe/sing-box-phone
-
-  # 生成二维码 url 文件
-  cat > $WORK_DIR/subscribe/qr << EOF
-https://${ARGO_DOMAIN}/${UUID}/auto
-
-QRcode:
-https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${ARGO_DOMAIN}/${UUID}/auto
-
-$($WORK_DIR/qrencode "https://${ARGO_DOMAIN}/${UUID}/auto")
-EOF
 }
 
-# Sing-box 的最新版本
+# https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://${ARGO_DOMAIN}/${UUID}/auto
+
+# Update sing-box
 update_sing-box() {
   local ONLINE=$(check_latest_sing-box)
   local LOCAL=$($WORK_DIR/sing-box version | awk '/version/{print $NF}')
@@ -942,16 +933,15 @@ update_sing-box() {
       mv $WORK_DIR/sing-box-$ONLINE-linux-$SING_BOX_ARCH/sing-box $WORK_DIR/sing-box &&
       rm -rf $WORK_DIR/sing-box-$ONLINE-linux-$SING_BOX_ARCH &&
       supervisorctl restart sing-box
-      info " Sing-box v${ONLINE} 更新成功！"
+      info " Sing-box v${ONLINE} updated!"
     else
-      info " Sing-box v${ONLINE} 已是最新版本！"
+      info " Sing-box v${ONLINE} is already the latest version!"
     fi
   else
-    warning " 获取不了在线版本，请稍后再试！"
+    warning "Could not fetch sing-box version. Please try again later!"
   fi
 }
 
-# 传参
 while getopts ":Vv" OPTNAME; do
   case "${OPTNAME,,}" in
     v ) ACTION=update
@@ -965,7 +955,6 @@ case "$ACTION" in
     update_sing-box
     ;;
   * )
-    install
-    # 运行 supervisor 进程守护
+    install_everything
     supervisord -c /etc/supervisord.conf
 esac
