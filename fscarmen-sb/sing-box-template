@@ -152,7 +152,7 @@
         "Auto",
         "Manual"
       ],
-      "default": "direct"
+      "default": "Auto"
     },
     {
       "type": "selector",
@@ -162,7 +162,7 @@
         "Auto",
         "Manual"
       ],
-      "default": "direct"
+      "default": "Auto"
     },
     {
       "type": "selector",
