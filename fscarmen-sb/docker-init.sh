@@ -104,17 +104,17 @@ EOF
   }
 EOF
 
-  cat > $WORK_DIR/conf/04_dns.json << EOF
-  {
-      "dns":{
-          "servers":[
-              {
-                  "address":"local"
-              }
-          ]
-      }
-  }
-EOF
+#   cat > $WORK_DIR/conf/04_dns.json << EOF
+#   {
+#       "dns":{
+#           "servers":[
+#               {
+#                   "address":"local"
+#               }
+#           ]
+#       }
+#   }
+# EOF
 
   [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/11_xtls-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
