@@ -79,6 +79,10 @@ EOF
               "type":"direct",
               "tag":"direct",
               "domain_strategy":"${DOMAIN_STRATEGY}"
+          },
+          {
+              "type": "dns",
+              "tag": "dns-out"
           }
       ]
   }
@@ -88,7 +92,12 @@ EOF
   {
       "route":{
           "rule_set":[],
-          "rules":[]
+          "rules":[
+            {
+              "protocol": "dns",
+              "outbound": "dns-out"
+            }
+          ]
       }
   }
 EOF
