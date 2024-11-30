@@ -50,7 +50,9 @@ docker run --rm ghcr.io/minlaxz/nekohasekai:fscarmen-sb generate rand --base64 1
 
 To use DNS servers (for example, AdGuard Remote DNS) configured from the client side.
 
-1. Disable `sniff` from server side, otherwise _no recent network activity will occur_.
-2. Disable `sniff_override_destination` from server side, otherwise _client dns will not be used_.
-3. Removed fakeip to enable `direct` network.
-4. Used `dns-local`, but other dns servers should work!
+1. Server: Enable `sniff`, otherwise _no recent network activity will occur_.
+2. Server: Disable `sniff_override_destination`, otherwise _DNS will not be used_.
+3. Client: Remove `fakeip` to enable `direct` network.
+4. Clinet: Use `dns-local`, but other dns servers should work!
+5. Client: Enable `sniff`, otherwise _no recent network activity will occur_.
+5. Client: Enable `sniff_override_destination`, otherwise _unexpected connection closed error will occur_.
