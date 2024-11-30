@@ -44,3 +44,13 @@ docker run --rm ghcr.io/minlaxz/nekohasekai:fscarmen-sb generate rand --base64 1
     - TROJANX=true
     - SHADOWTLSX=true
     - SHADOWSOCKSX=true
+
+
+### Note for DNS Settings
+
+To use DNS servers (for example, AdGuard Remote DNS) configured from the client side.
+
+1. Disable `sniff` from server side, otherwise _no recent network activity will occur_.
+2. Disable `sniff_override_destination` from server side, otherwise _client dns will not be used_.
+3. Removed fakeip to enable `direct` network.
+4. Used `dns-local`, but other dns servers should work!

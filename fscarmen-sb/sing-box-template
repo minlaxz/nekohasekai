@@ -29,13 +29,19 @@
         "detour": "direct"
       },
       {
+        "address": "1.1.1.1",
+        "detour": "direct",
+        "tag": "dns-cloudflare"
+      },
+      {
+        "address": "8.8.8.8",
+        "detour": "direct",
+        "tag": "dns-google"
+      },
+      {
         "address": "local",
         "detour": "direct",
         "tag": "dns-local"
-      },
-      {
-        "tag": "dns-fakeip",
-        "address": "fakeip"
       },
       {
         "address": "rcode://name_error",
@@ -58,21 +64,9 @@
         ],
         "disable_cache": true,
         "server": "dns-block"
-      },
-      {
-        "query_type": [
-          "A",
-          "AAAA"
-        ],
-        "server": "dns-fakeip"
       }
     ],
     "independent_cache": true,
-    "fakeip": {
-      "enabled": true,
-      "inet4_range": "198.18.0.0/15",
-      "inet6_range": "fc00::/18"
-    },
     "strategy": "ipv4_only",
     "final": "dns-remote"
   },
