@@ -77,7 +77,7 @@ EOF
       "outbounds":[
           {
               "type":"direct",
-              "tag":"direct",
+              "tag":"direct-out",
               "domain_strategy":"${DOMAIN_STRATEGY}"
           },
           {
@@ -102,16 +102,16 @@ EOF
   }
 EOF
 
-  cat > $WORK_DIR/conf/03_experimental.json << EOF
-  {
-      "experimental": {
-          "cache_file": {
-              "enabled": true,
-              "path": "$WORK_DIR/cache.db"
-          }
-      }
-  }
-EOF
+#   cat > $WORK_DIR/conf/03_experimental.json << EOF
+#   {
+#       "experimental": {
+#           "cache_file": {
+#               "enabled": true,
+#               "path": "$WORK_DIR/cache.db"
+#           }
+#       }
+#   }
+# EOF
 
 #   cat > $WORK_DIR/conf/04_dns.json << EOF
 #   {
@@ -213,28 +213,28 @@ EOF
       "inbounds":[
           {
               "type":"hysteria2",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} hysteria2",
               "listen":"::",
               "listen_port":${PORT_HYSTERIA2},
+              "up_mbps": 100,
+              "down_mbps": 100,
               "users":[
                   {
                       "password":"${UUID}"
                   }
               ],
-              "ignore_client_bandwidth":false,
+              "ignore_client_bandwidth":true,
               "tls":{
                   "enabled":true,
                   "server_name":"",
-                  "alpn":[
-                      "h3"
-                  ],
-                  "min_version":"1.3",
-                  "max_version":"1.3",
                   "certificate_path":"$WORK_DIR/cert/cert.pem",
                   "key_path":"$WORK_DIR/cert/private.key"
-              }
+                  "alpn": ["http/1.1", "h2", "h3"],
+                  "min_version":"1.3",
+                  "max_version":"1.3",
+              },
+              "sniff":true,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -260,9 +260,7 @@ EOF
               "zero_rtt_handshake": false,
               "tls":{
                   "enabled":true,
-                  "alpn":[
-                      "h3"
-                  ],
+                  "alpn": ["http/1.1", "h2", "h3"],
                   "certificate_path":"$WORK_DIR/cert/cert.pem",
                   "key_path":"$WORK_DIR/cert/private.key"
               }
@@ -355,13 +353,14 @@ EOF
       "inbounds":[
           {
               "type":"shadowsocks",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} shadowsocks",
               "listen":"::",
               "listen_port":${PORT_SHADOWSOCKS},
-              "method":"aes-128-gcm",
-              "password":"${UUID}"
+              "network": "tcp",
+              "method":"2022-blake3-aes-128-gcm",
+              "password":"${UUID}",
+              "sniff":true,
+              "sniff_override_destination":true
           }
       ]
   }
@@ -372,13 +371,14 @@ EOF
       "inbounds":[
           {
               "type":"shadowsocks",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} shadowsocks",
               "listen":"::",
               "listen_port":${PORT_SHADOWSOCKS},
-              "method":"aes-128-gcm",
+              "network": "tcp",
+              "method":"2022-blake3-aes-128-gcm",
               "password":"${UUID}",
+              "sniff":true,
+              "sniff_override_destination":true,
               "multiplex":{
                   "enabled":true,
                   "padding":true,
@@ -398,8 +398,6 @@ EOF
       "inbounds":[
           {
               "type":"trojan",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} trojan",
               "listen":"::",
               "listen_port":${PORT_TROJAN},
@@ -412,7 +410,9 @@ EOF
                   "enabled":true,
                   "certificate_path":"$WORK_DIR/cert/cert.pem",
                   "key_path":"$WORK_DIR/cert/private.key"
-              }
+              },
+              "sniff":true,
+              "sniff_override_destination":true
           }
       ]
   }
@@ -423,8 +423,6 @@ EOF
       "inbounds":[
           {
               "type":"trojan",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} trojan",
               "listen":"::",
               "listen_port":${PORT_TROJAN},
@@ -446,7 +444,9 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              }
+              },
+              "sniff":true,
+              "sniff_override_destination":true
           }
       ]
   }
@@ -868,11 +868,11 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} xtls-reality\","
 
   [ "${HYSTERIA2}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"hysteria2\", \"tag\": \"${NODE_NAME} hysteria2\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_HYSTERIA2}, \"up_mbps\": 200, \"down_mbps\": 1000, \"password\": \"${UUID}\", \"tls\": { \"enabled\": true, \"insecure\": true, \"server_name\": \"\", \"alpn\": [ \"h3\" ] } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"hysteria2\", \"tag\": \"${NODE_NAME} hysteria2\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_HYSTERIA2}, \"up_mbps\": 20, \"down_mbps\": 20, \"password\": \"${UUID}\", \"tls\": { \"enabled\": true, \"insecure\": true, \"server_name\": \"\", \"alpn\": [ \"http1.1\", \"h2\", \"h3\" ] } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} hysteria2\","
 
   [ "${TUIC}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"tuic\", \"tag\": \"${NODE_NAME} tuic\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_TUIC}, \"uuid\": \"${UUID}\", \"password\": \"${UUID}\", \"congestion_control\": \"bbr\", \"udp_relay_mode\": \"native\", \"zero_rtt_handshake\": false, \"heartbeat\": \"10s\", \"tls\": { \"enabled\": true, \"insecure\": true, \"server_name\": \"\", \"alpn\": [ \"h3\" ] } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"tuic\", \"tag\": \"${NODE_NAME} tuic\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_TUIC}, \"uuid\": \"${UUID}\", \"password\": \"${UUID}\", \"congestion_control\": \"bbr\", \"udp_relay_mode\": \"native\", \"zero_rtt_handshake\": false, \"heartbeat\": \"10s\", \"tls\": { \"enabled\": true, \"insecure\": true, \"server_name\": \"\", \"alpn\": [ \"http1.1\", \"h2\", \"h3\" ] } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} tuic\","
 
   [ "${SHADOWTLS}" = 'true' ] &&
@@ -884,11 +884,11 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} ShadowTLS\","
 
   [ "${SHADOWSOCKS}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"aes-128-gcm\", \"password\": \"${UUID}\" }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"2022-blake3-aes-128-gcm\", \"password\": \"${UUID}\" }," &&
   local NODE_REPLACE+="\"${NODE_NAME} shadowsocks\","
 
   [ "${SHADOWSOCKSX}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"aes-128-gcm\", \"password\": \"${UUID}\", \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true, \"brutal\":{ \"enabled\":true, \"up_mbps\":1000, \"down_mbps\":1000 } } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"2022-blake3-aes-128-gcm\", \"password\": \"${UUID}\", \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true, \"brutal\":{ \"enabled\":true, \"up_mbps\":1000, \"down_mbps\":1000 } } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} shadowsocks\","
 
   [ "${TROJAN}" = 'true' ] &&
