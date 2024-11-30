@@ -131,8 +131,6 @@ EOF
       "inbounds":[
           {
               "type":"vless",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} xtls-reality",
               "listen":"::",
               "listen_port":${PORT_XTLS_REALITY},
@@ -156,7 +154,9 @@ EOF
                           ""
                       ]
                   }
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -168,8 +168,6 @@ EOF
       "inbounds":[
           {
               "type":"vless",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} xtls-reality",
               "listen":"::",
               "listen_port":${PORT_XTLS_REALITY},
@@ -202,7 +200,9 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -245,8 +245,6 @@ EOF
       "inbounds":[
           {
               "type":"tuic",
-              "sniff":false,
-              "sniff_override_destination":false,
               "tag":"${NODE_NAME} tuic",
               "listen":"::",
               "listen_port":${PORT_TUIC},
@@ -260,10 +258,12 @@ EOF
               "zero_rtt_handshake": false,
               "tls":{
                   "enabled":true,
-                  "alpn": ["http/1.1", "h2", "h3"],
+                  "alpn": ["h3"],
                   "certificate_path":"$WORK_DIR/cert/cert.pem",
                   "key_path":"$WORK_DIR/cert/private.key"
-              }
+              },
+              "sniff":true,
+              "sniff_override_destination":true
           }
       ]
   }
@@ -274,8 +274,6 @@ EOF
       "inbounds":[
           {
               "type":"shadowtls",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} ShadowTLS",
               "listen":"::",
               "listen_port":${PORT_SHADOWTLS},
@@ -290,7 +288,9 @@ EOF
                   "server":"addons.mozilla.org",
                   "server_port":443
               },
-              "strict_mode":true
+              "strict_mode":true,
+              "sniff":false,
+              "sniff_override_destination":false
           },
           {
               "type":"shadowsocks",
@@ -309,8 +309,6 @@ EOF
       "inbounds":[
           {
               "type":"shadowtls",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} ShadowTLS",
               "listen":"::",
               "listen_port":${PORT_SHADOWTLS},
@@ -325,7 +323,9 @@ EOF
                   "server":"addons.mozilla.org",
                   "server_port":443
               },
-              "strict_mode":true
+              "strict_mode":true,
+              "sniff":false,
+              "sniff_override_destination":false
           },
           {
               "type":"shadowsocks",
@@ -359,8 +359,8 @@ EOF
               "network": "tcp",
               "method":"2022-blake3-aes-128-gcm",
               "password":"${SHADOWTLS_PASSWORD}",
-              "sniff":true,
-              "sniff_override_destination":true
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -377,8 +377,6 @@ EOF
               "network": "tcp",
               "method":"2022-blake3-aes-128-gcm",
               "password":"${SHADOWTLS_PASSWORD}",
-              "sniff":true,
-              "sniff_override_destination":true,
               "multiplex":{
                   "enabled":true,
                   "padding":true,
@@ -387,7 +385,9 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -411,8 +411,8 @@ EOF
                   "certificate_path":"$WORK_DIR/cert/cert.pem",
                   "key_path":"$WORK_DIR/cert/private.key"
               },
-              "sniff":true,
-              "sniff_override_destination":true
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -445,8 +445,8 @@ EOF
                       "down_mbps":1000
                   }
               },
-              "sniff":true,
-              "sniff_override_destination":true
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -458,8 +458,6 @@ EOF
       "inbounds":[
           {
               "type":"vless",
-              "sniff_override_destination":true,
-              "sniff":true,
               "tag":"${NODE_NAME} vless-ws-tls",
               "listen":"::",
               "listen_port":${PORT_VLESS_WS},
@@ -476,7 +474,9 @@ EOF
                   "path":"/${UUID}-vless",
                   "max_early_data":2048,
                   "early_data_header_name":"Sec-WebSocket-Protocol"
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -488,8 +488,6 @@ EOF
       "inbounds":[
           {
               "type":"vless",
-              "sniff_override_destination":true,
-              "sniff":true,
               "tag":"${NODE_NAME} vless-ws-tls",
               "listen":"::",
               "listen_port":${PORT_VLESS_WS},
@@ -515,7 +513,9 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -527,8 +527,6 @@ EOF
       "inbounds":[
           {
               "type":"vless",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} h2-reality",
               "listen":"::",
               "listen_port":${PORT_H2_REALITY},
@@ -554,7 +552,9 @@ EOF
               },
               "transport": {
                   "type": "http"
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -566,8 +566,6 @@ EOF
       "inbounds":[
           {
               "type":"vless",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} h2-reality",
               "listen":"::",
               "listen_port":${PORT_H2_REALITY},
@@ -602,7 +600,9 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -614,8 +614,6 @@ EOF
       "inbounds":[
           {
               "type":"vless",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} grpc-reality",
               "listen":"::",
               "listen_port":${PORT_GRPC_REALITY},
@@ -642,7 +640,9 @@ EOF
               "transport": {
                   "type": "grpc",
                   "service_name": "grpc"
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -654,8 +654,6 @@ EOF
       "inbounds":[
           {
               "type":"vless",
-              "sniff":true,
-              "sniff_override_destination":true,
               "tag":"${NODE_NAME} grpc-reality",
               "listen":"::",
               "listen_port":${PORT_GRPC_REALITY},
@@ -691,7 +689,9 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              }
+              },
+              "sniff":false,
+              "sniff_override_destination":false
           }
       ]
   }
@@ -872,7 +872,7 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} hysteria2\","
 
   [ "${TUIC}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"tuic\", \"tag\": \"${NODE_NAME} tuic\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_TUIC}, \"uuid\": \"${UUID}\", \"password\": \"${UUID}\", \"congestion_control\": \"bbr\", \"udp_relay_mode\": \"native\", \"zero_rtt_handshake\": false, \"heartbeat\": \"10s\", \"tls\": { \"enabled\": true, \"insecure\": true, \"server_name\": \"\", \"alpn\": [ \"http1.1\", \"h2\", \"h3\" ] } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"tuic\", \"tag\": \"${NODE_NAME} tuic\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_TUIC}, \"uuid\": \"${UUID}\", \"password\": \"${UUID}\", \"congestion_control\": \"bbr\", \"udp_relay_mode\": \"native\", \"zero_rtt_handshake\": false, \"heartbeat\": \"10s\", \"tls\": { \"enabled\": true, \"insecure\": true, \"server_name\": \"\", \"alpn\": [ \"h3\" ] } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} tuic\","
 
   [ "${SHADOWTLS}" = 'true' ] &&
