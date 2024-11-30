@@ -50,7 +50,7 @@ install_everything() {
   SERVER_IP="$(wget -q -O- https://ipecho.net/plain)"
 
   if [[ "$SERVER_IP" =~ : ]]; then
-    local DOMAIN_STRATEGY=prefer_ipv6
+    local DOMAIN_STRATEGY=prefer_ipv4
   else
     local DOMAIN_STRATEGY=ipv4_only
   fi
@@ -233,7 +233,7 @@ EOF
                   "min_version":"1.3",
                   "max_version":"1.3"
               },
-              "sniff":false,
+              "sniff":true,
               "sniff_override_destination":false
           }
       ]
