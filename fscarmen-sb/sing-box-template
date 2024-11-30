@@ -80,9 +80,9 @@
     {
       "type": "tun",
       "tag": "tun-in",
+      "domain_strategy": "ipv4_only",
       "interface_name": "tun0",
-      "inet4_address": "10.69.69.0/28",
-      "inet6_address": "fd00::1/126",
+      "address": ["10.69.69.0/28", "fd00::1/126"],
       "mtu": 1400,
       "auto_route": true,
       "strict_route": true,
@@ -91,9 +91,9 @@
       "sniff_override_destination": false
     },
     {
-      "domain_strategy": "ipv4_only",
       "type": "mixed",
       "tag": "mixed-in",
+      "domain_strategy": "ipv4_only",
       "listen": "0.0.0.0",
       "listen_port": 2080,
       "tcp_fast_open": false,

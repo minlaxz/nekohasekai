@@ -52,7 +52,7 @@ install_everything() {
   if [[ "$SERVER_IP" =~ : ]]; then
     local DOMAIN_STRATEGY=prefer_ipv6
   else
-    local DOMAIN_STRATEGY=prefer_ipv4
+    local DOMAIN_STRATEGY=ipv4_only
   fi
 
   local REALITY_KEYPAIR=$($WORK_DIR/sing-box generate reality-keypair) && AUTO_REALITY_PRIVATE=$(awk '/PrivateKey/{print $NF}' <<< "$REALITY_KEYPAIR") && AUTO_REALITY_PUBLIC=$(awk '/PublicKey/{print $NF}' <<< "$REALITY_KEYPAIR")
@@ -102,28 +102,28 @@ EOF
   }
 EOF
 
-#   cat > $WORK_DIR/conf/03_experimental.json << EOF
-#   {
-#       "experimental": {
-#           "cache_file": {
-#               "enabled": true,
-#               "path": "$WORK_DIR/cache.db"
-#           }
-#       }
-#   }
-# EOF
+  cat > $WORK_DIR/conf/03_experimental.json << EOF
+  {
+      "experimental": {
+          "cache_file": {
+              "enabled": true,
+              "path": "$WORK_DIR/cache.db"
+          }
+      }
+  }
+EOF
 
-#   cat > $WORK_DIR/conf/04_dns.json << EOF
-#   {
-#       "dns":{
-#           "servers":[
-#               {
-#                   "address":"local"
-#               }
-#           ]
-#       }
-#   }
-# EOF
+  cat > $WORK_DIR/conf/04_dns.json << EOF
+  {
+      "dns":{
+          "servers":[
+              {
+                  "address":"local"
+              }
+          ]
+      }
+  }
+EOF
 
   [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/11_xtls-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
@@ -227,13 +227,13 @@ EOF
               "tls":{
                   "enabled":true,
                   "server_name":"",
-                  "alpn": ["http/1.1", "h2", "h3"],
+                  "alpn": ["h3"],
                   "certificate_path":"$WORK_DIR/cert/cert.pem",
                   "key_path":"$WORK_DIR/cert/private.key",
                   "min_version":"1.3",
                   "max_version":"1.3"
               },
-              "sniff":true,
+              "sniff":false,
               "sniff_override_destination":false
           }
       ]
@@ -868,7 +868,7 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} xtls-reality\","
 
   [ "${HYSTERIA2}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"hysteria2\", \"tag\": \"${NODE_NAME} hysteria2\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_HYSTERIA2}, \"up_mbps\": 20, \"down_mbps\": 20, \"password\": \"${UUID}\", \"tls\": { \"enabled\": true, \"insecure\": true, \"server_name\": \"\", \"alpn\": [ \"http1.1\", \"h2\", \"h3\" ] } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"hysteria2\", \"tag\": \"${NODE_NAME} hysteria2\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_HYSTERIA2}, \"up_mbps\": 20, \"down_mbps\": 20, \"password\": \"${UUID}\", \"tls\": { \"enabled\": true, \"insecure\": true, \"server_name\": \"\", \"alpn\": [ \"h3\" ] } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} hysteria2\","
 
   [ "${TUIC}" = 'true' ] &&
