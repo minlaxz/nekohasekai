@@ -227,11 +227,11 @@ EOF
               "tls":{
                   "enabled":true,
                   "server_name":"",
-                  "certificate_path":"$WORK_DIR/cert/cert.pem",
-                  "key_path":"$WORK_DIR/cert/private.key"
                   "alpn": ["http/1.1", "h2", "h3"],
+                  "certificate_path":"$WORK_DIR/cert/cert.pem",
+                  "key_path":"$WORK_DIR/cert/private.key",
                   "min_version":"1.3",
-                  "max_version":"1.3",
+                  "max_version":"1.3"
               },
               "sniff":true,
               "sniff_override_destination":false
