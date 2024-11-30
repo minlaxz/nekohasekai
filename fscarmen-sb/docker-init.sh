@@ -233,7 +233,7 @@ EOF
                   "min_version":"1.3",
                   "max_version":"1.3"
               },
-              "sniff":true,
+              "sniff":false,
               "sniff_override_destination":false
           }
       ]
@@ -245,8 +245,8 @@ EOF
       "inbounds":[
           {
               "type":"tuic",
-              "sniff":true,
-              "sniff_override_destination":true,
+              "sniff":false,
+              "sniff_override_destination":false,
               "tag":"${NODE_NAME} tuic",
               "listen":"::",
               "listen_port":${PORT_TUIC},
