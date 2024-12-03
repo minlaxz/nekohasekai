@@ -34,11 +34,6 @@
         "tag": "dns-cloudflare"
       },
       {
-        "address": "8.8.8.8",
-        "detour": "direct",
-        "tag": "dns-google"
-      },
-      {
         "address": "local",
         "detour": "direct",
         "tag": "dns-local"
@@ -80,9 +75,9 @@
       "mtu": 1400,
       "auto_route": true,
       "strict_route": true,
-      "stack": "gvisor",
+      "stack": "mixed",
       "sniff": true,
-      "sniff_override_destination": false
+      "sniff_override_destination": true
     },
     {
       "type": "mixed",
@@ -93,7 +88,7 @@
       "tcp_fast_open": false,
       "sniff": true,
       "set_system_proxy": false,
-      "sniff_override_destination": false
+      "sniff_override_destination": true
     },
     {
       "type": "direct",
@@ -112,7 +107,6 @@
       "outbounds": [
         "sing-box xtls-reality",
         "sing-box hysteria2",
-        "sing-box tuic",
         "sing-box ShadowTLS",
         "sing-box shadowsocks",
         "sing-box trojan",

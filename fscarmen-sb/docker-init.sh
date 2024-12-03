@@ -96,6 +96,16 @@ EOF
             {
               "protocol": "dns",
               "outbound": "dns-out"
+            },
+            {
+              "inbound": "${NODE_NAME} direct",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} direct",
+              "action": "sniff",
+              "timeout": "1s"
             }
           ]
       }
@@ -122,6 +132,31 @@ EOF
               }
           ]
       }
+  }
+EOF
+
+  [ "${DIRECT}" = 'true' ] && ((PORT++)) && PORT_DIRECT=$PORT && cat > $WORK_DIR/conf/10_direct_inbounds.json << EOF
+  // "public_key":"${REALITY_PUBLIC}"
+  {
+      "inbounds":[
+          {
+              "type":"mixed",
+              "tag":"${NODE_NAME} direct",
+              "listen":"::",
+              "listen_port":${PORT_DIRECT},
+              "detour": "another-in",
+              "sniff":false,
+              "sniff_override_destination":false,
+              "domain_strategy": "ipv4_only",
+              "users": [
+                {
+                  "username": "admin",
+                  "password": "admin"
+                }
+              ],
+              "set_system_proxy": false
+          }
+      ]
   }
 EOF
 
