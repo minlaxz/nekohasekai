@@ -918,7 +918,7 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} http-direct\","
   
   [ "${SOCKS_DIRECT}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"socks\", \"tag\": \"${NODE_NAME} socks-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_SOCKS_DIRECT}, \"version\":\"5\", \"udp_over_tcp\":\"false\", \"tls\":{} }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"socks\", \"tag\": \"${NODE_NAME} socks-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_SOCKS_DIRECT}, \"version\":\"5\", \"udp_over_tcp\": false, \"tls\":{} }," &&
   local NODE_REPLACE+="\"${NODE_NAME} socks-direct\","
 
   [ "${XTLS_REALITY}" = 'true' ] &&
