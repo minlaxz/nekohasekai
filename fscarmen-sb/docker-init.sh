@@ -106,7 +106,7 @@ EOF
               "inbound": "${NODE_NAME} http-direct",
               "action": "sniff",
               "timeout": "1s"
-            }
+            },
             {
               "inbound": "${NODE_NAME} socks-direct",
               "action": "resolve",
@@ -116,12 +116,12 @@ EOF
               "inbound": "${NODE_NAME} socks-direct",
               "action": "sniff",
               "timeout": "1s"
-            }
+            },
             {
               "inbound": "${NODE_NAME} hysteria2",
               "action": "resolve",
               "strategy": "ipv4_only"
-            },
+            }
           ]
       }
   }
