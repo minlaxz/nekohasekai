@@ -98,15 +98,30 @@ EOF
               "outbound": "dns-out"
             },
             {
-              "inbound": "${NODE_NAME} direct",
+              "inbound": "${NODE_NAME} http-direct",
               "action": "resolve",
               "strategy": "ipv4_only"
             },
             {
-              "inbound": "${NODE_NAME} direct",
+              "inbound": "${NODE_NAME} http-direct",
               "action": "sniff",
               "timeout": "1s"
             }
+            {
+              "inbound": "${NODE_NAME} socks-direct",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} socks-direct",
+              "action": "sniff",
+              "timeout": "1s"
+            }
+            {
+              "inbound": "${NODE_NAME} hysteria2",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
           ]
       }
   }
@@ -135,26 +150,36 @@ EOF
   }
 EOF
 
-  [ "${DIRECT}" = 'true' ] && ((PORT++)) && PORT_DIRECT=$PORT && cat > $WORK_DIR/conf/10_direct_inbounds.json << EOF
-  // "public_key":"${REALITY_PUBLIC}"
+  [ "${HTTP_DIRECT}" = 'true' ] && ((PORT++)) && PORT_HTTP_DIRECT=$PORT && cat > $WORK_DIR/conf/09_http_direct_inbounds.json << EOF
   {
       "inbounds":[
           {
-              "type":"mixed",
-              "tag":"${NODE_NAME} direct",
+              "type":"http",
+              "tag":"${NODE_NAME} http-direct",
               "listen":"::",
-              "listen_port":${PORT_DIRECT},
-              "users": [
-                {
-                  "username": "admin",
-                  "password": "admin"
-                }
-              ],
+              "listen_port":${PORT_HTTP_DIRECT},
+              "users": [],
+              "tls": {},
               "set_system_proxy": false
           }
       ]
   }
 EOF
+
+  [ "${SOCKS_DIRECT}" = 'true' ] && ((PORT++)) && PORT_SOCKS_DIRECT=$PORT && cat > $WORK_DIR/conf/10_socks_direct_inbounds.json << EOF
+    {
+        "inbounds":[
+            {
+                "type":"socks",
+                "tag":"${NODE_NAME} socks-direct",
+                "listen":"::",
+                "listen_port":${PORT_SOCKS_DIRECT},
+                "users": []
+            }
+        ]
+    }
+EOF
+
 
   [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/11_xtls-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
@@ -263,9 +288,7 @@ EOF
                   "key_path":"$WORK_DIR/cert/private.key",
                   "min_version":"1.3",
                   "max_version":"1.3"
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -890,6 +913,14 @@ stdout_logfile=/dev/null
   fi
 
   # 生成 Sing-box 订阅文件
+  [ "${HTTP_DIRECT}" = 'true' ] &&
+  local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT}, \"path\":\"\", \"headers\":\"{ }\", \"tls\":{ } }," &&
+  local NODE_REPLACE+="\"${NODE_NAME} http-direct\","
+  
+  [ "${SOCKS_DIRECT}" = 'true' ] &&
+  local INBOUND_REPLACE+=" { \"type\": \"socks\", \"tag\": \"${NODE_NAME} socks-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_SOCKS_DIRECT}, \"version\":\"5\", \"udp_over_tcp\":\"false\", \"tls\":{ } }," &&
+  local NODE_REPLACE+="\"${NODE_NAME} socks-direct\","
+
   [ "${XTLS_REALITY}" = 'true' ] &&
   local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} xtls-reality\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_XTLS_REALITY}, \"uuid\":\"${UUID}\", \"flow\":\"\", \"packet_encoding\":\"xudp\", \"tls\":{ \"enabled\":true, \"server_name\":\"addons.mozilla.org\", \"utls\":{ \"enabled\":true, \"fingerprint\":\"chrome\" }, \"reality\":{ \"enabled\":true, \"public_key\":\"${REALITY_PUBLIC}\", \"short_id\":\"\" } } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} xtls-reality\","
