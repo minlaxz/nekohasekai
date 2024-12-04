@@ -914,11 +914,11 @@ stdout_logfile=/dev/null
 
   # 生成 Sing-box 订阅文件
   [ "${HTTP_DIRECT}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT}, \"path\":\"\", \"headers\":\"{ }\", \"tls\":{ } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
   local NODE_REPLACE+="\"${NODE_NAME} http-direct\","
   
   [ "${SOCKS_DIRECT}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"socks\", \"tag\": \"${NODE_NAME} socks-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_SOCKS_DIRECT}, \"version\":\"5\", \"udp_over_tcp\":\"false\", \"tls\":{ } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"socks\", \"tag\": \"${NODE_NAME} socks-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_SOCKS_DIRECT}, \"version\":\"5\", \"udp_over_tcp\":\"false\", \"tls\":{} }," &&
   local NODE_REPLACE+="\"${NODE_NAME} socks-direct\","
 
   [ "${XTLS_REALITY}" = 'true' ] &&
