@@ -108,12 +108,12 @@ EOF
               "strategy": "ipv4_only"
             },
             {
-              "inbound": "${NODE_NAME} socks-direct",
+              "inbound": "${NODE_NAME} http-direct-sniff",
               "action": "resolve",
               "strategy": "ipv4_only"
             },
             {
-              "inbound": "${NODE_NAME} socks-direct",
+              "inbound": "${NODE_NAME} http-direct-sniff",
               "action": "sniff",
               "timeout": "1s"
             },
@@ -211,18 +211,20 @@ EOF
   }
 EOF
 
-  [ "${SOCKS_DIRECT}" = 'true' ] && ((PORT++)) && PORT_SOCKS_DIRECT=$PORT && cat > $WORK_DIR/conf/10_socks_direct_inbounds.json << EOF
-    {
-        "inbounds":[
-            {
-                "type":"socks",
-                "tag":"${NODE_NAME} socks-direct",
-                "listen":"::",
-                "listen_port":${PORT_SOCKS_DIRECT},
-                "users": []
-            }
-        ]
-    }
+  [ "${HTTP_DIRECT_SNIFF}" = 'true' ] && ((PORT++)) && PORT_HTTP_DIRECT_SNIFF=$PORT && cat > $WORK_DIR/conf/10_http_direct_sniff_inbounds.json << EOF
+  {
+      "inbounds":[
+          {
+              "type":"http",
+              "tag":"${NODE_NAME} http-direct-sniff",
+              "listen":"::",
+              "listen_port":${PORT_HTTP_DIRECT_SNIFF},
+              "users": [],
+              "tls": {},
+              "set_system_proxy": false
+          }
+      ]
+  }
 EOF
 
 
@@ -934,9 +936,9 @@ stdout_logfile=/dev/null
   local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
   local NODE_REPLACE+="\"${NODE_NAME} http-direct\","
   
-  [ "${SOCKS_DIRECT}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"socks\", \"tag\": \"${NODE_NAME} socks-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_SOCKS_DIRECT}, \"version\":\"5\", \"udp_over_tcp\": false, \"tls\":{} }," &&
-  local NODE_REPLACE+="\"${NODE_NAME} socks-direct\","
+  [ "${HTTP_DIRECT_SNIFF}" = 'true' ] &&
+  local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct-sniff\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT_SNIFF}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
+  local NODE_REPLACE+="\"${NODE_NAME} http-direct-sniff\","
 
   [ "${XTLS_REALITY}" = 'true' ] &&
   local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} xtls-reality\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_XTLS_REALITY}, \"uuid\":\"${UUID}\", \"flow\":\"\", \"packet_encoding\":\"xudp\", \"tls\":{ \"enabled\":true, \"server_name\":\"addons.mozilla.org\", \"utls\":{ \"enabled\":true, \"fingerprint\":\"chrome\" }, \"reality\":{ \"enabled\":true, \"public_key\":\"${REALITY_PUBLIC}\", \"short_id\":\"\" } } }," &&
