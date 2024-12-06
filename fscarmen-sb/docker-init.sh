@@ -65,24 +65,20 @@ install_everything() {
 
   cat > $WORK_DIR/conf/00_log.json << EOF
   {
-      "log":{
+      "log": {
           "level": "warn",
-          "timestamp":true
+          "timestamp": true
       }
   }
 EOF
 
   cat > $WORK_DIR/conf/01_outbounds.json << EOF
   {
-      "outbounds":[
+      "outbounds": [
           {
-              "type":"direct",
-              "tag":"direct-out",
-              "domain_strategy":"${DOMAIN_STRATEGY}"
-          },
-          {
-              "type": "dns",
-              "tag": "dns-out"
+              "type": "direct",
+              "tag": "direct-out",
+              "domain_strategy": "${DOMAIN_STRATEGY}"
           }
       ]
   }
@@ -90,13 +86,9 @@ EOF
 
   cat > $WORK_DIR/conf/02_route.json << EOF
   {
-      "route":{
-          "rule_set":[],
-          "rules":[
-            {
-              "protocol": "dns",
-              "outbound": "dns-out"
-            },
+      "route": {
+          "rule_set": [],
+          "rules": [
             {
               "inbound": "${NODE_NAME} xtls-reality",
               "action": "resolve",
@@ -108,14 +100,9 @@ EOF
               "strategy": "ipv4_only"
             },
             {
-              "inbound": "${NODE_NAME} http-direct-sniff",
+              "inbound": "${NODE_NAME} http-direct-detour",
               "action": "resolve",
               "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} http-direct-sniff",
-              "action": "sniff",
-              "timeout": "1s"
             },
             {
               "inbound": "${NODE_NAME} hysteria2",
@@ -166,6 +153,14 @@ EOF
               "inbound": "${NODE_NAME} grpc-reality",
               "action": "resolve",
               "strategy": "ipv4_only"
+            },
+            {
+              "protocol": "dns",
+              "action": "hijack-dns"
+            },
+            {
+              "ip_is_private": true,
+              "outbound": "direct-out"
             }
           ]
       }
@@ -186,9 +181,9 @@ EOF
   cat > $WORK_DIR/conf/04_dns.json << EOF
   {
       "dns":{
-          "servers":[
+          "servers": [
               {
-                  "address":"local"
+                  "address": "local"
               }
           ]
       }
@@ -199,10 +194,10 @@ EOF
   {
       "inbounds":[
           {
-              "type":"http",
-              "tag":"${NODE_NAME} http-direct",
-              "listen":"::",
-              "listen_port":${PORT_HTTP_DIRECT},
+              "type": "http",
+              "tag": "${NODE_NAME} http-direct",
+              "listen": "::",
+              "listen_port": ${PORT_HTTP_DIRECT},
               "users": [],
               "tls": {},
               "set_system_proxy": false
@@ -211,14 +206,15 @@ EOF
   }
 EOF
 
-  [ "${HTTP_DIRECT_SNIFF}" = 'true' ] && ((PORT++)) && PORT_HTTP_DIRECT_SNIFF=$PORT && cat > $WORK_DIR/conf/10_http_direct_sniff_inbounds.json << EOF
+  [ "${HTTP_DIRECT_DETOUR}" = 'true' ] && ((PORT++)) && PORT_HTTP_DIRECT_DETOUR=$PORT && cat > $WORK_DIR/conf/10_http_direct_detour_inbounds.json << EOF
   {
       "inbounds":[
           {
-              "type":"http",
-              "tag":"${NODE_NAME} http-direct-sniff",
-              "listen":"::",
-              "listen_port":${PORT_HTTP_DIRECT_SNIFF},
+              "type": "http",
+              "tag": "${NODE_NAME} http-direct-detour",
+              "listen": "::",
+              "listen_port": ${PORT_HTTP_DIRECT_DETOUR},
+              "detour": "${NODE_NAME} xtls-reality",
               "users": [],
               "tls": {},
               "set_system_proxy": false
@@ -229,79 +225,77 @@ EOF
 
 
   [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/11_xtls-reality_inbounds.json << EOF
-  //  "public_key":"${REALITY_PUBLIC}"
+  //  "public_key": "${REALITY_PUBLIC}"
   {
       "inbounds":[
           {
-              "type":"vless",
-              "tag":"${NODE_NAME} xtls-reality",
-              "listen":"::",
-              "listen_port":${PORT_XTLS_REALITY},
-              "users":[
+              "type": "vless",
+              "tag": "${NODE_NAME} xtls-reality",
+              "listen": "::",
+              "listen_port": ${PORT_XTLS_REALITY},
+              "users": [
                   {
-                      "uuid":"${UUID}",
-                      "flow":""
+                      "uuid": "${UUID}",
+                      "flow": ""
                   }
               ],
-              "tls":{
-                  "enabled":true,
-                  "server_name":"addons.mozilla.org",
-                  "reality":{
-                      "enabled":true,
-                      "handshake":{
-                          "server":"addons.mozilla.org",
-                          "server_port":443
+              "tls": {
+                  "enabled": true,
+                  "server_name": "addons.mozilla.org",
+                  "reality": {
+                      "enabled": true,
+                      "handshake": {
+                          "server": "addons.mozilla.org",
+                          "server_port": 443
                       },
-                      "private_key":"${REALITY_PRIVATE}",
-                      "short_id":[
+                      "private_key": "${REALITY_PRIVATE}",
+                      "short_id": [
                           ""
                       ]
                   }
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
 EOF
 
   [ "${XTLS_REALITYX}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/11_xtls-reality_inbounds.json << EOF
-  //  "public_key":"${REALITY_PUBLIC}"
+  //  "public_key": "${REALITY_PUBLIC}"
   {
       "inbounds":[
           {
-              "type":"vless",
-              "tag":"${NODE_NAME} xtls-reality",
-              "listen":"::",
-              "listen_port":${PORT_XTLS_REALITY},
-              "users":[
+              "type": "vless",
+              "tag": "${NODE_NAME} xtls-reality",
+              "listen": "::",
+              "listen_port": ${PORT_XTLS_REALITY},
+              "users": [
                   {
-                      "uuid":"${UUID}",
-                      "flow":""
+                      "uuid": "${UUID}",
+                      "flow": ""
                   }
               ],
-              "tls":{
-                  "enabled":true,
-                  "server_name":"addons.mozilla.org",
-                  "reality":{
-                      "enabled":true,
-                      "handshake":{
-                          "server":"addons.mozilla.org",
-                          "server_port":443
+              "tls": {
+                  "enabled": true,
+                  "server_name": "addons.mozilla.org",
+                  "reality": {
+                      "enabled": true,
+                      "handshake": {
+                          "server": "addons.mozilla.org",
+                          "server_port": 443
                       },
-                      "private_key":"${REALITY_PRIVATE}",
-                      "short_id":[
+                      "private_key": "${REALITY_PRIVATE}",
+                      "short_id": [
                           ""
                       ]
                   }
               },
-              "multiplex":{
-                  "enabled":true,
-                  "padding":true,
-                  "brutal":{
-                      "enabled":true,
-                      "up_mbps":1000,
-                      "down_mbps":1000
+              "multiplex": {
+                  "enabled": true,
+                  "padding": true,
+                  "brutal": {
+                      "enabled": true,
+                      "up_mbps": 1000,
+                      "down_mbps": 1000
                   }
               }
           }
@@ -313,26 +307,26 @@ EOF
   {
       "inbounds":[
           {
-              "type":"hysteria2",
-              "tag":"${NODE_NAME} hysteria2",
-              "listen":"::",
-              "listen_port":${PORT_HYSTERIA2},
+              "type": "hysteria2",
+              "tag": "${NODE_NAME} hysteria2",
+              "listen": "::",
+              "listen_port": ${PORT_HYSTERIA2},
               "up_mbps": 100,
               "down_mbps": 100,
-              "users":[
+              "users": [
                   {
-                      "password":"${UUID}"
+                      "password": "${UUID}"
                   }
               ],
-              "ignore_client_bandwidth":true,
-              "tls":{
-                  "enabled":true,
-                  "server_name":"",
+              "ignore_client_bandwidth": true,
+              "tls": {
+                  "enabled": true,
+                  "server_name": "",
                   "alpn": ["h3"],
-                  "certificate_path":"$WORK_DIR/cert/cert.pem",
-                  "key_path":"$WORK_DIR/cert/private.key",
-                  "min_version":"1.3",
-                  "max_version":"1.3"
+                  "certificate_path": "$WORK_DIR/cert/cert.pem",
+                  "key_path": "$WORK_DIR/cert/private.key",
+                  "min_version": "1.3",
+                  "max_version": "1.3"
               }
           }
       ]
@@ -341,25 +335,25 @@ EOF
 
   [ "${TUIC}" = 'true' ] && ((PORT++)) && PORT_TUIC=$PORT && cat > $WORK_DIR/conf/13_tuic_inbounds.json << EOF
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"tuic",
-              "tag":"${NODE_NAME} tuic",
-              "listen":"::",
-              "listen_port":${PORT_TUIC},
-              "users":[
+              "type": "tuic",
+              "tag": "${NODE_NAME} tuic",
+              "listen": "::",
+              "listen_port": ${PORT_TUIC},
+              "users": [
                   {
-                      "uuid":"${UUID}",
-                      "password":"${UUID}"
+                      "uuid": "${UUID}",
+                      "password": "${UUID}"
                   }
               ],
               "congestion_control": "bbr",
               "zero_rtt_handshake": false,
-              "tls":{
-                  "enabled":true,
+              "tls": {
+                  "enabled": true,
                   "alpn": ["h3"],
-                  "certificate_path":"$WORK_DIR/cert/cert.pem",
-                  "key_path":"$WORK_DIR/cert/private.key"
+                  "certificate_path": "$WORK_DIR/cert/cert.pem",
+                  "key_path": "$WORK_DIR/cert/private.key"
               }
           }
       ]
@@ -368,32 +362,32 @@ EOF
 
   [ "${SHADOWTLS}" = 'true' ] && ((PORT++)) && PORT_SHADOWTLS=$PORT && cat > $WORK_DIR/conf/14_ShadowTLS_inbounds.json << EOF
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"shadowtls",
-              "tag":"${NODE_NAME} ShadowTLS",
-              "listen":"::",
-              "listen_port":${PORT_SHADOWTLS},
-              "detour":"shadowtls-in",
-              "version":3,
-              "users":[
+              "type": "shadowtls",
+              "tag": "${NODE_NAME} ShadowTLS",
+              "listen": "::",
+              "listen_port": ${PORT_SHADOWTLS},
+              "detour": "shadowtls-in",
+              "version": 3,
+              "users": [
                   {
-                      "password":"${UUID}"
+                      "password": "${UUID}"
                   }
               ],
-              "handshake":{
-                  "server":"addons.mozilla.org",
-                  "server_port":443
+              "handshake": {
+                  "server": "addons.mozilla.org",
+                  "server_port": 443
               },
-              "strict_mode":true
+              "strict_mode": true
           },
           {
-              "type":"shadowsocks",
-              "tag":"shadowtls-in",
-              "listen":"127.0.0.1",
-              "network":"tcp",
-              "method":"2022-blake3-aes-128-gcm",
-              "password":"${SHADOWTLS_PASSWORD}"
+              "type": "shadowsocks",
+              "tag": "shadowtls-in",
+              "listen": "127.0.0.1",
+              "network": "tcp",
+              "method": "2022-blake3-aes-128-gcm",
+              "password": "${SHADOWTLS_PASSWORD}"
           }
       ]
   }
@@ -401,39 +395,39 @@ EOF
 
   [ "${SHADOWTLSX}" = 'true' ] && ((PORT++)) && PORT_SHADOWTLS=$PORT && cat > $WORK_DIR/conf/14_ShadowTLS_inbounds.json << EOF
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"shadowtls",
-              "tag":"${NODE_NAME} ShadowTLS",
-              "listen":"::",
-              "listen_port":${PORT_SHADOWTLS},
-              "detour":"shadowtls-in",
-              "version":3,
-              "users":[
+              "type": "shadowtls",
+              "tag": "${NODE_NAME} ShadowTLS",
+              "listen": "::",
+              "listen_port": ${PORT_SHADOWTLS},
+              "detour": "shadowtls-in",
+              "version": 3,
+              "users": [
                   {
-                      "password":"${UUID}"
+                      "password": "${UUID}"
                   }
               ],
-              "handshake":{
-                  "server":"addons.mozilla.org",
-                  "server_port":443
+              "handshake": {
+                  "server": "addons.mozilla.org",
+                  "server_port": 443
               },
-              "strict_mode":true
+              "strict_mode": true
           },
           {
-              "type":"shadowsocks",
-              "tag":"shadowtls-in",
-              "listen":"127.0.0.1",
-              "network":"tcp",
-              "method":"2022-blake3-aes-128-gcm",
-              "password":"${SHADOWTLS_PASSWORD}",
-              "multiplex":{
-                  "enabled":true,
-                  "padding":true,
-                  "brutal":{
-                      "enabled":true,
-                      "up_mbps":1000,
-                      "down_mbps":1000
+              "type": "shadowsocks",
+              "tag": "shadowtls-in",
+              "listen": "127.0.0.1",
+              "network": "tcp",
+              "method": "2022-blake3-aes-128-gcm",
+              "password": "${SHADOWTLS_PASSWORD}",
+              "multiplex": {
+                  "enabled": true,
+                  "padding": true,
+                  "brutal": {
+                      "enabled": true,
+                      "up_mbps": 1000,
+                      "down_mbps": 1000
                   }
               }
           }
@@ -443,15 +437,15 @@ EOF
 
   [ "${SHADOWSOCKS}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/15_shadowsocks_inbounds.json << EOF
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"shadowsocks",
-              "tag":"${NODE_NAME} shadowsocks",
-              "listen":"::",
-              "listen_port":${PORT_SHADOWSOCKS},
+              "type": "shadowsocks",
+              "tag": "${NODE_NAME} shadowsocks",
+              "listen": "::",
+              "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
-              "method":"2022-blake3-aes-128-gcm",
-              "password":"${SHADOWTLS_PASSWORD}"
+              "method": "2022-blake3-aes-128-gcm",
+              "password": "${SHADOWTLS_PASSWORD}"
           }
       ]
   }
@@ -461,20 +455,20 @@ EOF
   {
       "inbounds":[
           {
-              "type":"shadowsocks",
-              "tag":"${NODE_NAME} shadowsocks",
-              "listen":"::",
-              "listen_port":${PORT_SHADOWSOCKS},
+              "type": "shadowsocks",
+              "tag": "${NODE_NAME} shadowsocks",
+              "listen": "::",
+              "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
-              "method":"2022-blake3-aes-128-gcm",
-              "password":"${SHADOWTLS_PASSWORD}",
-              "multiplex":{
-                  "enabled":true,
-                  "padding":true,
-                  "brutal":{
-                      "enabled":true,
-                      "up_mbps":1000,
-                      "down_mbps":1000
+              "method": "2022-blake3-aes-128-gcm",
+              "password": "${SHADOWTLS_PASSWORD}",
+              "multiplex": {
+                  "enabled": true,
+                  "padding": true,
+                  "brutal": {
+                      "enabled": true,
+                      "up_mbps": 1000,
+                      "down_mbps": 1000
                   }
               }
           }
@@ -484,21 +478,21 @@ EOF
 
   [ "${TROJAN}" = 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/16_trojan_inbounds.json << EOF
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"trojan",
-              "tag":"${NODE_NAME} trojan",
-              "listen":"::",
-              "listen_port":${PORT_TROJAN},
-              "users":[
+              "type": "trojan",
+              "tag": "${NODE_NAME} trojan",
+              "listen": "::",
+              "listen_port": ${PORT_TROJAN},
+              "users": [
                   {
-                      "password":"${UUID}"
+                      "password": "${UUID}"
                   }
               ],
-              "tls":{
-                  "enabled":true,
-                  "certificate_path":"$WORK_DIR/cert/cert.pem",
-                  "key_path":"$WORK_DIR/cert/private.key"
+              "tls": {
+                  "enabled": true,
+                  "certificate_path": "$WORK_DIR/cert/cert.pem",
+                  "key_path": "$WORK_DIR/cert/private.key"
               }
           }
       ]
@@ -507,29 +501,29 @@ EOF
 
   [ "${TROJANX}" = 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/16_trojan_inbounds.json << EOF
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"trojan",
-              "tag":"${NODE_NAME} trojan",
-              "listen":"::",
-              "listen_port":${PORT_TROJAN},
-              "users":[
+              "type": "trojan",
+              "tag": "${NODE_NAME} trojan",
+              "listen": "::",
+              "listen_port": ${PORT_TROJAN},
+              "users": [
                   {
-                      "password":"${UUID}"
+                      "password": "${UUID}"
                   }
               ],
-              "tls":{
-                  "enabled":true,
-                  "certificate_path":"$WORK_DIR/cert/cert.pem",
-                  "key_path":"$WORK_DIR/cert/private.key"
+              "tls": {
+                  "enabled": true,
+                  "certificate_path": "$WORK_DIR/cert/cert.pem",
+                  "key_path": "$WORK_DIR/cert/private.key"
               },
-              "multiplex":{
-                  "enabled":true,
-                  "padding":true,
-                  "brutal":{
-                      "enabled":true,
-                      "up_mbps":1000,
-                      "down_mbps":1000
+              "multiplex": {
+                  "enabled": true,
+                  "padding": true,
+                  "brutal": {
+                      "enabled": true,
+                      "up_mbps": 1000,
+                      "down_mbps": 1000
                   }
               }
           }
@@ -540,25 +534,25 @@ EOF
   [ "${VLESS_WS}" = 'true' ] && ((PORT++)) && PORT_VLESS_WS=$PORT && cat > $WORK_DIR/conf/18_vless-ws-tls_inbounds.json << EOF
   //  "CDN": "${CDN}"
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"vless",
-              "tag":"${NODE_NAME} vless-ws-tls",
-              "listen":"::",
-              "listen_port":${PORT_VLESS_WS},
-              "tcp_fast_open":false,
-              "proxy_protocol":false,
-              "users":[
+              "type": "vless",
+              "tag": "${NODE_NAME} vless-ws-tls",
+              "listen": "::",
+              "listen_port": ${PORT_VLESS_WS},
+              "tcp_fast_open": false,
+              "proxy_protocol": false,
+              "users": [
                   {
-                      "name":"sing-box",
-                      "uuid":"${UUID}"
+                      "name": "sing-box",
+                      "uuid": "${UUID}"
                   }
               ],
-              "transport":{
-                  "type":"ws",
-                  "path":"/${UUID}-vless",
-                  "max_early_data":2048,
-                  "early_data_header_name":"Sec-WebSocket-Protocol"
+              "transport": {
+                  "type": "ws",
+                  "path": "/${UUID}-vless",
+                  "max_early_data": 2048,
+                  "early_data_header_name": "Sec-WebSocket-Protocol"
               }
           }
       ]
@@ -568,33 +562,33 @@ EOF
   [ "${VLESS_WSX}" = 'true' ] && ((PORT++)) && PORT_VLESS_WS=$PORT && cat > $WORK_DIR/conf/18_vless-ws-tls_inbounds.json << EOF
   //  "CDN": "${CDN}"
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"vless",
-              "tag":"${NODE_NAME} vless-ws-tls",
-              "listen":"::",
-              "listen_port":${PORT_VLESS_WS},
-              "tcp_fast_open":false,
-              "proxy_protocol":false,
-              "users":[
+              "type": "vless",
+              "tag": "${NODE_NAME} vless-ws-tls",
+              "listen": "::",
+              "listen_port": ${PORT_VLESS_WS},
+              "tcp_fast_open": false,
+              "proxy_protocol": false,
+              "users": [
                   {
-                      "name":"sing-box",
-                      "uuid":"${UUID}"
+                      "name": "sing-box",
+                      "uuid": "${UUID}"
                   }
               ],
-              "transport":{
-                  "type":"ws",
-                  "path":"/${UUID}-vless",
-                  "max_early_data":2048,
-                  "early_data_header_name":"Sec-WebSocket-Protocol"
+              "transport": {
+                  "type": "ws",
+                  "path": "/${UUID}-vless",
+                  "max_early_data": 2048,
+                  "early_data_header_name": "Sec-WebSocket-Protocol"
               },
-              "multiplex":{
-                  "enabled":true,
-                  "padding":true,
-                  "brutal":{
-                      "enabled":true,
-                      "up_mbps":1000,
-                      "down_mbps":1000
+              "multiplex": {
+                  "enabled": true,
+                  "padding": true,
+                  "brutal": {
+                      "enabled": true,
+                      "up_mbps": 1000,
+                      "down_mbps": 1000
                   }
               }
           }
@@ -605,28 +599,28 @@ EOF
   [ "${H2_REALITY}" = 'true' ] && ((PORT++)) && PORT_H2_REALITY=$PORT && cat > $WORK_DIR/conf/19_h2-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"vless",
-              "tag":"${NODE_NAME} h2-reality",
-              "listen":"::",
-              "listen_port":${PORT_H2_REALITY},
-              "users":[
+              "type": "vless",
+              "tag": "${NODE_NAME} h2-reality",
+              "listen": "::",
+              "listen_port": ${PORT_H2_REALITY},
+              "users": [
                   {
-                      "uuid":"${UUID}"
+                      "uuid": "${UUID}"
                   }
               ],
-              "tls":{
-                  "enabled":true,
-                  "server_name":"addons.mozilla.org",
-                  "reality":{
-                      "enabled":true,
-                      "handshake":{
-                          "server":"addons.mozilla.org",
-                          "server_port":443
+              "tls": {
+                  "enabled": true,
+                  "server_name": "addons.mozilla.org",
+                  "reality": {
+                      "enabled": true,
+                      "handshake": {
+                          "server": "addons.mozilla.org",
+                          "server_port": 443
                       },
-                      "private_key":"${REALITY_PRIVATE}",
-                      "short_id":[
+                      "private_key": "${REALITY_PRIVATE}",
+                      "short_id": [
                           ""
                       ]
                   }
@@ -642,28 +636,28 @@ EOF
   [ "${H2_REALITYX}" = 'true' ] && ((PORT++)) && PORT_H2_REALITY=$PORT && cat > $WORK_DIR/conf/19_h2-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"vless",
-              "tag":"${NODE_NAME} h2-reality",
-              "listen":"::",
-              "listen_port":${PORT_H2_REALITY},
-              "users":[
+              "type": "vless",
+              "tag": "${NODE_NAME} h2-reality",
+              "listen": "::",
+              "listen_port": ${PORT_H2_REALITY},
+              "users": [
                   {
-                      "uuid":"${UUID}"
+                      "uuid": "${UUID}"
                   }
               ],
-              "tls":{
-                  "enabled":true,
-                  "server_name":"addons.mozilla.org",
-                  "reality":{
-                      "enabled":true,
-                      "handshake":{
-                          "server":"addons.mozilla.org",
-                          "server_port":443
+              "tls": {
+                  "enabled": true,
+                  "server_name": "addons.mozilla.org",
+                  "reality": {
+                      "enabled": true,
+                      "handshake": {
+                          "server": "addons.mozilla.org",
+                          "server_port": 443
                       },
-                      "private_key":"${REALITY_PRIVATE}",
-                      "short_id":[
+                      "private_key": "${REALITY_PRIVATE}",
+                      "short_id": [
                           ""
                       ]
                   }
@@ -671,13 +665,13 @@ EOF
               "transport": {
                   "type": "http"
               },
-              "multiplex":{
-                  "enabled":true,
-                  "padding":true,
-                  "brutal":{
-                      "enabled":true,
-                      "up_mbps":1000,
-                      "down_mbps":1000
+              "multiplex": {
+                  "enabled": true,
+                  "padding": true,
+                  "brutal": {
+                      "enabled": true,
+                      "up_mbps": 1000,
+                      "down_mbps": 1000
                   }
               }
           }
@@ -688,28 +682,28 @@ EOF
   [ "${GRPC_REALITY}" = 'true' ] && ((PORT++)) && PORT_GRPC_REALITY=$PORT && cat > $WORK_DIR/conf/20_grpc-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"vless",
-              "tag":"${NODE_NAME} grpc-reality",
-              "listen":"::",
-              "listen_port":${PORT_GRPC_REALITY},
-              "users":[
+              "type": "vless",
+              "tag": "${NODE_NAME} grpc-reality",
+              "listen": "::",
+              "listen_port": ${PORT_GRPC_REALITY},
+              "users": [
                   {
-                      "uuid":"${UUID}"
+                      "uuid": "${UUID}"
                   }
               ],
-              "tls":{
-                  "enabled":true,
-                  "server_name":"addons.mozilla.org",
-                  "reality":{
-                      "enabled":true,
-                      "handshake":{
-                          "server":"addons.mozilla.org",
-                          "server_port":443
+              "tls": {
+                  "enabled": true,
+                  "server_name": "addons.mozilla.org",
+                  "reality": {
+                      "enabled": true,
+                      "handshake": {
+                          "server": "addons.mozilla.org",
+                          "server_port": 443
                       },
-                      "private_key":"${REALITY_PRIVATE}",
-                      "short_id":[
+                      "private_key": "${REALITY_PRIVATE}",
+                      "short_id": [
                           ""
                       ]
                   }
@@ -726,28 +720,28 @@ EOF
   [ "${GRPC_REALITYX}" = 'true' ] && ((PORT++)) && PORT_GRPC_REALITY=$PORT && cat > $WORK_DIR/conf/20_grpc-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
   {
-      "inbounds":[
+      "inbounds": [
           {
-              "type":"vless",
-              "tag":"${NODE_NAME} grpc-reality",
-              "listen":"::",
-              "listen_port":${PORT_GRPC_REALITY},
-              "users":[
+              "type": "vless",
+              "tag": "${NODE_NAME} grpc-reality",
+              "listen": "::",
+              "listen_port": ${PORT_GRPC_REALITY},
+              "users": [
                   {
-                      "uuid":"${UUID}"
+                      "uuid": "${UUID}"
                   }
               ],
-              "tls":{
-                  "enabled":true,
-                  "server_name":"addons.mozilla.org",
-                  "reality":{
-                      "enabled":true,
-                      "handshake":{
-                          "server":"addons.mozilla.org",
-                          "server_port":443
+              "tls": {
+                  "enabled": true,
+                  "server_name": "addons.mozilla.org",
+                  "reality": {
+                      "enabled": true,
+                      "handshake": {
+                          "server": "addons.mozilla.org",
+                          "server_port": 443
                       },
-                      "private_key":"${REALITY_PRIVATE}",
-                      "short_id":[
+                      "private_key": "${REALITY_PRIVATE}",
+                      "short_id": [
                           ""
                       ]
                   }
@@ -756,13 +750,13 @@ EOF
                   "type": "grpc",
                   "service_name": "grpc"
               },
-              "multiplex":{
-                  "enabled":true,
-                  "padding":true,
-                  "brutal":{
-                      "enabled":true,
-                      "up_mbps":1000,
-                      "down_mbps":1000
+              "multiplex": {
+                  "enabled": true,
+                  "padding": true,
+                  "brutal": {
+                      "enabled": true,
+                      "up_mbps": 1000,
+                      "down_mbps": 1000
                   }
               }
           }
@@ -936,9 +930,9 @@ stdout_logfile=/dev/null
   local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
   local NODE_REPLACE+="\"${NODE_NAME} http-direct\","
   
-  [ "${HTTP_DIRECT_SNIFF}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct-sniff\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT_SNIFF}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
-  local NODE_REPLACE+="\"${NODE_NAME} http-direct-sniff\","
+  [ "${HTTP_DIRECT_DETOUR}" = 'true' ] &&
+  local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct-detour\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT_DETOUR}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
+  local NODE_REPLACE+="\"${NODE_NAME} http-direct-detour\","
 
   [ "${XTLS_REALITY}" = 'true' ] &&
   local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} xtls-reality\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_XTLS_REALITY}, \"uuid\":\"${UUID}\", \"flow\":\"\", \"packet_encoding\":\"xudp\", \"tls\":{ \"enabled\":true, \"server_name\":\"addons.mozilla.org\", \"utls\":{ \"enabled\":true, \"fingerprint\":\"chrome\" }, \"reality\":{ \"enabled\":true, \"public_key\":\"${REALITY_PUBLIC}\", \"short_id\":\"\" } } }," &&
