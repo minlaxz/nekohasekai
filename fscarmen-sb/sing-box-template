@@ -25,7 +25,6 @@
         "address": "quic://dns.adguard.com",
         "address_resolver": "dns-local",
         "address_strategy": "ipv4_only",
-        "strategy": "ipv4_only",
         "detour": "direct"
       },
       {
@@ -58,12 +57,16 @@
           }
         ],
         "disable_cache": true,
-        "server": "dns-block"
+        "action": "reject",
+        "method": "default",
+        "no_drop": false
       }
     ],
-    "independent_cache": true,
+    "final": "dns-remote",
     "strategy": "ipv4_only",
-    "final": "dns-remote"
+    "disable_cache": false,
+    "disable_expire": false,
+    "independent_cache": false
   },
   "inbounds": [
     {
@@ -71,7 +74,10 @@
       "tag": "tun-in",
       "domain_strategy": "ipv4_only",
       "interface_name": "tun0",
-      "address": ["10.69.69.0/28", "fd00::1/126"],
+      "address": [
+        "10.69.69.0/28",
+        "fd00::1/126"
+      ],
       "mtu": 1400,
       "auto_route": true,
       "strict_route": true,
@@ -100,7 +106,255 @@
     }
   ],
   "outbounds": [
-    "<INBOUND_REPLACE>",
+    {
+      "type": "vless",
+      "tag": "sing-box xtls-reality",
+      "server": "13.229.81.204",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8803,
+      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "flow": "",
+      "packet_encoding": "xudp",
+      "tls": {
+        "enabled": true,
+        "server_name": "addons.mozilla.org",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "5gDy1Y0kEngQptkp5DT85lOLZQ3s82jzQERlsGJeNhQ",
+          "short_id": ""
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "protocol": "h2mux",
+        "max_connections": 8,
+        "min_streams": 16,
+        "padding": true,
+        "brutal": {
+          "enabled": true,
+          "up_mbps": 1000,
+          "down_mbps": 1000
+        }
+      }
+    },
+    {
+      "type": "hysteria2",
+      "tag": "sing-box hysteria2",
+      "server": "13.229.81.204",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8804,
+      "up_mbps": 20,
+      "down_mbps": 20,
+      "password": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "tls": {
+        "enabled": true,
+        "insecure": true,
+        "server_name": "",
+        "alpn": [
+          "h3"
+        ]
+      }
+    },
+    {
+      "type": "tuic",
+      "tag": "sing-box tuic",
+      "server": "13.229.81.204",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8805,
+      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "password": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "congestion_control": "bbr",
+      "udp_relay_mode": "native",
+      "zero_rtt_handshake": false,
+      "heartbeat": "10s",
+      "tls": {
+        "enabled": true,
+        "insecure": true,
+        "server_name": "",
+        "alpn": [
+          "h3"
+        ]
+      }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "sing-box ShadowTLS",
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "26pG9+YxbEqlV3gXZwL/lg==",
+      "detour": "shadowtls-out",
+      "udp_over_tcp": false,
+      "multiplex": {
+        "enabled": true,
+        "protocol": "h2mux",
+        "max_connections": 8,
+        "min_streams": 16,
+        "padding": true,
+        "brutal": {
+          "enabled": true,
+          "up_mbps": 1000,
+          "down_mbps": 1000
+        }
+      }
+    },
+    {
+      "type": "shadowtls",
+      "tag": "shadowtls-out",
+      "server": "13.229.81.204",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8806,
+      "version": 3,
+      "password": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "tls": {
+        "enabled": true,
+        "server_name": "addons.mozilla.org",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "sing-box shadowsocks",
+      "server": "13.229.81.204",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8807,
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "26pG9+YxbEqlV3gXZwL/lg==",
+      "multiplex": {
+        "enabled": true,
+        "protocol": "h2mux",
+        "max_connections": 8,
+        "min_streams": 16,
+        "padding": true,
+        "brutal": {
+          "enabled": true,
+          "up_mbps": 1000,
+          "down_mbps": 1000
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "sing-box trojan",
+      "server": "13.229.81.204",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8808,
+      "password": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "tls": {
+        "enabled": true,
+        "insecure": true,
+        "server_name": "",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "protocol": "h2mux",
+        "max_connections": 8,
+        "min_streams": 16,
+        "padding": true,
+        "brutal": {
+          "enabled": true,
+          "up_mbps": 1000,
+          "down_mbps": 1000
+        }
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "sing-box vless-ws-tls",
+      "server": "www.csgo.com",
+      "domain_strategy": "ipv4_only",
+      "server_port": 443,
+      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "tls": {
+        "enabled": true,
+        "server_name": "min.minlaxz.site",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/abcd1234-5678-90ab-cdef-1234567890ff-vless",
+        "headers": {
+          "Host": "min.minlaxz.site"
+        },
+        "max_early_data": 2048,
+        "early_data_header_name": "Sec-WebSocket-Protocol"
+      },
+      "multiplex": {
+        "enabled": true,
+        "protocol": "h2mux",
+        "max_streams": 16,
+        "padding": true,
+        "brutal": {
+          "enabled": true,
+          "up_mbps": 1000,
+          "down_mbps": 1000
+        }
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "sing-box h2-reality",
+      "server": "13.229.81.204",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8810,
+      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "tls": {
+        "enabled": true,
+        "server_name": "addons.mozilla.org",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "5gDy1Y0kEngQptkp5DT85lOLZQ3s82jzQERlsGJeNhQ",
+          "short_id": ""
+        }
+      },
+      "packet_encoding": "xudp",
+      "transport": {
+        "type": "http"
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "sing-box grpc-reality",
+      "server": "13.229.81.204",
+      "domain_strategy": "ipv4_only",
+      "server_port": 8811,
+      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
+      "tls": {
+        "enabled": true,
+        "server_name": "addons.mozilla.org",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "5gDy1Y0kEngQptkp5DT85lOLZQ3s82jzQERlsGJeNhQ",
+          "short_id": ""
+        }
+      },
+      "packet_encoding": "xudp",
+      "transport": {
+        "type": "grpc",
+        "service_name": "grpc"
+      }
+    },
+
     {
       "type": "urltest",
       "tag": "Auto",
@@ -165,25 +419,9 @@
     {
       "tag": "direct",
       "type": "direct"
-    },
-    {
-      "tag": "block",
-      "type": "block"
-    },
-    {
-      "tag": "dns",
-      "type": "dns"
     }
   ],
   "route": {
-    "geoip": {
-      "download_url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geoip@release/geoip.db",
-      "download_detour": "sing-box hysteria2"
-    },
-    "geosite": {
-      "download_url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@release/geosite.db",
-      "download_detour": "sing-box hysteria2"
-    },
     "rule_set": [
       {
         "tag": "geosite-category-ads-all",
@@ -277,29 +515,7 @@
     "rules": [
       {
         "protocol": "dns",
-        "outbound": "dns"
-      },
-      {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "rule_set": "geosite-category-ads-all"
-          },
-          {
-            "domain_regex": "^stun\\..+"
-          },
-          {
-            "domain_keyword": [
-              "stun",
-              "httpdns"
-            ]
-          },
-          {
-            "protocol": "stun"
-          }
-        ],
-        "outbound": "block"
+        "action": "hijack-dns"
       },
       {
         "type": "logical",
@@ -309,6 +525,7 @@
             "rule_set": "geosite-category-porn"
           }
         ],
+        "action": "route",
         "outbound": "Options P0rn"
       },
       {
@@ -345,13 +562,24 @@
             ]
           }
         ],
+        "action": "route",
         "outbound": "Registered"
       },
       {
-        "rule_set": [
-          "geosite-private",
-          "geoip-private"
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": [
+              "geosite-private",
+              "geoip-private",
+              "geoip-mm"
+            ],
+            "ip_is_private": true,
+            "source_ip_is_private": true
+          }
         ],
+        "action": "route",
         "outbound": "direct"
       }
     ],
