@@ -98,14 +98,14 @@ EOF
               "outbound": "dns-out"
             },
             {
-              "inbound": "${NODE_NAME} http-direct",
+              "inbound": "${NODE_NAME} xtls-reality",
               "action": "resolve",
               "strategy": "ipv4_only"
             },
             {
               "inbound": "${NODE_NAME} http-direct",
-              "action": "sniff",
-              "timeout": "1s"
+              "action": "resolve",
+              "strategy": "ipv4_only"
             },
             {
               "inbound": "${NODE_NAME} socks-direct",
@@ -119,6 +119,51 @@ EOF
             },
             {
               "inbound": "${NODE_NAME} hysteria2",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} tuic",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} tuic",
+              "action": "sniff",
+              "timeout": "1s"
+            },
+            {
+              "inbound": "${NODE_NAME} ShadowTLS",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} ShadowTLS",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} shadowsocks",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} trojan",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} vless-ws-tls",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} h2-reality",
+              "action": "resolve",
+              "strategy": "ipv4_only"
+            },
+            {
+              "inbound": "${NODE_NAME} grpc-reality",
               "action": "resolve",
               "strategy": "ipv4_only"
             }
@@ -256,9 +301,7 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -315,9 +358,7 @@ EOF
                   "alpn": ["h3"],
                   "certificate_path":"$WORK_DIR/cert/cert.pem",
                   "key_path":"$WORK_DIR/cert/private.key"
-              },
-              "sniff":true,
-              "sniff_override_destination":true
+              }
           }
       ]
   }
@@ -342,9 +383,7 @@ EOF
                   "server":"addons.mozilla.org",
                   "server_port":443
               },
-              "strict_mode":true,
-              "sniff":false,
-              "sniff_override_destination":false
+              "strict_mode":true
           },
           {
               "type":"shadowsocks",
@@ -377,9 +416,7 @@ EOF
                   "server":"addons.mozilla.org",
                   "server_port":443
               },
-              "strict_mode":true,
-              "sniff":false,
-              "sniff_override_destination":false
+              "strict_mode":true
           },
           {
               "type":"shadowsocks",
@@ -412,9 +449,7 @@ EOF
               "listen_port":${PORT_SHADOWSOCKS},
               "network": "tcp",
               "method":"2022-blake3-aes-128-gcm",
-              "password":"${SHADOWTLS_PASSWORD}",
-              "sniff":false,
-              "sniff_override_destination":false
+              "password":"${SHADOWTLS_PASSWORD}"
           }
       ]
   }
@@ -439,9 +474,7 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -464,9 +497,7 @@ EOF
                   "enabled":true,
                   "certificate_path":"$WORK_DIR/cert/cert.pem",
                   "key_path":"$WORK_DIR/cert/private.key"
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -498,9 +529,7 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -528,9 +557,7 @@ EOF
                   "path":"/${UUID}-vless",
                   "max_early_data":2048,
                   "early_data_header_name":"Sec-WebSocket-Protocol"
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -567,9 +594,7 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -606,9 +631,7 @@ EOF
               },
               "transport": {
                   "type": "http"
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -654,9 +677,7 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -694,9 +715,7 @@ EOF
               "transport": {
                   "type": "grpc",
                   "service_name": "grpc"
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
@@ -743,9 +762,7 @@ EOF
                       "up_mbps":1000,
                       "down_mbps":1000
                   }
-              },
-              "sniff":false,
-              "sniff_override_destination":false
+              }
           }
       ]
   }
