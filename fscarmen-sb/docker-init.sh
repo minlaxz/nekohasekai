@@ -100,7 +100,7 @@ EOF
               "strategy": "ipv4_only"
             },
             {
-              "inbound": "${NODE_NAME} http-direct-detour",
+              "inbound": "${NODE_NAME} socks-direct",
               "action": "resolve",
               "strategy": "ipv4_only"
             },
@@ -113,11 +113,6 @@ EOF
               "inbound": "${NODE_NAME} tuic",
               "action": "resolve",
               "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} tuic",
-              "action": "sniff",
-              "timeout": "1s"
             },
             {
               "inbound": "${NODE_NAME} ShadowTLS",
@@ -153,14 +148,6 @@ EOF
               "inbound": "${NODE_NAME} grpc-reality",
               "action": "resolve",
               "strategy": "ipv4_only"
-            },
-            {
-              "protocol": "dns",
-              "action": "hijack-dns"
-            },
-            {
-              "ip_is_private": true,
-              "outbound": "direct-out"
             }
           ]
       }
@@ -179,6 +166,7 @@ EOF
 EOF
 
   cat > $WORK_DIR/conf/04_dns.json << EOF
+  // Not using sniff, so there's no effect of the following settings
   {
       "dns":{
           "servers": [
@@ -206,18 +194,15 @@ EOF
   }
 EOF
 
-  [ "${HTTP_DIRECT_DETOUR}" = 'true' ] && ((PORT++)) && PORT_HTTP_DIRECT_DETOUR=$PORT && cat > $WORK_DIR/conf/10_http_direct_detour_inbounds.json << EOF
+  [ "${SOCKS_DIRECT}" = 'true' ] && ((PORT++)) && PORT_SOCKS_DIRECT=$PORT && cat > $WORK_DIR/conf/10_socks_direct_detour_inbounds.json << EOF
   {
       "inbounds":[
           {
-              "type": "http",
-              "tag": "${NODE_NAME} http-direct-detour",
+              "type": "socks",
+              "tag": "${NODE_NAME} socks-direct",
               "listen": "::",
-              "listen_port": ${PORT_HTTP_DIRECT_DETOUR},
-              "detour": "${NODE_NAME} xtls-reality",
-              "users": [],
-              "tls": {},
-              "set_system_proxy": false
+              "listen_port": ${PORT_SCOKS_DIRECT},
+              "users": []
           }
       ]
   }
@@ -930,9 +915,9 @@ stdout_logfile=/dev/null
   local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
   local NODE_REPLACE+="\"${NODE_NAME} http-direct\","
   
-  [ "${HTTP_DIRECT_DETOUR}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct-detour\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT_DETOUR}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
-  local NODE_REPLACE+="\"${NODE_NAME} http-direct-detour\","
+  [ "${SOCKS_DIRECT}" = 'true' ] &&
+  local INBOUND_REPLACE+=" { \"type\": \"socks\", \"tag\": \"${NODE_NAME} socks-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_SOCKS_DIRECT}, \"version\":\"5\", \"network\":\"udp\" }," &&
+  local NODE_REPLACE+="\"${NODE_NAME} socks-direct-detour\","
 
   [ "${XTLS_REALITY}" = 'true' ] &&
   local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} xtls-reality\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_XTLS_REALITY}, \"uuid\":\"${UUID}\", \"flow\":\"\", \"packet_encoding\":\"xudp\", \"tls\":{ \"enabled\":true, \"server_name\":\"addons.mozilla.org\", \"utls\":{ \"enabled\":true, \"fingerprint\":\"chrome\" }, \"reality\":{ \"enabled\":true, \"public_key\":\"${REALITY_PUBLIC}\", \"short_id\":\"\" } } }," &&
