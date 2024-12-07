@@ -1,426 +1,73 @@
 {
   "log": {
     "level": "warn",
-    "timestamp": false
-  },
-  "experimental": {
-    "clash_api": {
-      "external_controller": "0.0.0.0:6969",
-      "external_ui": "ui",
-      "external_ui_download_url": "https://github.com/metacubex/metacubexd/archive/gh-pages.zip",
-      "external_ui_download_detour": "sing-box hysteria2",
-      "secret": "P@ssw0rd1234",
-      "default_mode": "rule"
-    },
-    "cache_file": {
-      "enabled": true,
-      "path": "cache.db",
-      "store_fakeip": true
-    }
+    "timestamp": true
   },
   "dns": {
     "servers": [
       {
-        "tag": "dns-remote",
+        "tag": "dns-proxy",
         "address": "quic://dns.adguard.com",
-        "address_resolver": "dns-local",
+        "address_resolver": "dns-direct",
         "address_strategy": "ipv4_only",
+        "detour": "Auto"
+      },
+      {
+        "tag": "dns-direct",
+        "address": "94.140.14.14",
         "detour": "direct"
       },
       {
-        "address": "1.1.1.1",
-        "detour": "direct",
-        "tag": "dns-cloudflare"
+        "tag": "dns-refused",
+        "address": "rcode://refused"
       },
       {
-        "address": "local",
-        "detour": "direct",
-        "tag": "dns-local"
-      },
-      {
-        "address": "rcode://name_error",
-        "tag": "dns-block"
+        "tag": "dns-fakeip",
+        "address": "fakeip"
       }
     ],
     "rules": [
       {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "rule_set": "geosite-category-ads-all"
-          },
-          {
-            "domain_regex": [
-              "^stun\\..+"
-            ]
-          }
+        "outbound": "any",
+        "server": "dns-direct"
+      },
+      {
+        "query_type": [
+          "A",
+          "AAAA"
         ],
-        "disable_cache": true,
-        "action": "reject",
-        "method": "default",
-        "no_drop": false
+        "server": "dns-fakeip"
+      },
+      {
+        "rule_set": "geosite-category-ads-all",
+        "query_type": [
+          "CNAME"
+        ],
+        "server": "dns-proxy"
+      },
+      {
+        "query_type": [
+          "A",
+          "AAAA",
+          "CNAME"
+        ],
+        "invert": true,
+        "server": "dns-refused",
+        "action": "route-options",
+        "disable_cache": true
       }
     ],
-    "final": "dns-remote",
+    "fakeip": {
+      "enabled": true,
+      "inet4_range": "198.18.0.0/15",
+      "inet6_range": "fc00::/18"
+    },
+    "final": "dns-direct",
     "strategy": "ipv4_only",
     "disable_cache": false,
     "disable_expire": false,
-    "independent_cache": false
+    "independent_cache": true
   },
-  "inbounds": [
-    {
-      "type": "tun",
-      "tag": "tun-in",
-      "domain_strategy": "ipv4_only",
-      "interface_name": "tun0",
-      "address": [
-        "10.69.69.0/28",
-        "fd00::1/126"
-      ],
-      "mtu": 1400,
-      "auto_route": true,
-      "strict_route": true,
-      "stack": "mixed",
-      "sniff": true,
-      "sniff_override_destination": true
-    },
-    {
-      "type": "mixed",
-      "tag": "mixed-in",
-      "domain_strategy": "ipv4_only",
-      "listen": "0.0.0.0",
-      "listen_port": 2080,
-      "tcp_fast_open": false,
-      "set_system_proxy": false,
-      "sniff": true,
-      "sniff_override_destination": true
-    },
-    {
-      "type": "direct",
-      "tag": "dns-in",
-      "listen": "0.0.0.0",
-      "listen_port": 6450,
-      "override_address": "8.8.8.8",
-      "override_port": 53
-    }
-  ],
-  "outbounds": [
-    {
-      "type": "vless",
-      "tag": "sing-box xtls-reality",
-      "server": "13.229.81.204",
-      "domain_strategy": "ipv4_only",
-      "server_port": 8803,
-      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "flow": "",
-      "packet_encoding": "xudp",
-      "tls": {
-        "enabled": true,
-        "server_name": "addons.mozilla.org",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-        "reality": {
-          "enabled": true,
-          "public_key": "5gDy1Y0kEngQptkp5DT85lOLZQ3s82jzQERlsGJeNhQ",
-          "short_id": ""
-        }
-      },
-      "multiplex": {
-        "enabled": true,
-        "protocol": "h2mux",
-        "max_connections": 8,
-        "min_streams": 16,
-        "padding": true,
-        "brutal": {
-          "enabled": true,
-          "up_mbps": 1000,
-          "down_mbps": 1000
-        }
-      }
-    },
-    {
-      "type": "hysteria2",
-      "tag": "sing-box hysteria2",
-      "server": "13.229.81.204",
-      "domain_strategy": "ipv4_only",
-      "server_port": 8804,
-      "up_mbps": 20,
-      "down_mbps": 20,
-      "password": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "tls": {
-        "enabled": true,
-        "insecure": true,
-        "server_name": "",
-        "alpn": [
-          "h3"
-        ]
-      }
-    },
-    {
-      "type": "tuic",
-      "tag": "sing-box tuic",
-      "server": "13.229.81.204",
-      "domain_strategy": "ipv4_only",
-      "server_port": 8805,
-      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "password": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "congestion_control": "bbr",
-      "udp_relay_mode": "native",
-      "zero_rtt_handshake": false,
-      "heartbeat": "10s",
-      "tls": {
-        "enabled": true,
-        "insecure": true,
-        "server_name": "",
-        "alpn": [
-          "h3"
-        ]
-      }
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "sing-box ShadowTLS",
-      "method": "2022-blake3-aes-128-gcm",
-      "password": "26pG9+YxbEqlV3gXZwL/lg==",
-      "detour": "shadowtls-out",
-      "udp_over_tcp": false,
-      "multiplex": {
-        "enabled": true,
-        "protocol": "h2mux",
-        "max_connections": 8,
-        "min_streams": 16,
-        "padding": true,
-        "brutal": {
-          "enabled": true,
-          "up_mbps": 1000,
-          "down_mbps": 1000
-        }
-      }
-    },
-    {
-      "type": "shadowtls",
-      "tag": "shadowtls-out",
-      "server": "13.229.81.204",
-      "domain_strategy": "ipv4_only",
-      "server_port": 8806,
-      "version": 3,
-      "password": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "tls": {
-        "enabled": true,
-        "server_name": "addons.mozilla.org",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        }
-      }
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "sing-box shadowsocks",
-      "server": "13.229.81.204",
-      "domain_strategy": "ipv4_only",
-      "server_port": 8807,
-      "method": "2022-blake3-aes-128-gcm",
-      "password": "26pG9+YxbEqlV3gXZwL/lg==",
-      "multiplex": {
-        "enabled": true,
-        "protocol": "h2mux",
-        "max_connections": 8,
-        "min_streams": 16,
-        "padding": true,
-        "brutal": {
-          "enabled": true,
-          "up_mbps": 1000,
-          "down_mbps": 1000
-        }
-      }
-    },
-    {
-      "type": "trojan",
-      "tag": "sing-box trojan",
-      "server": "13.229.81.204",
-      "domain_strategy": "ipv4_only",
-      "server_port": 8808,
-      "password": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "tls": {
-        "enabled": true,
-        "insecure": true,
-        "server_name": "",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        }
-      },
-      "multiplex": {
-        "enabled": true,
-        "protocol": "h2mux",
-        "max_connections": 8,
-        "min_streams": 16,
-        "padding": true,
-        "brutal": {
-          "enabled": true,
-          "up_mbps": 1000,
-          "down_mbps": 1000
-        }
-      }
-    },
-    {
-      "type": "vless",
-      "tag": "sing-box vless-ws-tls",
-      "server": "www.csgo.com",
-      "domain_strategy": "ipv4_only",
-      "server_port": 443,
-      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "tls": {
-        "enabled": true,
-        "server_name": "min.minlaxz.site",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        }
-      },
-      "transport": {
-        "type": "ws",
-        "path": "/abcd1234-5678-90ab-cdef-1234567890ff-vless",
-        "headers": {
-          "Host": "min.minlaxz.site"
-        },
-        "max_early_data": 2048,
-        "early_data_header_name": "Sec-WebSocket-Protocol"
-      },
-      "multiplex": {
-        "enabled": true,
-        "protocol": "h2mux",
-        "max_streams": 16,
-        "padding": true,
-        "brutal": {
-          "enabled": true,
-          "up_mbps": 1000,
-          "down_mbps": 1000
-        }
-      }
-    },
-    {
-      "type": "vless",
-      "tag": "sing-box h2-reality",
-      "server": "13.229.81.204",
-      "domain_strategy": "ipv4_only",
-      "server_port": 8810,
-      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "tls": {
-        "enabled": true,
-        "server_name": "addons.mozilla.org",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-        "reality": {
-          "enabled": true,
-          "public_key": "5gDy1Y0kEngQptkp5DT85lOLZQ3s82jzQERlsGJeNhQ",
-          "short_id": ""
-        }
-      },
-      "packet_encoding": "xudp",
-      "transport": {
-        "type": "http"
-      }
-    },
-    {
-      "type": "vless",
-      "tag": "sing-box grpc-reality",
-      "server": "13.229.81.204",
-      "domain_strategy": "ipv4_only",
-      "server_port": 8811,
-      "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
-      "tls": {
-        "enabled": true,
-        "server_name": "addons.mozilla.org",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-        "reality": {
-          "enabled": true,
-          "public_key": "5gDy1Y0kEngQptkp5DT85lOLZQ3s82jzQERlsGJeNhQ",
-          "short_id": ""
-        }
-      },
-      "packet_encoding": "xudp",
-      "transport": {
-        "type": "grpc",
-        "service_name": "grpc"
-      }
-    },
-
-    {
-      "type": "urltest",
-      "tag": "Auto",
-      "outbounds": [
-        "sing-box xtls-reality",
-        "sing-box hysteria2",
-        "sing-box ShadowTLS",
-        "sing-box shadowsocks",
-        "sing-box trojan",
-        "sing-box h2-reality",
-        "sing-box grpc-reality"
-      ],
-      "url": "http://www.gstatic.com/generate_204",
-      "interval": "1m",
-      "tolerance": 50
-    },
-    {
-      "type": "selector",
-      "tag": "Manual",
-      "outbounds": [
-        "sing-box xtls-reality",
-        "sing-box hysteria2",
-        "sing-box tuic",
-        "sing-box ShadowTLS",
-        "sing-box shadowsocks",
-        "sing-box trojan",
-        "sing-box h2-reality",
-        "sing-box grpc-reality"
-      ],
-      "default": "sing-box hysteria2"
-    },
-    {
-      "type": "selector",
-      "tag": "Registered",
-      "outbounds": [
-        "direct",
-        "Auto",
-        "Manual"
-      ],
-      "default": "Auto"
-    },
-    {
-      "type": "selector",
-      "tag": "Unregistered",
-      "outbounds": [
-        "direct",
-        "Auto",
-        "Manual"
-      ],
-      "default": "Auto"
-    },
-    {
-      "type": "selector",
-      "tag": "Options P0rn",
-      "outbounds": [
-        "direct",
-        "Auto",
-        "Manual"
-      ],
-      "default": "direct"
-    },
-    {
-      "tag": "direct",
-      "type": "direct"
-    }
-  ],
   "route": {
     "rule_set": [
       {
@@ -504,6 +151,14 @@
         "update_interval": "1d"
       },
       {
+        "tag": "geosite-bank-mm",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-bank-mm.json",
+        "download_detour": "sing-box hysteria2",
+        "update_interval": "1d"
+      },
+      {
         "tag": "geoip-jp",
         "type": "remote",
         "format": "binary",
@@ -514,8 +169,26 @@
     ],
     "rules": [
       {
+        "inbound": "tun-in",
+        "action": "sniff"
+      },
+      {
+        "inbound": "mixed-in",
+        "action": "sniff"
+      },
+      {
         "protocol": "dns",
         "action": "hijack-dns"
+      },
+      {
+        "port": 853,
+        "network": "tcp",
+        "action": "reject"
+      },
+      {
+        "port": 443,
+        "network": "udp",
+        "action": "reject"
       },
       {
         "type": "logical",
@@ -525,7 +198,6 @@
             "rule_set": "geosite-category-porn"
           }
         ],
-        "action": "route",
         "outbound": "Options P0rn"
       },
       {
@@ -562,7 +234,6 @@
             ]
           }
         ],
-        "action": "route",
         "outbound": "Registered"
       },
       {
@@ -573,18 +244,132 @@
             "rule_set": [
               "geosite-private",
               "geoip-private",
-              "geoip-mm"
+              "geoip-mm",
+              "geosite-bank-mm"
             ],
             "ip_is_private": true,
             "source_ip_is_private": true
           }
         ],
-        "action": "route",
         "outbound": "direct"
       }
     ],
     "final": "Unregistered",
-    "override_android_vpn": true,
-    "auto_detect_interface": true
+    "auto_detect_interface": true,
+    "override_android_vpn": true
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "domain_strategy": "ipv4_only",
+      "interface_name": "tun0",
+      "address": [
+        "10.69.69.0/28",
+        "fd00::1/126"
+      ],
+      "mtu": 1492,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system"
+    },
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "domain_strategy": "ipv4_only",
+      "listen": "0.0.0.0",
+      "listen_port": 2080,
+      "tcp_fast_open": false,
+      "set_system_proxy": false
+    },
+    {
+      "type": "direct",
+      "tag": "dns-in",
+      "listen": "0.0.0.0",
+      "listen_port": 6450,
+      "override_address": "8.8.8.8",
+      "override_port": 53
+    }
+  ],
+  "outbounds": [
+    "<INBOUND_REPLACE>",
+    {
+      "type": "urltest",
+      "tag": "Auto",
+      "outbounds": [
+        "sing-box xtls-reality",
+        "sing-box hysteria2",
+        "sing-box ShadowTLS",
+        "sing-box shadowsocks",
+        "sing-box trojan",
+        "sing-box h2-reality",
+        "sing-box grpc-reality"
+      ],
+      "url": "http://www.gstatic.com/generate_204",
+      "interval": "1m",
+      "tolerance": 50
+    },
+    {
+      "type": "selector",
+      "tag": "Manual",
+      "outbounds": [
+        "sing-box xtls-reality",
+        "sing-box hysteria2",
+        "sing-box tuic",
+        "sing-box ShadowTLS",
+        "sing-box shadowsocks",
+        "sing-box trojan",
+        "sing-box h2-reality",
+        "sing-box grpc-reality"
+      ],
+      "default": "sing-box hysteria2"
+    },
+    {
+      "type": "selector",
+      "tag": "Registered",
+      "outbounds": [
+        "Auto",
+        "Manual"
+      ],
+      "default": "Auto"
+    },
+    {
+      "type": "selector",
+      "tag": "Unregistered",
+      "outbounds": [
+        "direct",
+        "Auto"
+      ],
+      "default": "direct"
+    },
+    {
+      "type": "selector",
+      "tag": "Options P0rn",
+      "outbounds": [
+        "direct",
+        "Auto"
+      ],
+      "default": "direct"
+    },
+    {
+      "tag": "direct",
+      "type": "direct"
+    }
+  ],
+  "experimental": {
+    "clash_api": {
+      "external_controller": "0.0.0.0:6969",
+      "external_ui": "ui",
+      "external_ui_download_url": "https://github.com/metacubex/metacubexd/archive/gh-pages.zip",
+      "external_ui_download_detour": "sing-box hysteria2",
+      "secret": "P@ssw0rd1234",
+      "default_mode": "rule"
+    },
+    "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "store_fakeip": true,
+      "store_rdrc": true
+    }
   }
 }
