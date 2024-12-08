@@ -454,9 +454,7 @@ EOF
                   "alpn": ["h3"],
                   "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
-                  "key_path": "$WORK_DIR/cert/private.key",
-                  "min_version": "1.3",
-                  "max_version": "1.3"
+                  "key_path": "$WORK_DIR/cert/private.key"
               }
           }
       ]
@@ -481,9 +479,7 @@ EOF
                   "alpn": ["h3"],
                   "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
-                  "key_path": "$WORK_DIR/cert/private.key",
-                  "min_version": "1.3",
-                  "max_version": "1.3"
+                  "key_path": "$WORK_DIR/cert/private.key"
               },
               "multiplex": {
                   "enabled": true,
