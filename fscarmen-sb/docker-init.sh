@@ -162,7 +162,7 @@ EOF
               "listen_port": ${PORT_MIXED},
               "users": [
                     {
-                        "username" "nekoha",
+                        "username": "nekoha",
                         "password": "sekai"
                     }
               ],
