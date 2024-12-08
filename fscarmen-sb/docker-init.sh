@@ -201,7 +201,7 @@ EOF
               "type": "socks",
               "tag": "${NODE_NAME} socks-direct",
               "listen": "::",
-              "listen_port": ${PORT_SCOKS_DIRECT},
+              "listen_port": ${PORT_SOCKS_DIRECT},
               "users": []
           }
       ]
