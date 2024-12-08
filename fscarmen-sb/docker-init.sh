@@ -67,7 +67,8 @@ install_everything() {
   {
       "log": {
           "level": "warn",
-          "timestamp": true
+          "timestamp": true,
+          "output": "$WORK_DIR/sing.log"
       }
   }
 EOF
@@ -85,71 +86,27 @@ EOF
 EOF
 
   cat > $WORK_DIR/conf/02_route.json << EOF
+  // not using sniff, so there's no effect of the following settings
+  // for example route.rules
+  //  {
+  //    "inbound": "some-in",
+  //    "action": "sniff",
+  //    "timeout": "1s",
+  //  },
+  //  {
+  //    "inbound": "some-in",
+  //    "action": "resolve",
+  //    "strategy": "prefer_ipv4"
+  //  },
+  //  {
+  //    "protocol": "dns",
+  //    "action": "hijack-dns"
+  //  }
+
   {
       "route": {
           "rule_set": [],
-          "rules": [
-            {
-              "inbound": "${NODE_NAME} xtls-reality",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} http-direct",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} socks-direct",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} hysteria2",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} tuic",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} ShadowTLS",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} ShadowTLS",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} shadowsocks",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} trojan",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} vless-ws-tls",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} h2-reality",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            },
-            {
-              "inbound": "${NODE_NAME} grpc-reality",
-              "action": "resolve",
-              "strategy": "ipv4_only"
-            }
-          ]
+          "rules": []
       }
   }
 EOF
@@ -178,31 +135,41 @@ EOF
   }
 EOF
 
-  [ "${HTTP_DIRECT}" = 'true' ] && ((PORT++)) && PORT_HTTP_DIRECT=$PORT && cat > $WORK_DIR/conf/09_http_direct_inbounds.json << EOF
+  [ "${MIXED}" = 'true' ] && ((PORT++)) && PORT_MIXED=$PORT && cat > $WORK_DIR/conf/09_mixed_inbounds.json << EOF
   {
       "inbounds":[
           {
-              "type": "http",
-              "tag": "${NODE_NAME} http-direct",
-              "listen": "::",
-              "listen_port": ${PORT_HTTP_DIRECT},
+              "type": "mixed",
+              "tag": "${NODE_NAME} mixed",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_MIXED},
               "users": [],
-              "tls": {},
               "set_system_proxy": false
           }
       ]
   }
 EOF
 
-  [ "${SOCKS_DIRECT}" = 'true' ] && ((PORT++)) && PORT_SOCKS_DIRECT=$PORT && cat > $WORK_DIR/conf/10_socks_direct_detour_inbounds.json << EOF
+  [ "${NAIVE}" = 'true' ] && ((PORT++)) && PORT_NAIVE=$PORT && cat > $WORK_DIR/conf/10_naive_inbounds.json << EOF
+  //  "public_key": "${REALITY_PUBLIC}"
   {
       "inbounds":[
           {
-              "type": "socks",
-              "tag": "${NODE_NAME} socks-direct",
-              "listen": "::",
-              "listen_port": ${PORT_SOCKS_DIRECT},
-              "users": []
+              "type": "naive",
+              "tag": "${NODE_NAME} naive",
+              "network": "udp",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_MIXED},
+              "users": [],
+              "tls": {
+                  "enabled": true,
+                  "alpn": ["h3"],
+                  "server_name": "addons.mozilla.org",
+                  "certificate_path": "$WORK_DIR/cert/cert.pem",
+                  "key_path": "$WORK_DIR/cert/private.key",
+                  "min_version": "1.3",
+                  "max_version": "1.3"
+              }
           }
       ]
   }
@@ -216,7 +183,7 @@ EOF
           {
               "type": "vless",
               "tag": "${NODE_NAME} xtls-reality",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_XTLS_REALITY},
               "users": [
                   {
@@ -251,7 +218,7 @@ EOF
           {
               "type": "vless",
               "tag": "${NODE_NAME} xtls-reality",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_XTLS_REALITY},
               "users": [
                   {
@@ -294,7 +261,7 @@ EOF
           {
               "type": "hysteria2",
               "tag": "${NODE_NAME} hysteria2",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_HYSTERIA2},
               "up_mbps": 100,
               "down_mbps": 100,
@@ -306,8 +273,8 @@ EOF
               "ignore_client_bandwidth": true,
               "tls": {
                   "enabled": true,
-                  "server_name": "",
                   "alpn": ["h3"],
+                  "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
                   "key_path": "$WORK_DIR/cert/private.key",
                   "min_version": "1.3",
@@ -324,7 +291,7 @@ EOF
           {
               "type": "tuic",
               "tag": "${NODE_NAME} tuic",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_TUIC},
               "users": [
                   {
@@ -337,8 +304,11 @@ EOF
               "tls": {
                   "enabled": true,
                   "alpn": ["h3"],
+                  "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
-                  "key_path": "$WORK_DIR/cert/private.key"
+                  "key_path": "$WORK_DIR/cert/private.key",
+                  "min_version": "1.3",
+                  "max_version": "1.3"
               }
           }
       ]
@@ -351,7 +321,7 @@ EOF
           {
               "type": "shadowtls",
               "tag": "${NODE_NAME} ShadowTLS",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWTLS},
               "detour": "shadowtls-in",
               "version": 3,
@@ -384,7 +354,7 @@ EOF
           {
               "type": "shadowtls",
               "tag": "${NODE_NAME} ShadowTLS",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWTLS},
               "detour": "shadowtls-in",
               "version": 3,
@@ -426,7 +396,7 @@ EOF
           {
               "type": "shadowsocks",
               "tag": "${NODE_NAME} shadowsocks",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
               "method": "2022-blake3-aes-128-gcm",
@@ -442,7 +412,7 @@ EOF
           {
               "type": "shadowsocks",
               "tag": "${NODE_NAME} shadowsocks",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
               "method": "2022-blake3-aes-128-gcm",
@@ -467,7 +437,7 @@ EOF
           {
               "type": "trojan",
               "tag": "${NODE_NAME} trojan",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_TROJAN},
               "users": [
                   {
@@ -476,8 +446,12 @@ EOF
               ],
               "tls": {
                   "enabled": true,
+                  "alpn": ["h3"],
+                  "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
-                  "key_path": "$WORK_DIR/cert/private.key"
+                  "key_path": "$WORK_DIR/cert/private.key",
+                  "min_version": "1.3",
+                  "max_version": "1.3"
               }
           }
       ]
@@ -490,7 +464,7 @@ EOF
           {
               "type": "trojan",
               "tag": "${NODE_NAME} trojan",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_TROJAN},
               "users": [
                   {
@@ -499,8 +473,12 @@ EOF
               ],
               "tls": {
                   "enabled": true,
+                  "alpn": ["h3"],
+                  "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
-                  "key_path": "$WORK_DIR/cert/private.key"
+                  "key_path": "$WORK_DIR/cert/private.key",
+                  "min_version": "1.3",
+                  "max_version": "1.3"
               },
               "multiplex": {
                   "enabled": true,
@@ -523,7 +501,7 @@ EOF
           {
               "type": "vless",
               "tag": "${NODE_NAME} vless-ws-tls",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_VLESS_WS},
               "tcp_fast_open": false,
               "proxy_protocol": false,
@@ -551,7 +529,7 @@ EOF
           {
               "type": "vless",
               "tag": "${NODE_NAME} vless-ws-tls",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_VLESS_WS},
               "tcp_fast_open": false,
               "proxy_protocol": false,
@@ -588,7 +566,7 @@ EOF
           {
               "type": "vless",
               "tag": "${NODE_NAME} h2-reality",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_H2_REALITY},
               "users": [
                   {
@@ -625,7 +603,7 @@ EOF
           {
               "type": "vless",
               "tag": "${NODE_NAME} h2-reality",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_H2_REALITY},
               "users": [
                   {
@@ -671,7 +649,7 @@ EOF
           {
               "type": "vless",
               "tag": "${NODE_NAME} grpc-reality",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_GRPC_REALITY},
               "users": [
                   {
@@ -709,7 +687,7 @@ EOF
           {
               "type": "vless",
               "tag": "${NODE_NAME} grpc-reality",
-              "listen": "::",
+              "listen": "0.0.0.0",
               "listen_port": ${PORT_GRPC_REALITY},
               "users": [
                   {
@@ -911,14 +889,6 @@ stdout_logfile=/dev/null
   fi
 
   # 生成 Sing-box 订阅文件
-  [ "${HTTP_DIRECT}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"http\", \"tag\": \"${NODE_NAME} http-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_HTTP_DIRECT}, \"path\":\"\", \"headers\":{}, \"tls\":{} }," &&
-  local NODE_REPLACE+="\"${NODE_NAME} http-direct\","
-  
-  [ "${SOCKS_DIRECT}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"socks\", \"tag\": \"${NODE_NAME} socks-direct\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_SOCKS_DIRECT}, \"version\":\"5\", \"network\":\"udp\" }," &&
-  local NODE_REPLACE+="\"${NODE_NAME} socks-direct-detour\","
-
   [ "${XTLS_REALITY}" = 'true' ] &&
   local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} xtls-reality\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_XTLS_REALITY}, \"uuid\":\"${UUID}\", \"flow\":\"\", \"packet_encoding\":\"xudp\", \"tls\":{ \"enabled\":true, \"server_name\":\"addons.mozilla.org\", \"utls\":{ \"enabled\":true, \"fingerprint\":\"chrome\" }, \"reality\":{ \"enabled\":true, \"public_key\":\"${REALITY_PUBLIC}\", \"short_id\":\"\" } } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} xtls-reality\","
