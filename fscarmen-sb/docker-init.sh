@@ -160,7 +160,12 @@ EOF
               "network": "udp",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_MIXED},
-              "users": [],
+              "users": [
+                    {
+                        "username" "nekoha",
+                        "password": "sekai"
+                    }
+              ],
               "tls": {
                   "enabled": true,
                   "alpn": ["h3"],
