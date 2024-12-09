@@ -159,7 +159,7 @@ EOF
               "tag": "${NODE_NAME} naive",
               "network": "udp",
               "listen": "0.0.0.0",
-              "listen_port": ${PORT_MIXED},
+              "listen_port": ${PORT_NAIVE},
               "users": [
                     {
                         "username": "nekoha",
