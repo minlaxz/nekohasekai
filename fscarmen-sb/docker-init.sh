@@ -168,12 +168,10 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "alpn": ["h3"],
+                  "alpn": ["http/1.1", "h2", "h3"],
                   "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
-                  "key_path": "$WORK_DIR/cert/private.key",
-                  "min_version": "1.3",
-                  "max_version": "1.3"
+                  "key_path": "$WORK_DIR/cert/private.key"
               }
           }
       ]
@@ -278,7 +276,7 @@ EOF
               "ignore_client_bandwidth": true,
               "tls": {
                   "enabled": true,
-                  "alpn": ["h3"],
+                  "alpn": ["http/1.1", "h2", "h3"],
                   "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
                   "key_path": "$WORK_DIR/cert/private.key",
@@ -308,7 +306,7 @@ EOF
               "zero_rtt_handshake": false,
               "tls": {
                   "enabled": true,
-                  "alpn": ["h3"],
+                  "alpn": ["http/1.1", "h2", "h3"],
                   "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
                   "key_path": "$WORK_DIR/cert/private.key",
@@ -451,7 +449,7 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "alpn": ["h3"],
+                  "alpn": ["http/1.1", "h2", "h3"],
                   "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
                   "key_path": "$WORK_DIR/cert/private.key"
@@ -476,7 +474,7 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "alpn": ["h3"],
+                  "alpn": ["http/1.1", "h2", "h3"],
                   "server_name": "addons.mozilla.org",
                   "certificate_path": "$WORK_DIR/cert/cert.pem",
                   "key_path": "$WORK_DIR/cert/private.key"
