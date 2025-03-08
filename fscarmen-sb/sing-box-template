@@ -1,49 +1,28 @@
 {
-  "log": {
-    "level": "warn",
-    "timestamp": false
-  },
-  "experimental": {
-    "clash_api": {
-      "external_controller": "0.0.0.0:6969",
-      "external_ui": "ui",
-      "external_ui_download_url": "https://github.com/metacubex/metacubexd/archive/gh-pages.zip",
-      "external_ui_download_detour": "sing-box hysteria2",
-      "secret": "P@ssw0rd1234",
-      "default_mode": "rule"
-    },
-    "cache_file": {
-      "enabled": true,
-      "path": "cache.db",
-      "store_fakeip": true
-    }
-  },
   "dns": {
     "servers": [
       {
         "tag": "dns-remote",
         "address": "quic://dns.adguard.com",
-        "address_resolver": "dns-local",
+        "address_resolver": "dns-cloudflare",
         "address_strategy": "ipv4_only",
         "strategy": "ipv4_only",
         "detour": "direct"
       },
       {
-        "address": "1.1.1.1",
-        "detour": "direct",
-        "tag": "dns-cloudflare"
+        "tag": "dns-cloudflare",
+        "address": "1.1.1.1"
       },
       {
-        "address": "local",
-        "detour": "direct",
-        "tag": "dns-local"
-      },
-      {
-        "address": "rcode://name_error",
-        "tag": "dns-block"
+        "tag": "dns-block",
+        "address": "rcode://name_error"
       }
     ],
     "rules": [
+      {
+        "outbound": "any",
+        "server": "dns-remote"
+      },
       {
         "type": "logical",
         "mode": "or",
@@ -57,46 +36,35 @@
             ]
           }
         ],
-        "disable_cache": true,
+        "disable_cache": false,
         "server": "dns-block"
       }
     ],
     "independent_cache": true,
-    "strategy": "ipv4_only",
-    "final": "dns-remote"
+    "strategy": "ipv4_only"
   },
   "inbounds": [
     {
       "type": "tun",
       "tag": "tun-in",
       "domain_strategy": "ipv4_only",
-      "interface_name": "tun0",
+      "interface_name": "utun1",
       "address": ["10.69.69.0/28", "fd00::1/126"],
       "mtu": 1400,
       "auto_route": true,
       "strict_route": true,
-      "stack": "mixed",
+      "stack": "gvisor",
       "sniff": true,
       "sniff_override_destination": true
     },
     {
-      "type": "mixed",
-      "tag": "mixed-in",
+      "type": "http",
+      "tag": "http-in",
       "domain_strategy": "ipv4_only",
       "listen": "0.0.0.0",
       "listen_port": 2080,
       "tcp_fast_open": false,
-      "set_system_proxy": false,
-      "sniff": true,
       "sniff_override_destination": true
-    },
-    {
-      "type": "direct",
-      "tag": "dns-in",
-      "listen": "0.0.0.0",
-      "listen_port": 6450,
-      "override_address": "8.8.8.8",
-      "override_port": 53
     }
   ],
   "outbounds": [
@@ -165,25 +133,9 @@
     {
       "tag": "direct",
       "type": "direct"
-    },
-    {
-      "tag": "block",
-      "type": "block"
-    },
-    {
-      "tag": "dns",
-      "type": "dns"
     }
   ],
   "route": {
-    "geoip": {
-      "download_url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geoip@release/geoip.db",
-      "download_detour": "sing-box hysteria2"
-    },
-    "geosite": {
-      "download_url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@release/geosite.db",
-      "download_detour": "sing-box hysteria2"
-    },
     "rule_set": [
       {
         "tag": "geosite-category-ads-all",
@@ -276,30 +228,18 @@
     ],
     "rules": [
       {
-        "protocol": "dns",
-        "outbound": "dns"
+        "inbound": "tun-in",
+        "action": "resolve",
+        "strategy": "ipv4_only"
       },
       {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "rule_set": "geosite-category-ads-all"
-          },
-          {
-            "domain_regex": "^stun\\..+"
-          },
-          {
-            "domain_keyword": [
-              "stun",
-              "httpdns"
-            ]
-          },
-          {
-            "protocol": "stun"
-          }
-        ],
-        "outbound": "block"
+        "inbound": "tun-in",
+        "action": "sniff",
+        "timeout": "1s"
+      },
+      {
+        "protocol": "dns",
+        "action": "hijack-dns"
       },
       {
         "type": "logical",
@@ -358,5 +298,26 @@
     "final": "Unregistered",
     "override_android_vpn": true,
     "auto_detect_interface": true
+  },
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "0.0.0.0:6969",
+      "default_mode": "Enhanced",
+      "access_control_allow_origin": [
+        "http://127.0.0.1",
+        "https://yacd.haishan.me"
+      ],
+      "access_control_allow_private_network": true
+    },
+    "cache_file": {
+      "enabled": true,
+      "store_fakeip": true,
+      "store_rdrc": true,
+      "rdrc_timeout": "1d"
+    }
   }
 }
