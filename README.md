@@ -3,19 +3,15 @@ A working configurations for sing-box (with docker)
 
 > This is not automated script or something, but for those who would like to setup by hand.
 
-### Anyway, install Docker first!
+### First, Docker is needed!
 
 ```sh
 wget -qO- get.docker.com | bash
 
-# Just add USER to docker group. :)
+# Just add $USER to the docker group!
 
-sudo groupadd docker || true
-sudo usermod -aG docker $USER
-newgrp docker
+sudo groupadd docker || true && sudo usermod -aG docker $USER && newgrp docker
 
-# Optional
-docker network create proxy-net
 ```
 
 ### TCP Brutal Multiplexing for TCP proxies
@@ -35,8 +31,8 @@ net.ipv4.tcp_congestion_control=bbr
 sudo sysctl -p
 ```
 
-- [sing-box examples](/sing-box/)
-- [fscarmen-sing-box examples](/fscarmen-sb/)
+- [sing-box examples](/examples/)
+- [sing-box in docker](/docker/)
 
 
 <!-- ### My example setup -->
