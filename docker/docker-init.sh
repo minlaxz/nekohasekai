@@ -5,7 +5,7 @@
 
 WORK_DIR=/sing-box
 PORT=$START_PORT
-TEMPLATE_PATH="https://raw.githubusercontent.com/minlaxz/nekohasekai/main/fscarmen-sb/sing-box-template"
+TEMPLATE_PATH="https://raw.githubusercontent.com/minlaxz/nekohasekai/main/docker/sing-box-template"
 
 warning() { echo -e "\033[31m\033[01m$*\033[0m"; }
 info() { echo -e "\033[32m\033[01m$*\033[0m"; }
@@ -246,12 +246,7 @@ EOF
               },
               "multiplex": {
                   "enabled": true,
-                  "padding": true,
-                  "brutal": {
-                      "enabled": true,
-                      "up_mbps": 1000,
-                      "down_mbps": 1000
-                  }
+                  "padding": true
               }
           }
       ]
@@ -381,12 +376,7 @@ EOF
               "password": "${SHADOWTLS_PASSWORD}",
               "multiplex": {
                   "enabled": true,
-                  "padding": true,
-                  "brutal": {
-                      "enabled": true,
-                      "up_mbps": 1000,
-                      "down_mbps": 1000
-                  }
+                  "padding": true
               }
           }
       ]
@@ -422,12 +412,7 @@ EOF
               "password": "${SHADOWTLS_PASSWORD}",
               "multiplex": {
                   "enabled": true,
-                  "padding": true,
-                  "brutal": {
-                      "enabled": true,
-                      "up_mbps": 1000,
-                      "down_mbps": 1000
-                  }
+                  "padding": true
               }
           }
       ]
@@ -481,12 +466,7 @@ EOF
               },
               "multiplex": {
                   "enabled": true,
-                  "padding": true,
-                  "brutal": {
-                      "enabled": true,
-                      "up_mbps": 1000,
-                      "down_mbps": 1000
-                  }
+                  "padding": true
               }
           }
       ]
@@ -546,12 +526,7 @@ EOF
               },
               "multiplex": {
                   "enabled": true,
-                  "padding": true,
-                  "brutal": {
-                      "enabled": true,
-                      "up_mbps": 1000,
-                      "down_mbps": 1000
-                  }
+                  "padding": true
               }
           }
       ]
@@ -629,12 +604,7 @@ EOF
               },
               "multiplex": {
                   "enabled": true,
-                  "padding": true,
-                  "brutal": {
-                      "enabled": true,
-                      "up_mbps": 1000,
-                      "down_mbps": 1000
-                  }
+                  "padding": true
               }
           }
       ]
@@ -714,12 +684,7 @@ EOF
               },
               "multiplex": {
                   "enabled": true,
-                  "padding": true,
-                  "brutal": {
-                      "enabled": true,
-                      "up_mbps": 1000,
-                      "down_mbps": 1000
-                  }
+                  "padding": true
               }
           }
       ]
@@ -893,7 +858,7 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} xtls-reality\","
 
   [ "${XTLS_REALITYX}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} xtls-reality\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_XTLS_REALITY}, \"uuid\":\"${UUID}\", \"flow\":\"\", \"packet_encoding\":\"xudp\", \"tls\":{ \"enabled\":true, \"server_name\":\"addons.mozilla.org\", \"utls\":{ \"enabled\":true, \"fingerprint\":\"chrome\" }, \"reality\":{ \"enabled\":true, \"public_key\":\"${REALITY_PUBLIC}\", \"short_id\":\"\" } }, \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true, \"brutal\":{ \"enabled\":true, \"up_mbps\":1000, \"down_mbps\":1000 } } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} xtls-reality\", \"server\":\"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":${PORT_XTLS_REALITY}, \"uuid\":\"${UUID}\", \"flow\":\"\", \"packet_encoding\":\"xudp\", \"tls\":{ \"enabled\":true, \"server_name\":\"addons.mozilla.org\", \"utls\":{ \"enabled\":true, \"fingerprint\":\"chrome\" }, \"reality\":{ \"enabled\":true, \"public_key\":\"${REALITY_PUBLIC}\", \"short_id\":\"\" } }, \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} xtls-reality\","
 
   [ "${HYSTERIA2}" = 'true' ] &&
@@ -909,7 +874,7 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} ShadowTLS\","
 
   [ "${SHADOWTLSX}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} ShadowTLS\", \"method\": \"2022-blake3-aes-128-gcm\", \"password\": \"${SHADOWTLS_PASSWORD}\", \"detour\": \"shadowtls-out\", \"udp_over_tcp\": false, \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true, \"brutal\":{ \"enabled\":true, \"up_mbps\":1000, \"down_mbps\":1000 } } }, { \"type\": \"shadowtls\", \"tag\": \"shadowtls-out\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_SHADOWTLS}, \"version\": 3, \"password\": \"${UUID}\", \"tls\": { \"enabled\": true, \"server_name\": \"addons.mozilla.org\", \"utls\": { \"enabled\": true, \"fingerprint\": \"chrome\" } } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} ShadowTLS\", \"method\": \"2022-blake3-aes-128-gcm\", \"password\": \"${SHADOWTLS_PASSWORD}\", \"detour\": \"shadowtls-out\", \"udp_over_tcp\": false, \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true } }, { \"type\": \"shadowtls\", \"tag\": \"shadowtls-out\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": ${PORT_SHADOWTLS}, \"version\": 3, \"password\": \"${UUID}\", \"tls\": { \"enabled\": true, \"server_name\": \"addons.mozilla.org\", \"utls\": { \"enabled\": true, \"fingerprint\": \"chrome\" } } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} ShadowTLS\","
 
   [ "${SHADOWSOCKS}" = 'true' ] &&
@@ -917,7 +882,7 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} shadowsocks\","
 
   [ "${SHADOWSOCKSX}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"2022-blake3-aes-128-gcm\", \"password\": \"${SHADOWTLS_PASSWORD}\", \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true, \"brutal\":{ \"enabled\":true, \"up_mbps\":1000, \"down_mbps\":1000 } } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"2022-blake3-aes-128-gcm\", \"password\": \"${SHADOWTLS_PASSWORD}\", \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} shadowsocks\","
 
   [ "${TROJAN}" = 'true' ] &&
@@ -925,7 +890,7 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} trojan\","
 
   [ "${TROJANX}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"trojan\", \"tag\": \"${NODE_NAME} trojan\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_TROJAN, \"password\": \"${UUID}\", \"tls\": { \"enabled\":true, \"insecure\": true, \"server_name\":\"\", \"utls\": { \"enabled\":true, \"fingerprint\":\"chrome\" } }, \"multiplex\": { \"enabled\":true, \"protocol\":\"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true, \"brutal\":{ \"enabled\":true, \"up_mbps\":1000, \"down_mbps\":1000 } } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"trojan\", \"tag\": \"${NODE_NAME} trojan\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_TROJAN, \"password\": \"${UUID}\", \"tls\": { \"enabled\":true, \"insecure\": true, \"server_name\":\"\", \"utls\": { \"enabled\":true, \"fingerprint\":\"chrome\" } }, \"multiplex\": { \"enabled\":true, \"protocol\":\"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} trojan\","
 
   [ "${VLESS_WS}" = 'true' ] &&
@@ -933,7 +898,7 @@ stdout_logfile=/dev/null
   local NODE_REPLACE+="\"${NODE_NAME} vless-ws-tls\","
   
   [ "${VLESS_WSX}" = 'true' ] &&
-  local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} vless-ws-tls\", \"server\":\"${CDN}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":443, \"uuid\":\"${UUID}\", \"tls\": { \"enabled\":true, \"server_name\":\"${ARGO_DOMAIN}\", \"utls\": { \"enabled\":true, \"fingerprint\":\"chrome\" } }, \"transport\": { \"type\":\"ws\", \"path\":\"/${UUID}-vless\", \"headers\": { \"Host\": \"${ARGO_DOMAIN}\" }, \"max_early_data\":2048, \"early_data_header_name\":\"Sec-WebSocket-Protocol\" }, \"multiplex\": { \"enabled\":true, \"protocol\":\"h2mux\", \"max_streams\":16, \"padding\": true, \"brutal\":{ \"enabled\":true, \"up_mbps\":1000, \"down_mbps\":1000 } } }," &&
+  local INBOUND_REPLACE+=" { \"type\": \"vless\", \"tag\": \"${NODE_NAME} vless-ws-tls\", \"server\":\"${CDN}\", \"domain_strategy\": \"ipv4_only\", \"server_port\":443, \"uuid\":\"${UUID}\", \"tls\": { \"enabled\":true, \"server_name\":\"${ARGO_DOMAIN}\", \"utls\": { \"enabled\":true, \"fingerprint\":\"chrome\" } }, \"transport\": { \"type\":\"ws\", \"path\":\"/${UUID}-vless\", \"headers\": { \"Host\": \"${ARGO_DOMAIN}\" }, \"max_early_data\":2048, \"early_data_header_name\":\"Sec-WebSocket-Protocol\" }, \"multiplex\": { \"enabled\":true, \"protocol\":\"h2mux\", \"max_streams\":16, \"padding\": true } }," &&
   local NODE_REPLACE+="\"${NODE_NAME} vless-ws-tls\","
 
   [ "${H2_REALITY}" = 'true' ] &&

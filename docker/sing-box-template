@@ -4,40 +4,28 @@
       {
         "tag": "dns-remote",
         "address": "quic://dns.adguard.com",
-        "address_resolver": "dns-cloudflare",
+        "address_resolver": "dns-local",
         "address_strategy": "ipv4_only",
         "strategy": "ipv4_only",
-        "detour": "direct"
+        "detour": "Auto"
       },
       {
-        "tag": "dns-cloudflare",
+        "tag": "dns-local",
         "address": "1.1.1.1"
-      },
-      {
-        "tag": "dns-block",
-        "address": "rcode://name_error"
       }
     ],
     "rules": [
       {
         "outbound": "any",
-        "server": "dns-remote"
+        "server": "dns-local"
       },
       {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "rule_set": "geosite-category-ads-all"
-          },
-          {
-            "domain_regex": [
-              "^stun\\..+"
-            ]
-          }
-        ],
-        "disable_cache": false,
-        "server": "dns-block"
+        "clash_mode": "FilteringDNS",
+        "server": "dns-filtering"
+      },
+      {
+        "clash_mode": "DirectDNS",
+        "server": "dns-local"
       }
     ],
     "independent_cache": true,
@@ -64,11 +52,16 @@
       "listen": "0.0.0.0",
       "listen_port": 2080,
       "tcp_fast_open": false,
+      "sniff": true,
       "sniff_override_destination": true
     }
   ],
   "outbounds": [
     "<INBOUND_REPLACE>",
+    {
+      "tag": "direct",
+      "type": "direct"
+    },
     {
       "type": "urltest",
       "tag": "Auto",
@@ -129,10 +122,6 @@
         "Manual"
       ],
       "default": "direct"
-    },
-    {
-      "tag": "direct",
-      "type": "direct"
     }
   ],
   "route": {
@@ -234,6 +223,16 @@
       },
       {
         "inbound": "tun-in",
+        "action": "sniff",
+        "timeout": "1s"
+      },
+      {
+        "inbound": "http-in",
+        "action": "resolve",
+        "strategy": "ipv4_only"
+      },
+      {
+        "inbound": "http-in",
         "action": "sniff",
         "timeout": "1s"
       },
