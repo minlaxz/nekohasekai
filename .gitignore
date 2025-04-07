@@ -268,3 +268,4 @@ my-client.json
 .DS_Store
 sing-box
 clients
+*.lst
