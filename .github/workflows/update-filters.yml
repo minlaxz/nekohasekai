@@ -29,6 +29,7 @@ jobs:
         run: |
           python ooni/probe.py
           python ooni/resolver.py
+          ls -laR .
           sed -i 's/^/*. /' ooni/domains.lst
 
       - name: Download converter tool
