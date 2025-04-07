@@ -29,6 +29,7 @@ jobs:
         run: |
           python ooni/probe.py
           python ooni/resolver.py
+          sed -i 's/^/*. /' ooni/domains.lst
 
       - name: Download converter tool
         run: |
@@ -46,10 +47,10 @@ jobs:
           ./generate-geoip-geosite -i ./ooni -o ./ooni/route-rules
           ls -R .
 
-      - name: Commit and push changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Update sing-box rules"
-          git push
+      - name: Deploy to GitHub Branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ github.token }}
+          publish_branch: route-rules
+          publish_dir: ooni/route-rules
+          force_orphan: true
