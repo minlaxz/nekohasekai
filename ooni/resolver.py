@@ -83,7 +83,7 @@ def main():
 
     # file writer thread
     writer_thread = threading.Thread(
-        target=write_cidrs_to_file, args=("ips.lst",)
+        target=write_cidrs_to_file, args=("ooni/ips.lst",)
     )
     writer_thread.start()
 

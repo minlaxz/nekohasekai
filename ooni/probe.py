@@ -91,7 +91,7 @@ def main(output_file=None, country=None, day_range=7):
 
 
 if __name__ == "__main__":
-    output_file = "domains.lst"
+    output_file = "ooni/domains.lst"
     country = "MM"
     day_range = 14
     main(output_file=output_file, country=country, day_range=day_range)

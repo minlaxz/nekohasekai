@@ -38,10 +38,10 @@ jobs:
           tar -xzf generate-geoip-geosite.tar.gz
           chmod +x generate-geoip-geosite
 
-      - name: Convert files to LF (Unix format)
-        run: |
-          sudo apt-get update && sudo apt-get install -y dos2unix
-          find . -type f -name "*.lst" -exec dos2unix {} \;
+      # - name: Convert files to LF (Unix format)
+      #   run: |
+      #     sudo apt-get update && sudo apt-get install -y dos2unix
+      #     find . -type f -name "*.lst" -exec dos2unix {} \;
 
       - name: Convert to sing-box rules
         run: |
