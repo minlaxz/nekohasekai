@@ -75,7 +75,7 @@ def write_cidrs_to_file(filename="ips_temp.lst"):
 
 def main():
     gc.enable()
-    domains = read_domains_from_file("domains.lst")
+    domains = read_domains_from_file("ooni/domains.lst")
     if not domains:
         return
 
