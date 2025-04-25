@@ -37,6 +37,6 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64, linux/arm/v7
-          context: ./xtls
+          context: ./xray
           target: dist
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:xray
