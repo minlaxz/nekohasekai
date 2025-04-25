@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 WORK_DIR=/usr/bin
 CONFIG_DIR=/etc/xray
 RULES_DIR=/usr/share/xray
@@ -45,43 +44,45 @@ XRAY_FILE="Xray-${XRAY_ARCH}.zip"
 XRAY_DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/download/v${XRAY_VERSION}/${XRAY_FILE}"
 
 # Download
-echo "Downloading zip file: ${XRAY_FILE}"
+hint "Downloading zip file: ${XRAY_FILE}"
 wget --no-check-certificate -O /${XRAY_FILE} ${XRAY_DOWNLOAD_URL} > /dev/null 2>&1
 if [ $? -ne 0 ]; then
-    echo "Error: Failed to download zip file: ${XRAY_FILE}" && exit 1
+    warning "Error: Failed to download zip file: ${XRAY_FILE}" && exit 1
 fi
-echo "Download zip file: ${XRAY_FILE} completed"
+info "Download zip file: ${XRAY_FILE} completed"
 
 # Unzip
-echo "Unzipping file: ${XRAY_FILE}"
+hist "Unzipping file: ${XRAY_FILE}"
 unzip -o /${XRAY_FILE} -d $WORK_DIR/ > /dev/null 2>&1
 if [ $? -ne 0 ]; then
-    echo "Error: Failed to unzip file: ${XRAY_FILE}" && exit 1
+    warning "Error: Failed to unzip file: ${XRAY_FILE}" && exit 1
 fi
-echo "Unzipping file: ${XRAY_FILE} completed"
+info "Unzipping file: ${XRAY_FILE} completed"
 
 # Rules
 mv $WORK_DIR/*.dat $RULES_DIR/
 
 # Config
-cat > $CONFIG_DIR/config.json << EOF
-{
-  "log": {
-    "loglevel": "warning"
-  },
-  "inbounds": [],
-  "outbounds": [
-    {
-      "protocol": "freedom",
-      "settings": {}
-    }
-  ]
-}
-EOF
+# cat > $CONFIG_DIR/config.json << EOF
+# {
+#   "log": {
+#     "loglevel": "warning"
+#   },
+#   "inbounds": [],
+#   "outbounds": [
+#     {
+#       "protocol": "freedom",
+#       "settings": {}
+#     }
+#   ]
+# }
+# EOF
 
 # Clean up
+info "Cleaning up ..."
 rm -fr *.zip $WORK_DIR/*.md $WORK_DIR/LICENSE
 
 # Run it!
+info "Starting Xray ..."
 chmod +x $WORK_DIR/xray
 $WORK_DIR/xray -config $CONFIG_DIR/config.json > /dev/null 2>&1
