@@ -12,7 +12,7 @@ hint() { echo -e "\033[33m\033[01m$*\033[0m"; }
 check_arch() {
   hint "Checking system architecture ..."
   case "$ARCH" in
-    arm64 )
+    arm )
       XRAY_ARCH=linux-arm64-v8a;
       ;;
     amd64 )
@@ -34,11 +34,15 @@ check_arch
 check_latest_xray
 
 # Checks
-if [ -z "$XRAY_ARCH" || -z "$XRAY_VERSION"]; then
+if [ -z "$XRAY_ARCH" ]; then
   warning "architecture: $ARCH"
+  exit 1
+fi
+if [ -z "$XRAY_VERSION" ]; then
   warning "version: $XRAY_VERSION"
   exit 1
 fi
+
 
 XRAY_FILE="Xray-${XRAY_ARCH}.zip"
 XRAY_DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/download/v${XRAY_VERSION}/${XRAY_FILE}"
