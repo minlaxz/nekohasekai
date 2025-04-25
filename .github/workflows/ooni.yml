@@ -1,4 +1,4 @@
-name: Build sing-box rules
+name: Build sing-box rules from OONI data
 
 on:
   workflow_dispatch:

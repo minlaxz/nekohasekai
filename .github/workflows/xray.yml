@@ -1,4 +1,4 @@
-name: "Build and push singbox image (fscarmen)"
+name: "Build and push XRAY image (teddysun)"
 
 on:
   workflow_dispatch:
@@ -37,6 +37,6 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64, linux/arm/v7
-          context: ./singbox
+          context: ./xtls
           target: dist
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:singbox
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:xray
