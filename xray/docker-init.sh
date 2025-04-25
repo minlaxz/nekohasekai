@@ -56,7 +56,7 @@ fi
 info "Download zip file: ${XRAY_FILE} completed"
 
 # Unzip
-hist "Unzipping file: ${XRAY_FILE}"
+hint "Unzipping file: ${XRAY_FILE}"
 unzip -o /${XRAY_FILE} -d $WORK_DIR/ > /dev/null 2>&1
 if [ $? -ne 0 ]; then
     warning "Error: Failed to unzip file: ${XRAY_FILE}" && exit 1
@@ -88,4 +88,5 @@ chmod +x $WORK_DIR/xray
 info "Cleaning up ..."
 rm -fr *.zip $WORK_DIR/*.md $WORK_DIR/LICENSE
 
-info "Xray installation completed, version: ${XRAY_VERSION}"
+info "Xray installation completed for arch: ${ARCH}"
+info "version: ${XRAY_VERSION}, xray arch: ${XRAY_ARCH}"
