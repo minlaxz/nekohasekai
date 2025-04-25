@@ -12,14 +12,13 @@ hint() { echo -e "\033[33m\033[01m$*\033[0m"; }
 check_arch() {
   hint "Checking system architecture ..."
   case "$ARCH" in
-    arm )
+    arm64 )
       XRAY_ARCH=linux-arm64-v8a;
       ;;
-    amd64 )
-      XRAY_ARCH=linux-64;
-      ;;
-    armv7 )
+    arm )
       XRAY_ARCH=linux-arm32-v7a;
+    * )
+      XRAY_ARCH=linux-64;
       ;;
   esac
   hint "System architecture: $ARCH"
