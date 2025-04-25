@@ -17,6 +17,7 @@ check_arch() {
       ;;
     arm )
       XRAY_ARCH=linux-arm32-v7a;
+      ;;
     * )
       XRAY_ARCH=linux-64;
       ;;
