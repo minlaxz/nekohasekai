@@ -59,8 +59,10 @@ if [ $? -ne 0 ]; then
 fi
 info "Unzipping file: ${XRAY_FILE} completed"
 
-# Rules
+# Rules and make binary executable
+info "Moving rules and making binary executable ..."
 mv $WORK_DIR/*.dat $RULES_DIR/
+chmod +x $WORK_DIR/xray
 
 # Config
 # cat > $CONFIG_DIR/config.json << EOF
@@ -82,7 +84,4 @@ mv $WORK_DIR/*.dat $RULES_DIR/
 info "Cleaning up ..."
 rm -fr *.zip $WORK_DIR/*.md $WORK_DIR/LICENSE
 
-# Run it!
-info "Starting Xray ..."
-chmod +x $WORK_DIR/xray
-$WORK_DIR/xray -config $CONFIG_DIR/config.json > /dev/null 2>&1
+info "Xray installation completed, version: ${XRAY_VERSION}"
