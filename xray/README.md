@@ -8,7 +8,7 @@ This is just my personal Xray setup to bypass Myanmar's fucking network restrict
 2. Read every comments in it and modify as needed.
 ```bash
 mkdir -p xray && cd xray
-curl -o config.jsonc https://raw.githubusercontent.com/minlaxz/nekohasekai/main/xray/server_config.jsonc
+curl -o config.jsonc https://raw.githubusercontent.com/minlaxz/nekohasekai/main/xray/vless-tls-tcp-reality/config.jsonc
 ```
 
 1. inbounds[0].port should be same as docker publishing port.

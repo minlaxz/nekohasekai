@@ -1,0 +1,62 @@
+{
+    "log": {
+        "loglevel": "debug"
+    },
+    "inbounds": [
+        {
+            "port": 10442,
+            "protocol": "vless",
+            "settings": {
+                "clients": [
+                    {
+                        "id": "abcd1234-5678-90ab-cdef-1234567890ff",
+                        "flow": ""
+                    }
+                ],
+                "decryption": "none"
+            },
+            "streamSettings": {
+                "network": "grpc",
+                "security": "reality",
+                "realitySettings": {
+                    "show": false,
+                    "dest": "1.1.1.1:443",
+                    "xver": 0,
+                    "serverNames": [
+                        ""
+                    ],
+                    "privateKey": "cKYGJecEWNzY-yjaVUUrClJCYHc08wqVJ0lVG2Ze1lc",
+                    "shortIds": [
+                        "",
+                        "0123456789abcdef"
+                    ]
+                },
+                "grpcSettings": {
+                    "serviceName": ""
+                }
+            },
+            "sniffing": {
+                "enabled": true,
+                "destOverride": [
+                    "http",
+                    "tls",
+                    "quic"
+                ]
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom",
+            "tag": "direct"
+        }
+    ],
+    "policy": {
+        "levels": {
+            "0": {
+                "handshake": 2,
+                "connIdle": 120
+            }
+        }
+    }
+}

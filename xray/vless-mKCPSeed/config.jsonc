@@ -1,0 +1,30 @@
+{
+    "log": {
+        "loglevel": "warning"
+    },
+    "inbounds": [
+        {
+            "protocol": "vless",
+            "port": 10442,
+            "settings": {
+                "decryption":"none",
+                "clients": [
+                    {
+                        "id": "abcd1234-5678-90ab-cdef-1234567890ff"
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "kcp",
+                "kcpSettings": {
+                    "seed": "0123456789abcdef"
+                }
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom"
+        }
+    ]
+}
