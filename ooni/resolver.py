@@ -3,15 +3,27 @@ import concurrent.futures
 import threading
 import gc
 import ipaddress
+from typing import Any, Set
 from idna import encode as idna_encode
 from queue import Queue
+import logging
+import argparse
+
+logging.basicConfig(
+    level=logging.NOTSET,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("resolver.log", mode="a"),
+        logging.StreamHandler(),
+    ],
+)
 
 file_write_lock = threading.Lock()
-results_queue = Queue()
+results_queue: Queue[Any] = Queue()
 
 
-def resolve_domain(domain, max_retries=2):
-    ip_set = set()
+def resolve_domain(domain: str, max_retries: int = 2) -> list[str]:
+    ip_set: Set[str] = set()
     # Convert to punycode if necessary
     try:
         domain = idna_encode(domain).decode("utf-8")
@@ -27,7 +39,7 @@ def resolve_domain(domain, max_retries=2):
     return list(ip_set)
 
 
-def is_ip_in_existing_cidr(ip, cidrs):
+def is_ip_in_existing_cidr(ip: str, cidrs: Set[str]):
     try:
         ip_obj = ipaddress.ip_address(ip)
         for cidr in cidrs:
@@ -38,9 +50,9 @@ def is_ip_in_existing_cidr(ip, cidrs):
     return False
 
 
-def process_domain(domain, existing_cidrs):
+def process_domain(domain: str, existing_cidrs: Set[str]) -> Set[str]:
     try:
-        cidrs = set()
+        cidrs: Set[str] = set()
         ip_addresses = resolve_domain(domain)  # Resolve domain to its IP addresses
         for ip in ip_addresses:
             if not is_ip_in_existing_cidr(ip, existing_cidrs):
@@ -50,16 +62,18 @@ def process_domain(domain, existing_cidrs):
         return set()
 
 
-def read_domains_from_file(file_path="domains.lst"):
+def read_domains_from_file(file_path: str, verbose: bool = False) -> list[str]:
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             domains = [line.strip() for line in f.readlines() if line.strip()]
+        if verbose:
+            logging.info(f"Read {len(domains)} total domains.")
         return domains
     except FileNotFoundError:
         return []
 
 
-def write_cidrs_to_file(filename="ips_temp.lst"):
+def write_cidrs_to_file(filename: str = "ips_temp.lst"):
     while True:
         # fetch CIDRs from the queue
         cidrs = results_queue.get()
@@ -74,17 +88,28 @@ def write_cidrs_to_file(filename="ips_temp.lst"):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Probe Parser for OONI Data")
+    parser.add_argument("--input", "-i", required=True, help="Input file path")
+    parser.add_argument("--output", "-o", required=True, help="Output file path")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
+    )
+
+    args = parser.parse_args()
+
+    output_file = args.output
+    input_file = args.input
+    verbose = args.verbose
+
     gc.enable()
-    domains = read_domains_from_file("ooni/domains.lst")
+    domains = read_domains_from_file(input_file, verbose)
     if not domains:
         return
 
-    existing_cidrs = set()
+    existing_cidrs: Set[str] = set()
 
     # file writer thread
-    writer_thread = threading.Thread(
-        target=write_cidrs_to_file, args=("ooni/ips.lst",)
-    )
+    writer_thread = threading.Thread(target=write_cidrs_to_file, args=(output_file,))
     writer_thread.start()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:

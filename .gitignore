@@ -269,5 +269,6 @@ my-client.json
 sing-box
 clients
 *.lst
+!failed-domains/*.lst
 # Ignore the generated geoip geosite tool
 generate-geoip-geosite*

@@ -1,31 +1,37 @@
+from typing import Set
 import requests
 import csv
 import re
 import logging
 from datetime import datetime, timedelta
+import argparse
 
 logging.basicConfig(
     level=logging.NOTSET,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("ooni_domain_fetch.log", mode="a"),
+        logging.FileHandler("probe.log", mode="a"),
         logging.StreamHandler(),
     ],
 )
 
 
-def normalize_domain(domain):
+def normalize_domain(domain: str) -> str:
     return domain.lstrip("www.") if domain.startswith("www.") else domain
 
 
-def main(output_file=None, country=None, day_range=7):
+def get_domains_from_ooni_api(
+    country: str,
+    day_range: int,
+    verbose: bool = False,
+) -> Set[str] | None:
     try:
         today = datetime.now()
         since = (today - timedelta(days=day_range)).strftime("%Y-%m-%d")
         until = today.strftime("%Y-%m-%d")
 
         base_url = "https://api.ooni.io/api/v1/aggregation"
-        params = {
+        params: dict[str, str | None] = {
             "axis_y": "domain",
             "axis_x": "measurement_start_day",
             "probe_cc": country,
@@ -38,14 +44,10 @@ def main(output_file=None, country=None, day_range=7):
 
         url = f"{base_url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
         response = requests.get(url)
-        if response.status_code != 200:
-            logging.error(
-                f"Failed to download data from OONI API, status code: {response.status_code}"
-            )
-            return
+        response.raise_for_status()  # Raise an error for bad responses
         logging.info("Successfully downloaded data from OONI API")
 
-        domains = set()
+        domains: Set[str] = set()
         csv_data = response.content.decode("utf-8").splitlines()
         csv_reader = csv.DictReader(csv_data)
 
@@ -58,9 +60,10 @@ def main(output_file=None, country=None, day_range=7):
             ok_count = int(row["ok_count"])
 
             # Log domain processing details
-            logging.info(
-                f"Checking domain: {domain} | Anomalies: {anomaly_count}, OK: {ok_count}, Anomaly Rate: {anomaly_count / (anomaly_count + ok_count) if (anomaly_count + ok_count) > 0 else 0:.2f}"
-            )
+            if verbose:
+                logging.info(
+                    f"Checking domain: {domain} | Anomalies: {anomaly_count}, OK: {ok_count}, Anomaly Rate: {anomaly_count / (anomaly_count + ok_count) if (anomaly_count + ok_count) > 0 else 0:.2f}"
+                )
 
             # Filter out incorrect domains
             if re.match(pattern, domain):
@@ -73,25 +76,64 @@ def main(output_file=None, country=None, day_range=7):
                 normalized_domain = normalize_domain(domain)
                 if normalized_domain not in domains:
                     domains.add(normalized_domain)
-                    logging.info(
-                        f"Anomaly rate is high for the domain: {normalized_domain} - Adding to the list"
-                    )
+                    if verbose:
+                        logging.info(
+                            f"Anomaly rate is high for the domain: {normalized_domain} - Adding to the list"
+                        )
             else:
-                logging.info(f"Site is accessible in Myanmar: {domain}")
-
-        # Write the domains to the output file
-        with open(output_file, "w") as output:
-            for domain in sorted(domains):  # Optionally sort the domains
-                output.write(f"{domain}\n")
-
-        logging.info(f"Total unique domains written to {output_file}: {len(domains)}")
+                if verbose:
+                    logging.info(f"Site is accessible in {country}: {domain}")
+    except requests.RequestException as e:
+        logging.error(f"Error fetching data from OONI API: {e}")
+        return set("")
 
     except Exception as e:
-        logging.error(f"Error occurred during fetching or processing: {e}")
+        logging.error(f"An error occurred while processing the data: {e}")
+        return set("")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Probe Parser for OONI Data")
+    parser.add_argument("--input", "-i", default=None, help="Input file path")
+    parser.add_argument("--output", "-o", required=True, help="Output file path")
+    parser.add_argument("--country", "-c", default="MM", help="Country code")
+    parser.add_argument("--day-range", "-dr", default=14, help="Day range for data")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
+    )
+
+    args = parser.parse_args()
+
+    output_file = args.output
+    verbose = args.verbose
+
+    try:
+        if args.input:
+            # Read domains from the input file if provided
+            with open(args.input, "r") as input_file:
+                domains = set(line.strip() for line in input_file if line.strip())
+                logging.info(f"Read {len(domains)} domains from input file.")
+        else:
+            # Fetch domains from OONI API with country and day range
+            country = args.country
+            day_range = int(args.day_range)
+            domains = get_domains_from_ooni_api(country, day_range, verbose)
+
+        # Write the domains to the output file
+        if domains:
+            with open(output_file, "w") as output:
+                for domain in sorted(domains):  # Optionally sort the domains
+                    output.write(f"{domain}\n")
+
+            logging.info(
+                f"Total unique domains written to {output_file}: {len(domains)}"
+            )
+        else:
+            logging.warning("No domains found.")
+
+    except Exception as e:
+        logging.error(f"Error: {e}")
 
 
 if __name__ == "__main__":
-    output_file = "ooni/domains.lst"
-    country = "MM"
-    day_range = 14
-    main(output_file=output_file, country=country, day_range=day_range)
+    main()

@@ -2,8 +2,23 @@ name: Build sing-box rules from OONI data
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 0 * * *" # every day at midnight
+  # schedule:
+  #   - cron: '30 0 * * *'
+  #   - cron: '30 1 * * *'
+  #   - cron: '30 2 * * *'
+  #   - cron: '30 3 * * *'
+  #   - cron: '30 4 * * *'
+  #   - cron: '30 5 * * *'
+  #   - cron: '30 6 * * *'
+  #   - cron: '30 7 * * *'
+  #   - cron: '30 8 * * *'
+  #   - cron: '30 9 * * *'
+  #   - cron: '30 10 * * *'
+  #   - cron: '30 11 * * *'
+  #   - cron: '30 12 * * *'
+
+# env:
+#   oonimm-output: ooni/oonimm.lst
 
 jobs:
   run-scripts:
@@ -27,30 +42,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ooni/requirements.txt
 
-      - name: Run script
+      - name: OONI Rules
         run: |
-          python ooni/probe.py
-          python ooni/resolver.py
-          sed -i 's/^/*. /' ooni/domains.lst
-          mv ooni/domains.lst ooni/include-domain-minpersonal.lst
-          mv ooni/ips.lst ooni/include-ip-minpersonal.lst
+          python ooni/probe.py -o ooni/include-domain-oonimm.lst -c MM -dr 14
+          python ooni/resolver.py -i ooni/include-domain-oonimm.lst -o ooni/include-ip-oonimm.lst
+          sed -i 's/^/*. /' ooni/include-domain-oonimm.lst
 
-      - name: Download converter tool
+      - name: Personal Rules
+        run: |
+          python ooni/probe.py -i failed-domains/minlaxz.lst -o ooni/include-domain-minlaxz.lst
+          python ooni/resolver.py -i ooni/include-domain-minlaxz.lst -o ooni/include-ip-minlaxz.lst
+          sed -i 's/^/*. /' ooni/include-domain-minlaxz.lst
+
+      - name: Convert rules
         run: |
           curl -Lo generate-geoip-geosite.tar.gz https://github.com/Dunamis4tw/generate-geoip-geosite/releases/download/v1.3.1/generate-geoip-geosite-1.3.1-linux-amd64.tar.gz
-          tar -xzf generate-geoip-geosite.tar.gz
-          chmod +x generate-geoip-geosite
-          
+          tar -xzf generate-geoip-geosite.tar.gz && chmod +x generate-geoip-geosite
+          ./generate-geoip-geosite -i ./ooni -o ./ooni/route-rules
 
       # - name: Convert files to LF (Unix format)
       #   run: |
       #     sudo apt-get update && sudo apt-get install -y dos2unix
       #     find . -type f -name "*.lst" -exec dos2unix {} \;
-
-      - name: Convert to sing-box rules
-        run: |
-          ./generate-geoip-geosite -i ./ooni -o ./ooni/route-rules
-          ls -R .
 
       - name: Deploy to GitHub Branch
         uses: peaceiris/actions-gh-pages@v4
