@@ -83,9 +83,6 @@ def get_domains_from_ooni_api(
             else:
                 if verbose:
                     logging.info(f"Site is accessible in {country}: {domain}")
-    except requests.RequestException as e:
-        logging.error(f"Error fetching data from OONI API: {e}")
-        return set("")
 
     except Exception as e:
         logging.error(f"An error occurred while processing the data: {e}")

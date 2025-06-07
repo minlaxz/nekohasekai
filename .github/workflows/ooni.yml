@@ -44,8 +44,8 @@ jobs:
 
       - name: OONI Rules
         run: |
-          python ooni/probe.py -o ooni/include-domain-oonimm.lst -c MM -dr 14
-          python ooni/resolver.py -i ooni/include-domain-oonimm.lst -o ooni/include-ip-oonimm.lst
+          python ooni/probe.py -o ooni/include-domain-oonimm.lst -c MM -dr 14 -v
+          python ooni/resolver.py -i ooni/include-domain-oonimm.lst -o ooni/include-ip-oonimm.lst -v
           sed -i 's/^/*. /' ooni/include-domain-oonimm.lst
 
       - name: Personal Rules
