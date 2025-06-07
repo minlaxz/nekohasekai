@@ -54,6 +54,7 @@ jobs:
           cat ooni/include-domain-minlaxz.lst
           python ooni/resolver.py -i ooni/include-domain-minlaxz.lst -o ooni/include-ip-minlaxz.lst
           sed -i 's/^/*. /' ooni/include-domain-minlaxz.lst
+          cat ooni/include-domain-minlaxz.lst
 
       - name: Convert rules
         run: |
