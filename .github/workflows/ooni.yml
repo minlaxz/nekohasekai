@@ -51,6 +51,7 @@ jobs:
       - name: Personal Rules
         run: |
           python ooni/probe.py -i failed-domains/minlaxz.lst -o ooni/include-domain-minlaxz.lst
+          cat ooni/include-domain-minlaxz.lst
           python ooni/resolver.py -i ooni/include-domain-minlaxz.lst -o ooni/include-ip-minlaxz.lst
           sed -i 's/^/*. /' ooni/include-domain-minlaxz.lst
 
