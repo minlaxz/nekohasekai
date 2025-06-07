@@ -88,7 +88,7 @@ def write_cidrs_to_file(filename: str = "ips_temp.lst"):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Probe Parser for OONI Data")
+    parser = argparse.ArgumentParser(description="Probe Parser")
     parser.add_argument("--input", "-i", required=True, help="Input file path")
     parser.add_argument("--output", "-o", required=True, help="Output file path")
     parser.add_argument(
