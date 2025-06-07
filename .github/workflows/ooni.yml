@@ -32,8 +32,8 @@ jobs:
           python ooni/probe.py
           python ooni/resolver.py
           sed -i 's/^/*. /' ooni/domains.lst
-          mv ooni/domains.lst ooni/include_domain_minpersonal.lst
-          mv ooni/ips.lst ooni/include_ip_minpersonal.lst
+          mv ooni/domains.lst ooni/include-domain-minpersonal.lst
+          mv ooni/ips.lst ooni/include-ip-minpersonal.lst
 
       - name: Download converter tool
         run: |
