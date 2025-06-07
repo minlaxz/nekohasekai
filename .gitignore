@@ -270,5 +270,6 @@ sing-box
 clients
 *.lst
 !failed-domains/*.lst
-# Ignore the generated geoip geosite tool
+**/logs/*.txt
+# Ignore the tool
 generate-geoip-geosite*
