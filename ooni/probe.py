@@ -24,7 +24,7 @@ def get_domains_from_ooni_api(
     country: str,
     day_range: int,
     verbose: bool = False,
-) -> Set[str] | None:
+) -> Set[str]:
     try:
         today = datetime.now()
         since = (today - timedelta(days=day_range)).strftime("%Y-%m-%d")
@@ -83,10 +83,9 @@ def get_domains_from_ooni_api(
             else:
                 if verbose:
                     logging.info(f"Site is accessible in {country}: {domain}")
-
+        return domains
     except Exception as e:
-        logging.error(f"An error occurred while processing the data: {e}")
-        return set("")
+        raise e
 
 
 def main():
