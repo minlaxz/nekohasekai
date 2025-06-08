@@ -2,6 +2,9 @@ name: Build sing-box rules (optional OONI)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
   # schedule:
   #   - cron: '30 0 * * *'
   #   - cron: '30 1 * * *'
@@ -50,10 +53,10 @@ jobs:
           python scripts/resolver.py -i rules/route-rules/include-domain-oonimm.lst -o rules/route-rules/include-ip-oonimm.lst -v
           python scripts/probe.py -i rules/include-rule-list.txt -o rules/route-rules/include-domain-minlaxz.lst
           python scripts/resolver.py -i rules/route-rules/include-domain-minlaxz.lst -o rules/route-rules/include-ip-minlaxz.lst
+          sed -i 's/^/*./' rules/route-rules/include-domain-oonimm.lst
+          sed -i 's/^/*./' rules/route-rules/include-domain-minlaxz.lst
         # curl -sSL https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/facebook.json -o facebook.json
         # jq -r '.[] | select(.domain != null) | .domain[]?' facebook.json > file.lst
-        # sed -i 's/^/*./' rules/route-rules/include-domain-oonimm.lst
-        # sed -i 's/^/*./' rules/route-rules/include-domain-minlaxz.lst
 
       - name: Convert and download rules
         run: |

@@ -109,8 +109,8 @@ async def main():
 
 
 try:
-    asyncio.run(main())
     print("Started WebSocket client.")
+    asyncio.run(main())
 except KeyboardInterrupt:
     print("Exiting...")
 except Exception as e:
