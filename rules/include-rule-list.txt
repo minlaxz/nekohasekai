@@ -21,3 +21,6 @@ firebaseio.com
 b-cdn.net
 zyte.com
 channelmyanmar.to
+composio.dev
+pipedream.com
+mcp.zapier.com
