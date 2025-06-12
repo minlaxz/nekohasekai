@@ -18,3 +18,6 @@ ingest.sentry.io
 llamaindex.ai
 plausible.io
 firebaseio.com
+b-cdn.net
+zyte.com
+channelmyanmar.to
