@@ -2,12 +2,12 @@
   "dns": {
     "servers": [
       {
-        "tag": "dns-remote",
+        "tag": "dns-filtering",
         "address": "quic://dns.adguard.com",
         "address_resolver": "dns-local",
         "address_strategy": "ipv4_only",
         "strategy": "ipv4_only",
-        "detour": "Auto"
+        "detour": "svr1"
       },
       {
         "tag": "dns-local",
@@ -67,51 +67,51 @@
     },
     {
       "type": "urltest",
-      "tag": "Auto",
+      "tag": "svr1",
       "outbounds": [
-        "sing-box xtls-reality",
-        "sing-box hysteria2",
-        "sing-box ShadowTLS",
-        "sing-box shadowsocks",
-        "sing-box trojan",
-        "sing-box h2-reality",
-        "sing-box grpc-reality"
+        "svr1 xtls-reality",
+        "svr1 hysteria2",
+        "svr1 ShadowTLS",
+        "svr1 shadowsocks",
+        "svr1 trojan",
+        "svr1 h2-reality",
+        "svr1 grpc-reality"
       ],
       "url": "http://www.gstatic.com/generate_204",
-      "interval": "1m",
-      "tolerance": 50
+      "interval": "3m",
+      "tolerance": 100
     },
     {
       "type": "selector",
       "tag": "Manual",
       "outbounds": [
-        "sing-box xtls-reality",
-        "sing-box hysteria2",
+        "svr1 xtls-reality",
+        "svr1 hysteria2",
         "sing-box tuic",
-        "sing-box ShadowTLS",
-        "sing-box shadowsocks",
-        "sing-box trojan",
-        "sing-box h2-reality",
-        "sing-box grpc-reality"
+        "svr1 ShadowTLS",
+        "svr1 shadowsocks",
+        "svr1 trojan",
+        "svr1 h2-reality",
+        "svr1 grpc-reality"
       ],
-      "default": "sing-box hysteria2"
+      "default": "svr1 hysteria2"
     },
     {
       "type": "selector",
       "tag": "Registered",
       "outbounds": [
         "direct",
-        "Auto",
+        "svr1",
         "Manual"
       ],
-      "default": "Auto"
+      "default": "svr1"
     },
     {
       "type": "selector",
       "tag": "Unregistered",
       "outbounds": [
         "direct",
-        "Auto",
+        "svr1",
         "Manual"
       ],
       "default": "direct"
@@ -121,8 +121,7 @@
       "tag": "Options P0rn",
       "outbounds": [
         "direct",
-        "Auto",
-        "Manual"
+        "svr1"
       ],
       "default": "direct"
     }
@@ -134,7 +133,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-porn.srs",
-        "download_detour": "sing-box hysteria2",
+        "download_detour": "svr1 hysteria2",
         "update_interval": "1d"
       },
       {
@@ -142,7 +141,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs",
-        "download_detour": "sing-box hysteria2",
+        "download_detour": "svr1 xtls-reality",
         "update_interval": "1d"
       },
       {
@@ -150,7 +149,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
-        "download_detour": "sing-box hysteria2",
+        "download_detour": "svr1 xtls-reality",
         "update_interval": "1d"
       },
       {
@@ -158,7 +157,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
-        "download_detour": "sing-box hysteria2",
+        "download_detour": "svr1 xtls-reality",
         "update_interval": "1d"
       },
       {
@@ -166,7 +165,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
-        "download_detour": "ec2-hysteria2",
+        "download_detour": "svr1 xtls-reality",
         "update_interval": "1d"
       },
       {
@@ -174,7 +173,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "ec2-xtls-reality",
+        "download_detour": "svr1 xtls-reality",
         "update_interval": "1d"
       },
       {
@@ -182,7 +181,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-minlaxz.srs",
-        "download_detour": "ec2-xtls-reality",
+        "download_detour": "svr1 xtls-reality",
         "update_interval": "1h"
       },
       {
@@ -190,7 +189,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
-        "download_detour": "sing-box hysteria2",
+        "download_detour": "svr1 xtls-reality",
         "update_interval": "1d"
       },
       {
@@ -198,7 +197,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/private.srs",
-        "download_detour": "sing-box hysteria2",
+        "download_detour": "svr1 xtls-reality",
         "update_interval": "1d"
       }
     ],
