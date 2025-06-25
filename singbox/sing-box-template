@@ -87,7 +87,7 @@
       "outbounds": [
         "svr1 xtls-reality",
         "svr1 hysteria2",
-        "sing-box tuic",
+        "svr1 tuic",
         "svr1 ShadowTLS",
         "svr1 shadowsocks",
         "svr1 trojan",
