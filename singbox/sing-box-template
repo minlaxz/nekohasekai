@@ -2,14 +2,6 @@
   "dns": {
     "servers": [
       {
-        "tag": "dns-filtering",
-        "address": "quic://dns.adguard.com",
-        "address_resolver": "dns-local",
-        "address_strategy": "ipv4_only",
-        "strategy": "ipv4_only",
-        "detour": "svr1"
-      },
-      {
         "tag": "dns-local",
         "address": "1.1.1.1"
       }
@@ -17,14 +9,6 @@
     "rules": [
       {
         "outbound": "any",
-        "server": "dns-local"
-      },
-      {
-        "clash_mode": "Enhanced",
-        "server": "dns-filtering"
-      },
-      {
-        "clash_mode": "DirectDNS",
         "server": "dns-local"
       }
     ],
@@ -85,6 +69,7 @@
       "type": "selector",
       "tag": "Manual",
       "outbounds": [
+        "direct",
         "svr1 xtls-reality",
         "svr1 hysteria2",
         "svr1 tuic",
@@ -94,7 +79,7 @@
         "svr1 h2-reality",
         "svr1 grpc-reality"
       ],
-      "default": "svr1 hysteria2"
+      "default": "direct"
     },
     {
       "type": "selector",
@@ -133,7 +118,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-porn.srs",
-        "download_detour": "svr1 hysteria2",
+        "download_detour": "direct",
         "update_interval": "1d"
       },
       {
@@ -141,7 +126,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs",
-        "download_detour": "svr1 xtls-reality",
+        "download_detour": "direct",
         "update_interval": "1d"
       },
       {
@@ -149,7 +134,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
-        "download_detour": "svr1 xtls-reality",
+        "download_detour": "direct",
         "update_interval": "1d"
       },
       {
@@ -157,7 +142,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
-        "download_detour": "svr1 xtls-reality",
+        "download_detour": "direct",
         "update_interval": "1d"
       },
       {
@@ -165,7 +150,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
-        "download_detour": "svr1 xtls-reality",
+        "download_detour": "direct",
         "update_interval": "1d"
       },
       {
@@ -173,7 +158,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "svr1 xtls-reality",
+        "download_detour": "direct",
         "update_interval": "1d"
       },
       {
@@ -181,7 +166,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-minlaxz.srs",
-        "download_detour": "svr1 xtls-reality",
+        "download_detour": "direct",
         "update_interval": "1h"
       },
       {
@@ -189,7 +174,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
-        "download_detour": "svr1 xtls-reality",
+        "download_detour": "direct",
         "update_interval": "1d"
       },
       {
@@ -197,7 +182,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/private.srs",
-        "download_detour": "svr1 xtls-reality",
+        "download_detour": "direct",
         "update_interval": "1d"
       }
     ],
@@ -291,7 +276,6 @@
   "experimental": {
     "clash_api": {
       "external_controller": "0.0.0.0:6969",
-      "default_mode": "Enhanced",
       "access_control_allow_origin": [
         "http://127.0.0.1",
         "https://yacd.haishan.me",
