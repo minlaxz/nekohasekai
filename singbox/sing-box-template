@@ -69,7 +69,6 @@
       "type": "selector",
       "tag": "Manual",
       "outbounds": [
-        "direct",
         "svr1 xtls-reality",
         "svr1 hysteria2",
         "svr1 tuic",
@@ -79,7 +78,7 @@
         "svr1 h2-reality",
         "svr1 grpc-reality"
       ],
-      "default": "direct"
+      "default": "svr1 xtls-reality"
     },
     {
       "type": "selector",
