@@ -79,7 +79,10 @@ EOF
           {
               "type": "direct",
               "tag": "direct-out",
-              "domain_strategy": "${DOMAIN_STRATEGY}"
+              "domain_resolver": {
+                  "server": "local",
+                  "strategy": "${DOMAIN_STRATEGY}"
+              }
           }
       ]
   }
@@ -128,7 +131,8 @@ EOF
       "dns":{
           "servers": [
               {
-                  "type": "local"
+                  "type": "local",
+                  "tag": "local"
               }
           ]
       }
