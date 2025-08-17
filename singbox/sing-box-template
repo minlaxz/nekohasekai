@@ -3,7 +3,8 @@
     "servers": [
       {
         "tag": "dns-local",
-        "address": "1.1.1.1"
+        "server": "1.1.1.1",
+        "type": "udp"
       }
     ],
     "rules": [
