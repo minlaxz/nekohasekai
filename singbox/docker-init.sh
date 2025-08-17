@@ -128,7 +128,7 @@ EOF
       "dns":{
           "servers": [
               {
-                  "address": "local"
+                  "type": "local"
               }
           ]
       }
