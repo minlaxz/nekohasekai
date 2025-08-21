@@ -139,16 +139,30 @@ EOF
   }
 EOF
 
-  [ "${MIXED}" = 'true' ] && ((PORT++)) && PORT_MIXED=$PORT && cat > $WORK_DIR/conf/09_mixed_inbounds.json << EOF
+  [ "${HTTP}" = 'true' ] && ((PORT++)) && PORT_HTTP=$PORT && cat > $WORK_DIR/conf/09_http_inbounds.json << EOF
   {
       "inbounds":[
           {
-              "type": "mixed",
-              "tag": "${NODE_NAME} mixed",
+              "type": "http",
+              "tag": "${NODE_NAME} http",
               "listen": "0.0.0.0",
-              "listen_port": ${PORT_MIXED},
+              "listen_port": ${PORT_HTTP},
               "users": [],
               "set_system_proxy": false
+          }
+      ]
+  }
+EOF
+
+  [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/09_socks_inbounds.json << EOF
+  {
+      "inbounds":[
+          {
+              "type": "socks",
+              "tag": "${NODE_NAME} socks",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_SOCKS},
+              "users": []
           }
       ]
   }
