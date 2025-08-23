@@ -139,64 +139,6 @@ EOF
   }
 EOF
 
-  [ "${HTTP}" = 'true' ] && ((PORT++)) && PORT_HTTP=$PORT && cat > $WORK_DIR/conf/09_http_inbounds.json << EOF
-  {
-      "inbounds":[
-          {
-              "type": "http",
-              "tag": "${NODE_NAME} http",
-              "listen": "0.0.0.0",
-              "listen_port": ${PORT_HTTP},
-              "users": [],
-              "set_system_proxy": false
-          }
-      ]
-  }
-EOF
-
-  [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/09_socks_inbounds.json << EOF
-  {
-      "inbounds":[
-          {
-              "type": "socks",
-              "tag": "${NODE_NAME} socks",
-              "listen": "0.0.0.0",
-              "listen_port": ${PORT_SOCKS},
-              "users": []
-          }
-      ]
-  }
-EOF
-
-  [ "${NAIVE}" = 'true' ] && ((PORT++)) && PORT_NAIVE=$PORT && cat > $WORK_DIR/conf/10_naive_inbounds.json << EOF
-  //  "public_key": "${REALITY_PUBLIC}"
-  {
-      "inbounds":[
-          {
-              "type": "naive",
-              "tag": "${NODE_NAME} naive",
-              "network": "udp",
-              "listen": "0.0.0.0",
-              "listen_port": ${PORT_NAIVE},
-              "users": [
-                    {
-                        "username": "nekoha",
-                        "password": "sekai"
-                    }
-              ],
-              "tls": {
-                  "enabled": true,
-                  "alpn": ["http/1.1", "h2", "h3"],
-                  "server_name": "addons.mozilla.org",
-                  "certificate_path": "$WORK_DIR/cert/cert.pem",
-                  "key_path": "$WORK_DIR/cert/private.key"
-              }
-          }
-      ]
-  }
-EOF
-
-
   [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/11_xtls-reality_inbounds.json << EOF
   //  "public_key": "${REALITY_PUBLIC}"
   {
@@ -703,6 +645,63 @@ EOF
               "multiplex": {
                   "enabled": true,
                   "padding": true
+              }
+          }
+      ]
+  }
+EOF
+
+  [ "${HTTP}" = 'true' ] && ((PORT++)) && PORT_HTTP=$PORT && cat > $WORK_DIR/conf/09_http_inbounds.json << EOF
+  {
+      "inbounds":[
+          {
+              "type": "http",
+              "tag": "${NODE_NAME} http",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_HTTP},
+              "users": [],
+              "set_system_proxy": false
+          }
+      ]
+  }
+EOF
+
+  [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/09_socks_inbounds.json << EOF
+  {
+      "inbounds":[
+          {
+              "type": "socks",
+              "tag": "${NODE_NAME} socks",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_SOCKS},
+              "users": []
+          }
+      ]
+  }
+EOF
+
+  [ "${NAIVE}" = 'true' ] && ((PORT++)) && PORT_NAIVE=$PORT && cat > $WORK_DIR/conf/10_naive_inbounds.json << EOF
+  //  "public_key": "${REALITY_PUBLIC}"
+  {
+      "inbounds":[
+          {
+              "type": "naive",
+              "tag": "${NODE_NAME} naive",
+              "network": "udp",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_NAIVE},
+              "users": [
+                    {
+                        "username": "nekoha",
+                        "password": "sekai"
+                    }
+              ],
+              "tls": {
+                  "enabled": true,
+                  "alpn": ["http/1.1", "h2", "h3"],
+                  "server_name": "addons.mozilla.org",
+                  "certificate_path": "$WORK_DIR/cert/cert.pem",
+                  "key_path": "$WORK_DIR/cert/private.key"
               }
           }
       ]
