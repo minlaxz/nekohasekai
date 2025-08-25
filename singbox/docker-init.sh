@@ -117,6 +117,13 @@ EOF
   cat > $WORK_DIR/conf/03_experimental.json << EOF
   {
       "experimental": {
+          "clash_api": {
+              "external_controller": "0.0.0.0:${PORT}",
+              "external_ui": "metacubexd",
+              "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
+              "external_ui_download_detour": "direct",
+              "default_mode": "rule"
+          },
           "cache_file": {
               "enabled": true,
               "path": "$WORK_DIR/cache.db"
@@ -139,7 +146,7 @@ EOF
   }
 EOF
 
-  [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/11_xtls-reality_inbounds.json << EOF
+  [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_XTLS_REALITY}_xtls-reality_inbounds.json << EOF
   //  "public_key": "${REALITY_PUBLIC}"
   {
       "inbounds":[
@@ -174,7 +181,7 @@ EOF
   }
 EOF
 
-  [ "${XTLS_REALITYX}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/11_xtls-reality_inbounds.json << EOF
+  [ "${XTLS_REALITYX}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_XTLS_REALITY}_xtls-reality_inbounds.json << EOF
   //  "public_key": "${REALITY_PUBLIC}"
   {
       "inbounds":[
@@ -213,7 +220,7 @@ EOF
   }
 EOF
 
-  [ "${HYSTERIA2}" = 'true' ] && ((PORT++)) && PORT_HYSTERIA2=$PORT && cat > $WORK_DIR/conf/12_hysteria2_inbounds.json << EOF
+  [ "${HYSTERIA2}" = 'true' ] && ((PORT++)) && PORT_HYSTERIA2=$PORT && cat > $WORK_DIR/conf/${PORT_HYSTERIA2}_hysteria2_inbounds.json << EOF
   {
       "inbounds":[
           {
@@ -243,7 +250,7 @@ EOF
   }
 EOF
 
-  [ "${TUIC}" = 'true' ] && ((PORT++)) && PORT_TUIC=$PORT && cat > $WORK_DIR/conf/13_tuic_inbounds.json << EOF
+  [ "${TUIC}" = 'true' ] && ((PORT++)) && PORT_TUIC=$PORT && cat > $WORK_DIR/conf/${PORT_TUIC}_tuic_inbounds.json << EOF
   {
       "inbounds": [
           {
@@ -273,7 +280,7 @@ EOF
   }
 EOF
 
-  [ "${SHADOWTLS}" = 'true' ] && ((PORT++)) && PORT_SHADOWTLS=$PORT && cat > $WORK_DIR/conf/14_ShadowTLS_inbounds.json << EOF
+  [ "${SHADOWTLS}" = 'true' ] && ((PORT++)) && PORT_SHADOWTLS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWTLS}_ShadowTLS_inbounds.json << EOF
   {
       "inbounds": [
           {
@@ -306,7 +313,7 @@ EOF
   }
 EOF
 
-  [ "${SHADOWTLSX}" = 'true' ] && ((PORT++)) && PORT_SHADOWTLS=$PORT && cat > $WORK_DIR/conf/14_ShadowTLS_inbounds.json << EOF
+  [ "${SHADOWTLSX}" = 'true' ] && ((PORT++)) && PORT_SHADOWTLS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWTLS}_ShadowTLS_inbounds.json << EOF
   {
       "inbounds": [
           {
@@ -343,7 +350,7 @@ EOF
   }
 EOF
 
-  [ "${SHADOWSOCKS}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/15_shadowsocks_inbounds.json << EOF
+  [ "${SHADOWSOCKS}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWSOCKS}_shadowsocks_inbounds.json << EOF
   {
       "inbounds": [
           {
@@ -359,7 +366,7 @@ EOF
   }
 EOF
 
-  [ "${SHADOWSOCKSX}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/15_shadowsocks_inbounds.json << EOF
+  [ "${SHADOWSOCKSX}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWSOCKS}_shadowsocks_inbounds.json << EOF
   {
       "inbounds":[
           {
@@ -379,7 +386,7 @@ EOF
   }
 EOF
 
-  [ "${TROJAN}" = 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/16_trojan_inbounds.json << EOF
+  [ "${TROJAN}" = 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/${PORT_TROJAN}_trojan_inbounds.json << EOF
   {
       "inbounds": [
           {
@@ -404,7 +411,7 @@ EOF
   }
 EOF
 
-  [ "${TROJANX}" = 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/16_trojan_inbounds.json << EOF
+  [ "${TROJANX}" = 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/${PORT_TROJAN}_trojan_inbounds.json << EOF
   {
       "inbounds": [
           {
@@ -433,7 +440,7 @@ EOF
   }
 EOF
 
-  [ "${VLESS_WS}" = 'true' ] && ((PORT++)) && PORT_VLESS_WS=$PORT && cat > $WORK_DIR/conf/18_vless-ws-tls_inbounds.json << EOF
+  [ "${VLESS_WS}" = 'true' ] && ((PORT++)) && PORT_VLESS_WS=$PORT && cat > $WORK_DIR/conf/${PORT_VLESS_WS}_vless-ws-tls_inbounds.json << EOF
   //  "CDN": "${CDN}"
   {
       "inbounds": [
@@ -461,7 +468,7 @@ EOF
   }
 EOF
 
-  [ "${VLESS_WSX}" = 'true' ] && ((PORT++)) && PORT_VLESS_WS=$PORT && cat > $WORK_DIR/conf/18_vless-ws-tls_inbounds.json << EOF
+  [ "${VLESS_WSX}" = 'true' ] && ((PORT++)) && PORT_VLESS_WS=$PORT && cat > $WORK_DIR/conf/${PORT_VLESS_WS}_vless-ws-tls_inbounds.json << EOF
   //  "CDN": "${CDN}"
   {
       "inbounds": [
@@ -493,7 +500,7 @@ EOF
   }
 EOF
 
-  [ "${H2_REALITY}" = 'true' ] && ((PORT++)) && PORT_H2_REALITY=$PORT && cat > $WORK_DIR/conf/19_h2-reality_inbounds.json << EOF
+  [ "${H2_REALITY}" = 'true' ] && ((PORT++)) && PORT_H2_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_H2_REALITY}_h2-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
   {
       "inbounds": [
@@ -530,7 +537,7 @@ EOF
   }
 EOF
 
-  [ "${H2_REALITYX}" = 'true' ] && ((PORT++)) && PORT_H2_REALITY=$PORT && cat > $WORK_DIR/conf/19_h2-reality_inbounds.json << EOF
+  [ "${H2_REALITYX}" = 'true' ] && ((PORT++)) && PORT_H2_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_H2_REALITY}_h2-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
   {
       "inbounds": [
@@ -571,7 +578,7 @@ EOF
   }
 EOF
 
-  [ "${GRPC_REALITY}" = 'true' ] && ((PORT++)) && PORT_GRPC_REALITY=$PORT && cat > $WORK_DIR/conf/20_grpc-reality_inbounds.json << EOF
+  [ "${GRPC_REALITY}" = 'true' ] && ((PORT++)) && PORT_GRPC_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_GRPC_REALITY}_grpc-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
   {
       "inbounds": [
@@ -609,7 +616,7 @@ EOF
   }
 EOF
 
-  [ "${GRPC_REALITYX}" = 'true' ] && ((PORT++)) && PORT_GRPC_REALITY=$PORT && cat > $WORK_DIR/conf/20_grpc-reality_inbounds.json << EOF
+  [ "${GRPC_REALITYX}" = 'true' ] && ((PORT++)) && PORT_GRPC_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_GRPC_REALITY}_grpc-reality_inbounds.json << EOF
   //  "public_key":"${REALITY_PUBLIC}"
   {
       "inbounds": [
@@ -651,7 +658,7 @@ EOF
   }
 EOF
 
-  [ "${HTTP}" = 'true' ] && ((PORT++)) && PORT_HTTP=$PORT && cat > $WORK_DIR/conf/09_http_inbounds.json << EOF
+  [ "${HTTP}" = 'true' ] && ((PORT++)) && PORT_HTTP=$PORT && cat > $WORK_DIR/conf/${PORT_HTTP}_http_inbounds.json << EOF
   {
       "inbounds":[
           {
@@ -666,7 +673,23 @@ EOF
   }
 EOF
 
-  [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/09_socks_inbounds.json << EOF
+  [ "${HTTP}" = 'true' ] && ((PORT++)) && PORT_HTTP_DETOUR=$PORT && cat > $WORK_DIR/conf/${PORT_HTTP_DETOUR}_http_detour_inbounds.json << EOF
+  {
+      "inbounds":[
+          {
+              "type": "http",
+              "tag": "${NODE_NAME} http-detour",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_HTTP_DETOUR},
+              "users": [],
+              "set_system_proxy": false,
+              "detour": "${NODE_NAME} xtls-reality"
+          }
+      ]
+  }
+EOF
+
+  [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SOCKS}_socks_inbounds.json << EOF
   {
       "inbounds":[
           {
@@ -680,7 +703,7 @@ EOF
   }
 EOF
 
-  [ "${NAIVE}" = 'true' ] && ((PORT++)) && PORT_NAIVE=$PORT && cat > $WORK_DIR/conf/10_naive_inbounds.json << EOF
+  [ "${NAIVE}" = 'true' ] && ((PORT++)) && PORT_NAIVE=$PORT && cat > $WORK_DIR/conf/${PORT_NAIVE}_naive_inbounds.json << EOF
   //  "public_key": "${REALITY_PUBLIC}"
   {
       "inbounds":[
