@@ -118,7 +118,7 @@ EOF
   {
       "experimental": {
           "clash_api": {
-              "external_controller": "0.0.0.0:${PORT}",
+              "external_controller": "0.0.0.0:8820",
               "external_ui": "metacubexd",
               "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
               "external_ui_download_detour": "direct",
