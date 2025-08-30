@@ -7,7 +7,7 @@
         "address_resolver": "dns-direct",
         "address_strategy": "ipv4_only",
         "detour": "direct"
-      }
+      },
       {
         "tag": "dns-direct",
         "address": "1.1.1.1",
