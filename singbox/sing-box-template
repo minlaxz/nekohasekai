@@ -2,16 +2,47 @@
   "dns": {
     "servers": [
       {
-        "tag": "dns-local",
-        "address": "1.1.1.1"
+        "tag": "dns-remote",
+        "address": "tls://dns.adguard-dns.com",
+        "address_resolver": "dns-direct",
+        "address_strategy": "ipv4_only",
+        "detour": "direct"
+      }
+      {
+        "tag": "dns-direct",
+        "address": "1.1.1.1",
+        "detour": "direct"
+      },
+      {
+        "tag": "dns-fake",
+        "address": "fakeip"
       }
     ],
     "rules": [
       {
         "outbound": "any",
-        "server": "dns-local"
+        "server": "dns-direct",
+        "action": "route"
+      },
+      {
+        "query_type": ["A"],
+        "server": "dns-fake",
+        "rewrite_ttl": 3600,
+        "action": "route"
+      },
+      {
+        "domain_suffix": ".mm",
+        "rule_set": ["geosite-mm"],
+        "server": "dns-direct",
+        "rewrite_ttl": 3600,
+        "action": "route"
       }
     ],
+    "fakeip": {
+      "enabled": true,
+      "inet4_range": "198.18.0.0/15"
+    },
+    "final": "dns-remote",
     "independent_cache": true,
     "strategy": "ipv4_only"
   },
@@ -62,8 +93,9 @@
         "svr1 grpc-reality"
       ],
       "url": "http://www.gstatic.com/generate_204",
-      "interval": "3m",
-      "tolerance": 100
+      "interval": "1m",
+      "tolerance": 100,
+      "interrupt_exist_connections": false
     },
     {
       "type": "selector",
@@ -78,7 +110,8 @@
         "svr1 h2-reality",
         "svr1 grpc-reality"
       ],
-      "default": "svr1 xtls-reality"
+      "default": "svr1 xtls-reality",
+      "interrupt_exist_connections": false
     },
     {
       "type": "selector",
@@ -88,7 +121,8 @@
         "svr1",
         "Manual"
       ],
-      "default": "svr1"
+      "default": "svr1",
+      "interrupt_exist_connections": false
     },
     {
       "type": "selector",
@@ -98,7 +132,8 @@
         "svr1",
         "Manual"
       ],
-      "default": "direct"
+      "default": "direct",
+      "interrupt_exist_connections": false
     },
     {
       "type": "selector",
@@ -107,7 +142,8 @@
         "direct",
         "svr1"
       ],
-      "default": "direct"
+      "default": "direct",
+      "interrupt_exist_connections": false
     }
   ],
   "route": {
@@ -183,7 +219,15 @@
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/private.srs",
         "download_detour": "direct",
         "update_interval": "1d"
-      }
+      },
+      {
+        "tag": "geosite-mm",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/mm.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
     ],
     "rules": [
       {
@@ -207,14 +251,39 @@
         "timeout": "1s"
       },
       {
-        "protocol": "dns",
-        "inbound": "tun-in",
-        "action": "hijack-dns"
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+            {
+               "protocol": "dns"
+            },
+            {
+               "port": 53
+            }
+         ],
+         "action": "hijack-dns"
       },
       {
-        "protocol": "dns",
-        "inbound": "http-in",
-        "action": "hijack-dns"
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+            {
+              "network": "tcp",
+              "port": 853
+            },
+            {
+              "network": "udp",
+              "port": [
+                443,
+                853
+              ]
+            },
+            {
+              "protocol": "stun"
+            }
+          ],
+        "action": "reject",
+        "method": "drop"
       },
       {
         "type": "logical",
@@ -282,9 +351,10 @@
       ],
       "access_control_allow_private_network": true
     },
-    "cache_file": {
-      "enabled": false,
-      "store_fakeip": false,
+  "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "store_fakeip": true,
       "store_rdrc": true,
       "rdrc_timeout": "1d"
     }
