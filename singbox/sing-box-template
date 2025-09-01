@@ -42,7 +42,7 @@
       "enabled": true,
       "inet4_range": "198.18.0.0/15"
     },
-    "final": "dns-remote",
+    "final": "dns-direct",
     "independent_cache": true,
     "strategy": "ipv4_only"
   },
