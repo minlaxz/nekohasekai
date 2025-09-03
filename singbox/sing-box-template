@@ -3,7 +3,7 @@
     "servers": [
       {
         "tag": "dns-remote",
-        "address": "tls://dns.adguard-dns.com",
+        "address": "https://dns.adguard-dns.com/dns-query",
         "address_resolver": "dns-direct",
         "address_strategy": "ipv4_only",
         "detour": "direct"
@@ -108,7 +108,8 @@
         "svr1 shadowsocks",
         "svr1 trojan",
         "svr1 h2-reality",
-        "svr1 grpc-reality"
+        "svr1 grpc-reality",
+        "svr1 socks"
       ],
       "default": "svr1 xtls-reality",
       "interrupt_exist_connections": false
