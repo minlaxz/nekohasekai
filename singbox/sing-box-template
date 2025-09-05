@@ -108,8 +108,7 @@
         "svr1 shadowsocks",
         "svr1 trojan",
         "svr1 h2-reality",
-        "svr1 grpc-reality",
-        "svr1 socks"
+        "svr1 grpc-reality"
       ],
       "default": "svr1 xtls-reality",
       "interrupt_exist_connections": false
