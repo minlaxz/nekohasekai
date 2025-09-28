@@ -1,7 +1,7 @@
 services:
-    sing-box:
-        image: ghcr.io/minlaxz/nekohasekai:singbox
-        container_name: sing-box
+    sing-box-v2:
+        image: ghcr.io/minlaxz/nekohasekai:singbox-v2
+        container_name: sing-box-v2
         restart: unless-stopped
         ports:
             - "8840-8850:8840-8850"
@@ -9,13 +9,32 @@ services:
             - .env
         volumes:
             - ./conf:/sing-box/conf
+            - public:/sing-box/public
+        networks:
+            - sing-net
 
-    cloudflared:
-        image: cloudflare/cloudflared:latest
-        container_name: cloudflared
+    nginx:
+        image: nginx:alpine
+        container_name: nginx
         restart: unless-stopped
-        command: tunnel --edge-ip-version auto --tunnel quic run --token ${ARGO_AUTH}
         depends_on:
-            - sing-box
+            - sing-box-v2
+        expose:
+          - "80"
+        volumes:
+            - ./nginx/conf.d:/etc/nginx/conf.d
+            - public:/usr/share/nginx/html:ro
         env_file:
             - .env
+        networks:
+            - sing-net
+            - cfnet
+
+volumes:
+    public:
+
+networks:
+    sing-net:
+        driver: bridge
+    cfnet:
+        external: true
