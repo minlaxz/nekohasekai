@@ -17,19 +17,17 @@ jobs:
 
       steps:
       - uses: actions/checkout@v5
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3.0.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.0.0
-
-      - name: Log into registry ${{ env.REGISTRY }}
-        uses: docker/login-action@v3
+      - uses: docker/setup-qemu-action@v3.0.0
+      - uses: docker/setup-buildx-action@v3.0.0
+      - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -37,4 +35,6 @@ jobs:
           push: true
           platforms: linux/amd64, linux/arm64
           context: ./singbox/v2
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:singbox-v2
+          tags: |
+            ${{ env.IMAGE_NAME }}:singbox-v2
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:singbox-v2
