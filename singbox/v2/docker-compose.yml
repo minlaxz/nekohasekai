@@ -10,31 +10,20 @@ services:
         volumes:
             - ./conf:/sing-box/conf
             - public:/sing-box/public
-        networks:
-            - sing-net
 
-    nginx:
+    nginx-v2:
         image: nginx:alpine
-        container_name: nginx
+        container_name: nginx-v2
         restart: unless-stopped
         depends_on:
             - sing-box-v2
-        expose:
-          - "80"
+        ports:
+          - "8851:80"
         volumes:
-            - ./nginx/conf.d:/etc/nginx/conf.d
-            - public:/usr/share/nginx/html:ro
+            # - ./nginx/conf.d:/etc/nginx/conf.d
+            - public:/usr/share/nginx/html:ro # /client.json
         env_file:
             - .env
-        networks:
-            - sing-net
-            - cfnet
 
 volumes:
     public:
-
-networks:
-    sing-net:
-        driver: bridge
-    cfnet:
-        external: true
