@@ -2,10 +2,10 @@ services:
     sing-box:
         image: ghcr.io/minlaxz/nekohasekai:singbox
         container_name: sing-box
+        command: ["/sing-box/sing-box", "run", "-C", "/sing-box/conf"]
         restart: unless-stopped
         ports:
-            - "8800-8810:8800-8810/tcp"
-            - "8800-8810:8800-8810/udp"
+            - "8840-8850:8840-8850"
         env_file:
             - .env
 
@@ -13,7 +13,7 @@ services:
         image: cloudflare/cloudflared:latest
         container_name: cloudflared
         restart: unless-stopped
-        command: tunnel --edge-ip-version 6 --tunnel http2 run --token ${ARGO_TOKEN}
+        command: tunnel --edge-ip-version auto --tunnel quic run --token ${ARGO_AUTH}
         depends_on:
             - sing-box
         env_file:

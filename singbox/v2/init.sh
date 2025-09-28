@@ -170,3 +170,6 @@ EOF
 }
 
 setting_things_up
+
+# https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
+exec "$@"
