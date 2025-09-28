@@ -2,12 +2,13 @@ services:
     sing-box:
         image: ghcr.io/minlaxz/nekohasekai:singbox
         container_name: sing-box
-        command: ["/sing-box/sing-box", "run", "-C", "/sing-box/conf"]
         restart: unless-stopped
         ports:
             - "8840-8850:8840-8850"
         env_file:
             - .env
+        volumes:
+            - ./conf:/sing-box/conf
 
     cloudflared:
         image: cloudflare/cloudflared:latest
