@@ -1,0 +1,324 @@
+{
+  "dns": {
+    "servers": [
+      {
+        "tag": "dns-remote",
+        "address": "https://dns.adguard-dns.com/dns-query",
+        "address_resolver": "dns-direct",
+        "address_strategy": "ipv4_only",
+        "detour": "direct"
+      },
+      {
+        "tag": "dns-direct",
+        "address": "1.1.1.1",
+        "detour": "direct"
+      },
+      {
+        "tag": "dns-fake",
+        "address": "fakeip"
+      }
+    ],
+    "rules": [
+      {
+        "outbound": "any",
+        "server": "dns-direct",
+        "action": "route"
+      },
+      {
+        "query_type": ["A"],
+        "server": "dns-fake",
+        "rewrite_ttl": 3600,
+        "action": "route"
+      },
+      {
+        "domain_suffix": ".mm",
+        "rule_set": ["geosite-mm"],
+        "server": "dns-direct",
+        "rewrite_ttl": 3600,
+        "action": "route"
+      }
+    ],
+    "fakeip": {
+      "enabled": true,
+      "inet4_range": "198.18.0.0/15"
+    },
+    "final": "dns-direct",
+    "independent_cache": true,
+    "strategy": "ipv4_only"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "domain_strategy": "ipv4_only",
+      "interface_name": "utun1",
+      "address": [
+        "10.69.69.0/28",
+        "fd00::1/126"
+      ],
+      "mtu": 1400,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "gvisor",
+      "sniff": true,
+      "sniff_override_destination": true
+    },
+    {
+      "type": "http",
+      "tag": "http-in",
+      "domain_strategy": "ipv4_only",
+      "listen": "0.0.0.0",
+      "listen_port": 2080,
+      "tcp_fast_open": false,
+      "sniff": true,
+      "sniff_override_destination": true
+    }
+  ],
+  "outbounds": [
+    "<INBOUND_REPLACE>",
+    {
+      "tag": "direct",
+      "type": "direct"
+    },
+    {
+      "type": "selector",
+      "tag": "Registered",
+      "outbounds": [
+        "direct",
+        "svr1 shadowsocks"
+      ],
+      "default": "svr1 shadowsocks"
+    },
+    {
+      "type": "selector",
+      "tag": "Unregistered",
+      "outbounds": [
+        "direct",
+        "svr1 shadowsocks"
+      ],
+      "default": "direct"
+    },
+    {
+      "type": "selector",
+      "tag": "Options P0rn",
+      "outbounds": [
+        "direct",
+        "svr1 shadowsocks"
+      ],
+      "default": "direct"
+    }
+  ],
+  "route": {
+    "rule_set": [
+      {
+        "tag": "geosite-category-porn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-porn.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-facebook",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-messenger",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-instagram",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-whatsapp",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-twitter",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-minlaxz",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-minlaxz.srs",
+        "download_detour": "direct",
+        "update_interval": "1h"
+      },
+      {
+        "tag": "geosite-github",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-private",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/private.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-mm",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/mm.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      }
+    ],
+    "rules": [
+      {
+        "inbound": "tun-in",
+        "action": "resolve",
+        "strategy": "ipv4_only"
+      },
+      {
+        "inbound": "tun-in",
+        "action": "sniff",
+        "timeout": "1s"
+      },
+      {
+        "inbound": "http-in",
+        "action": "resolve",
+        "strategy": "ipv4_only"
+      },
+      {
+        "inbound": "http-in",
+        "action": "sniff",
+        "timeout": "1s"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+            {
+               "protocol": "dns"
+            },
+            {
+               "port": 53
+            }
+         ],
+         "action": "hijack-dns"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+            {
+              "network": "tcp",
+              "port": 853
+            },
+            {
+              "network": "udp",
+              "port": [
+                443,
+                853
+              ]
+            },
+            {
+              "protocol": "stun"
+            }
+          ],
+        "action": "reject",
+        "method": "drop"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": "geosite-category-porn"
+          }
+        ],
+        "outbound": "Options P0rn"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": [
+              "geosite-facebook",
+              "geosite-messenger",
+              "geosite-instagram",
+              "geosite-whatsapp",
+              "geosite-twitter",
+              "geosite-minlaxz",
+              "geosite-github"
+            ]
+          },
+          {
+            "domain_keyword": [
+              "channelmyanmar"
+            ]
+          },
+          {
+            "domain_regex": "^(bard|gemini)\\.google\\.com$"
+          },
+          {
+            "domain_suffix": [
+              "proton.me"
+            ]
+          }
+        ],
+        "outbound": "Registered"
+      },
+      {
+        "rule_set": [
+          "geoip-private"
+        ],
+        "outbound": "direct"
+      }
+    ],
+    "final": "Unregistered",
+    "override_android_vpn": true,
+    "auto_detect_interface": true
+  },
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "0.0.0.0:6969",
+      "access_control_allow_origin": [
+        "http://127.0.0.1",
+        "https://yacd.haishan.me",
+        "https://d.metacubex.one"
+      ],
+      "access_control_allow_private_network": true
+    },
+  "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "store_fakeip": true,
+      "store_rdrc": true,
+      "rdrc_timeout": "1d"
+    }
+  }
+}
