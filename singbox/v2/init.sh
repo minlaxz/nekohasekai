@@ -11,7 +11,7 @@ setting_things_up() {
   SERVER_IP="$(wget -q -O- https://ipecho.net/plain)"
 
   if [[ "$SERVER_IP" =~ : ]]; then
-    local DOMAIN_STRATEGY=ipv6_only
+    local DOMAIN_STRATEGY=prefer_ipv4
   else
     local DOMAIN_STRATEGY=ipv4_only
   fi
