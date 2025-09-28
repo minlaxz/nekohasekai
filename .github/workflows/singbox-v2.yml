@@ -37,5 +37,4 @@ jobs:
           push: true
           platforms: linux/amd64, linux/arm64
           context: ./singbox/v2
-          target: top
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:singbox-v2
