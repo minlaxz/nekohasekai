@@ -159,6 +159,14 @@
         "update_interval": "1d"
       },
       {
+        "tag": "geosite-tiktok",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/tiktok.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
         "tag": "geosite-minlaxz",
         "type": "remote",
         "format": "binary",
@@ -268,6 +276,7 @@
               "geosite-instagram",
               "geosite-whatsapp",
               "geosite-twitter",
+              "geosite-tiktok",
               "geosite-minlaxz",
               "geosite-github"
             ]
