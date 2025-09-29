@@ -21,7 +21,7 @@ services:
           - "8851:80"
         volumes:
             # - ./nginx/conf.d:/etc/nginx/conf.d
-            - public:/usr/share/nginx/html:ro # /client.json
+            - public:/usr/share/nginx/html:ro # domain/client.json
         env_file:
             - .env
 

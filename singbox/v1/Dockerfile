@@ -11,7 +11,7 @@ WORKDIR /sing-box
 
 COPY --from=openssl /private.key /sing-box/cert/private.key
 COPY --from=openssl /cert.pem /sing-box/cert/cert.pem
-COPY docker-init.sh /sing-box/init.sh
+COPY init.sh /sing-box/init.sh
 
 RUN set -ex &&\
   apk add --no-cache supervisor nginx bash &&\

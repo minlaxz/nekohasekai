@@ -1,9 +1,9 @@
 {
-    "family": "min-facarmansb-td",
+    "family": "singbox-td",
     "containerDefinitions": [
         {
-            "name": "sb",
-            "image": "ghcr.io/minlaxz/nekohasekai:fscarmen-sb",
+            "name": "singbox",
+            "image": "ghcr.io/minlaxz/nekohasekai:<tag>",
             "cpu": 0,
             "portMappings": [
                 {
@@ -286,16 +286,12 @@
                     "value": "true"
                 },
                 {
-                    "name": "SERVER_IP",
-                    "value": "localhost"
-                },
-                {
                     "name": "H2_REALITY",
                     "value": "true"
                 },
                 {
                     "name": "NODE_NAME",
-                    "value": "sing-box"
+                    "value": "svr-1"
                 },
                 {
                     "name": "START_PORT",
@@ -318,7 +314,7 @@
                     "value": "true"
                 },
                 {
-                    "name": "UUID",
+                    "name": "CUSTOM_UUID",
                     "value": "<<<YOUR-UUID>>>"
                 },
                 {
@@ -333,7 +329,7 @@
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
-                    "awslogs-group": "/ecs/min-facarmansb-td",
+                    "awslogs-group": "/ecs/singbox-td",
                     "mode": "non-blocking",
                     "awslogs-create-group": "true",
                     "max-buffer-size": "25m",

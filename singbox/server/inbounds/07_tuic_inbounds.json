@@ -1,0 +1,27 @@
+{
+  "inbounds": [
+    {
+      "type": "tuic",
+      "tag": "svr1 tuic",
+      "listen": "0.0.0.0",
+      "listen_port": 8805,
+      "users": [
+        {
+          "uuid": "abcd1234-5678-90ab-cdef-1234567890ff",
+          "password": "abcd1234-5678-90ab-cdef-1234567890ff"
+        }
+      ],
+      "congestion_control": "bbr",
+      "zero_rtt_handshake": false,
+      "tls": {
+        "enabled": true,
+        "alpn": ["http/1.1", "h2", "h3"],
+        "server_name": "addons.mozilla.org",
+        "certificate_path": "/sing-box/cert/cert.pem",
+        "key_path": "/sing-box/cert/private.key",
+        "min_version": "1.3",
+        "max_version": "1.3"
+      }
+    }
+  ]
+}

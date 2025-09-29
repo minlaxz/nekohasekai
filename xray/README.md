@@ -2,7 +2,7 @@ Xray
 ===
 [Xray](https://github.com/XTLS/Xray-core) is a powerful proxy tool that can be used to bypass network restrictions.
 
-This is just my personal Xray setup to bypass Myanmar's fucking network restrictions.
+This is just my personal Xray setup to bypass Myanmar's network restrictions.
 
 1. Download and check the config file.
 2. Read every comments in it and modify as needed.

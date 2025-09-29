@@ -1,0 +1,9 @@
+{
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct-out",
+      "domain_strategy": "ipv4_only"
+    }
+  ]
+}

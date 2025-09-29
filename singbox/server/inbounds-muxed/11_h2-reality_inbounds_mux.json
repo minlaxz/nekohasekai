@@ -1,0 +1,35 @@
+{
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "svr1 h2-reality",
+      "listen": "0.0.0.0",
+      "listen_port": 8810,
+      "users": [
+        {
+          "uuid": "abcd1234-5678-90ab-cdef-1234567890ff"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "addons.mozilla.org",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "addons.mozilla.org",
+            "server_port": 443
+          },
+          "private_key": "QHZLntJAFNpXH0yECmuNFSIjsonXJJFV0F-rFb6G6Wg",
+          "short_id": [""]
+        }
+      },
+      "transport": {
+        "type": "http"
+      },
+      "multiplex": {
+        "enabled": true,
+        "padding": true
+      }
+    }
+  ]
+}

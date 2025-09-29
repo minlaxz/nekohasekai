@@ -1,0 +1,17 @@
+{
+  "inbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "svr1 shadowsocks",
+      "listen": "0.0.0.0",
+      "listen_port": 8807,
+      "network": "tcp",
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "26pG9+YxbEqlV3gXZwL/lg==",
+      "multiplex": {
+        "enabled": true,
+        "padding": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+services:
+    sing-box-v1:
+        image: ghcr.io/minlaxz/nekohasekai:singbox-v1
+        container_name: sing-box-v1
+        restart: unless-stopped
+        ports:
+            - "8800-8820:8800-8820"
+        env_file:
+            - .env
+        volumes:
+            - ./conf:/sing-box/conf

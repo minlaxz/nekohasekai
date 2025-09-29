@@ -3,43 +3,37 @@ A working configurations for sing-box (with docker)
 
 > This is not automated script or something, but for those who would like to setup by hand.
 
-### First, Docker is needed!
+We first need three things:
+1. Docker and compose extension
+2. TCP Brutal Multiplexing (for TCP proxies)
+3. BBR congestion control (for TUIC proxy)
+
+### 1. Install Docker and compose extension
 
 ```sh
 wget -qO- get.docker.com | bash
-
-# Just add $USER to the docker group!
-
-sudo groupadd docker || true && sudo usermod -aG docker $USER && newgrp docker
-
 ```
 
-### TCP Brutal Multiplexing for TCP proxies
+### 2. TCP Brutal Multiplexing for TCP proxies
 
 ```sh
 bash <(curl -fsSL https://tcp.hy2.sh/)
 ```
 
 
-### BBR congestion control for TUIC proxy
+### 3. BBR congestion control for TUIC proxy
 ```sh
-sudo nano /etc/sysctl.conf
-
-net.core.default_qdisc=fq
-net.ipv4.tcp_congestion_control=bbr
-
+echo net.core.default_qdisc=fq | sudo tee -a /etc/sysctl.conf
+echo net.ipv4.tcp_congestion_control=bbr | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
 
-- [sing-box examples](/examples/)
-- [sing-box in docker](/docker/)
+### 4. What are these directories?
+- [rules](/rules/) - my rules for adblocking and routing, you can use as reference
+- [scripts](/scripts/) - useful scripts for misc tasks
+- [singbox](/singbox/) - sing-box configuration files and separated README
+- [xray](/xray/) - xray configuration files (for vless proxy), _deprecated_
 
 
-<!-- ### My example setup -->
-<!-- ```sh -->
-<!-- git clone --single-branch --branch release https://github.com/minlaxz/nekohasekai.git -->
-<!-- cd nekohasekai/reverse-proxy && ./setup.sh && cd ../.. -->
-<!-- mv .env.sample .env -->
-<!-- ``` -->
-<!-- bash <(curl -fsSL https://tcp.hy2.sh/) -->
-<!-- bash <(wget -qO- https://raw.githubusercontent.com/GFW4Fun/S-UI-PRO/master/s-ui-pro.sh) -install yes -->
+### 5. nekohasekai
+- [nekohasekai](https://github.com/nekohasekai)

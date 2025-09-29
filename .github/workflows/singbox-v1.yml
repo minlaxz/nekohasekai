@@ -36,6 +36,6 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64
-          context: ./singbox
+          context: ./singbox/v1
           target: dist
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:singbox
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:singbox-v1
