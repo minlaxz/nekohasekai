@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 WORK_DIR=/sing-box
-makdir -p $WORK_DIR/conf
-makdir -p $WORK_DIR/public
+mkdir -p $WORK_DIR/conf
+mkdir -p $WORK_DIR/public
 PORT=${START_PORT:-1080}
 TEMPLATE_PATH="https://raw.githubusercontent.com/minlaxz/nekohasekai/main/singbox/v2/sing-box-template"
 
