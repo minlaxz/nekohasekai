@@ -55,10 +55,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if version.startswith("11"):
                 remote_data["dns"]["servers"] = [
                     {
-                        "tag": "dns-fake",
-                        "address": "fakeip"
-                    },
-                    {
                         "tag": "dns-remote",
                         "address": "quic://dns.adguard-dns.com",
                         "address_resolver": "dns-direct",
@@ -71,19 +67,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "detour": "direct"
                     }
                 ]
-                remote_data["dns"]["fakeip"] = {
-                    "enabled": "true",
-                    "inet4_range": "10.10.0.0/16",
-                    "inet6_range": "fc00::/18"
-                }
             else:
                 remote_data["dns"]["servers"] = [
-                    {
-                        "tag": "dns-fake",
-                        "type": "fakeip",
-                        "inet4_range": "10.10.0.0/16",
-                        "inet6_range": "fc00::/18"
-                    },
                     {
                         "tag": "dns-remote",
                         "type": "quic",
@@ -96,6 +81,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "server": "1.1.1.1"
                     }
                 ]
+                remote_data["route"]["default_domain_resolver"] = {
+                    "server": "dns-direct",
+                    "rewrite_ttl": 60,
+                    "client_subnet": "1.1.1.1"
+                }
             # fmt: on
 
             body = json.dumps(remote_data, indent=2).encode()

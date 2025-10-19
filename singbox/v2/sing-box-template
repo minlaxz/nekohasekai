@@ -1,31 +1,6 @@
 {
   "dns": {
     "servers": [],
-    "rules": [
-      {
-        "query_type": [
-          "A",
-          "AAAA"
-        ],
-        "server": "dns-fake",
-        "rewrite_ttl": 3600,
-        "action": "route"
-      },
-      {
-        "outbound": "any",
-        "server": "dns-direct",
-        "action": "route"
-      },
-      {
-        "domain_suffix": ".mm",
-        "rule_set": [
-          "geosite-mm"
-        ],
-        "server": "dns-direct",
-        "rewrite_ttl": 3600,
-        "action": "route"
-      }
-    ],
     "final": "dns-remote",
     "independent_cache": true,
     "strategy": "ipv4_only"
