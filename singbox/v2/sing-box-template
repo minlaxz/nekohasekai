@@ -15,7 +15,9 @@
       },
       {
         "tag": "dns-fake",
-        "address": "fakeip"
+        "type": "fakeip",
+        "inet4_range": "10.10.0.0/16",
+        "inet6_range": "fc00::/18"
       }
     ],
     "rules": [
@@ -38,10 +40,6 @@
         "action": "route"
       }
     ],
-    "fakeip": {
-      "enabled": true,
-      "inet4_range": "198.18.0.0/15"
-    },
     "final": "dns-direct",
     "independent_cache": true,
     "strategy": "ipv4_only"
@@ -85,16 +83,16 @@
       "tag": "Registered",
       "outbounds": [
         "direct",
-        "svr1 shadowsocks"
+        "shadowsocks"
       ],
-      "default": "svr1 shadowsocks"
+      "default": "shadowsocks"
     },
     {
       "type": "selector",
       "tag": "Unregistered",
       "outbounds": [
         "direct",
-        "svr1 shadowsocks"
+        "shadowsocks"
       ],
       "default": "direct"
     },
@@ -103,7 +101,7 @@
       "tag": "Options P0rn",
       "outbounds": [
         "direct",
-        "svr1 shadowsocks"
+        "shadowsocks"
       ],
       "default": "direct"
     }
@@ -283,7 +281,7 @@
           },
           {
             "domain_keyword": [
-              "channelmyanmar"
+              "minlaxz"
             ]
           },
           {
