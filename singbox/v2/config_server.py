@@ -88,14 +88,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "tag": "dns-remote",
                         "type": "quic",
                         "server": "dns.adguard-dns.com",
-                        "domain_resolver": "dns-direct",
-                        "detour": "direct"
+                        "domain_resolver": "dns-direct"
                     },
                     {
                         "tag": "dns-direct",
                         "type": "udp",
-                        "server": "1.1.1.1",
-                        "detour": "direct"
+                        "server": "1.1.1.1"
                     }
                 ]
             # fmt: on
