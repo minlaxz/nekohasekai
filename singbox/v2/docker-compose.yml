@@ -1,5 +1,5 @@
 services:
-    sing-box-v2:
+    sing-box:
         image: ghcr.io/minlaxz/nekohasekai:singbox-v2
         container_name: sing-box-v2
         restart: unless-stopped
@@ -8,22 +8,21 @@ services:
         env_file:
             - .env
         volumes:
-            - ./conf:/sing-box/conf
             - public:/sing-box/public
 
-    nginx-v2:
-        image: nginx:alpine
-        container_name: nginx-v2
+      json-server:
+        build: .
+        container_name: json-server
         restart: unless-stopped
         depends_on:
-            - sing-box-v2
+          - sing-box-v2
         ports:
-          - "8851:80"
+          - "127.0.0.1:8851:8851"
         volumes:
-            # - ./nginx/conf.d:/etc/nginx/conf.d
-            - public:/usr/share/nginx/html:ro # domain/client.json
-        env_file:
-            - .env
+          - public:/data:ro
+        environment:
+          - LOCAL_JSON_PATH=/data/local.json
+          - REMOTE_JSON_URL=https://example.com/remote.json
 
 volumes:
     public:
