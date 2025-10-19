@@ -10,7 +10,7 @@ warning() { echo -e "\033[31m\033[01m$*\033[0m"; }
 info() { echo -e "\033[32m\033[01m$*\033[0m"; }
 hint() { echo -e "\033[33m\033[01m$*\033[0m"; }
 
-setting_things_up() {
+upupup() {
   SERVER_IP="$(wget -q -O- https://ipecho.net/plain)"
 
   if [[ "$SERVER_IP" =~ : ]]; then
@@ -19,7 +19,8 @@ setting_things_up() {
     local DOMAIN_STRATEGY=ipv4_only
   fi
 
-  local SHADOWTLS_PASSWORD=${CUSTOM_SHADOWTLS_PASSWORD:-"$($WORK_DIR/sing-box generate rand --base64 16)"}
+  local SS_ENCRYPTION_METHOD=${CUSTOM_SS_ENCRYPTION_METHOD:="chacha20-ietf-poly1305"}
+  local SS_PASSWORD=${CUSTOM_SS_PASSWORD:-"$($WORK_DIR/sing-box generate rand --base64 16)"}
   local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
   local NODE_NAME=${NODE_NAME:-"sing-box"}
 
@@ -76,7 +77,7 @@ EOF
 EOF
 
   cat > $WORK_DIR/conf/04_dns.json << EOF
-  // As no sniff in outbound, have no effect on this as well
+  // As no sniff in outbound, do not affect this as well
   {
       "dns":{
           "servers": [
@@ -94,12 +95,11 @@ EOF
       "inbounds": [
           {
               "type": "shadowsocks",
-              "tag": "${NODE_NAME} shadowsocks",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
-              "method": "chacha20-ietf-poly1305",
-              "password": "${SHADOWTLS_PASSWORD}"
+              "method": "${SS_ENCRYPTION_METHOD}",
+              "password": "${SS_PASSWORD}"
           }
       ]
   }
@@ -110,12 +110,11 @@ EOF
       "inbounds":[
           {
               "type": "shadowsocks",
-              "tag": "${NODE_NAME} shadowsocks",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
-              "method": "chacha20-ietf-poly1305",
-              "password": "${SHADOWTLS_PASSWORD}",
+              "method": "${SS_ENCRYPTION_METHOD}",
+              "password": "${SS_PASSWORD}",
               "multiplex": {
                   "enabled": true,
                   "padding": true
@@ -130,7 +129,6 @@ EOF
       "inbounds":[
           {
               "type": "http",
-              "tag": "${NODE_NAME} http",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_HTTP},
               "users": [],
@@ -145,12 +143,11 @@ EOF
       "inbounds":[
           {
               "type": "http",
-              "tag": "${NODE_NAME} http-detour",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_HTTP_DETOUR},
               "users": [],
               "set_system_proxy": false,
-              "detour": "${NODE_NAME} shadowsocks"
+              "detour": "shadowsocks"
           }
       ]
   }
@@ -171,19 +168,17 @@ EOF
 EOF
 
 [ "${SHADOWSOCKS}" = 'true' ] &&
-local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"chacha20-ietf-poly1305\", \"password\": \"${SHADOWTLS_PASSWORD}\" }," &&
-local NODE_REPLACE+="\"${NODE_NAME} shadowsocks\","
+local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"chacha20-ietf-poly1305\", \"password\": \"${SHADOWTLS_PASSWORD}\" }," &&
 
 [ "${SHADOWSOCKSX}" = 'true' ] &&
-local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"${NODE_NAME} shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"chacha20-ietf-poly1305\", \"password\": \"${SHADOWTLS_PASSWORD}\", \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true } }," &&
-local NODE_REPLACE+="\"${NODE_NAME} shadowsocks\","
+local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"chacha20-ietf-poly1305\", \"password\": \"${SHADOWTLS_PASSWORD}\", \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true } }," &&
 
 local SING_BOX_JSON=$(wget -qO- --tries=3 --timeout=2 ${TEMPLATE_PATH})
-echo $SING_BOX_JSON | sed 's#, {[^}]\+"tun-in"[^}]\+}##' | sed "s#\"<INBOUND_REPLACE>\",#$INBOUND_REPLACE#; s#\"<NODE_REPLACE>\"#${NODE_REPLACE%,}#g" | jq > $WORK_DIR/public/client.json
+echo $SING_BOX_JSON | sed 's#, {[^}]\+"tun-in"[^}]\+}##' | sed "s#\"<INBOUND_REPLACE>\",#$INBOUND_REPLACE#;" | jq > $WORK_DIR/public/client.json
 
 }
 
-setting_things_up
-
-info "Starting sing-box..."
+upupup
+info "starting..."
 /sing-box/sing-box run -C $WORK_DIR/conf
+info "started."
