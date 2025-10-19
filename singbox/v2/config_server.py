@@ -34,7 +34,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # ipv6-onlu=1 -> enable ipv6 (not stable yet)
         # is_ipv6 = query.get("ipv6-only", ["0"])[0] == "1"
 
-        if path != "/client.json" or path != "/help":
+        if path not in ("/client.json", "/help"):
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b"Not Found")
