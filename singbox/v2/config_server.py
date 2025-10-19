@@ -26,13 +26,36 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         private_nextdns_path = query.get("nextdns-path", [""])[0]
 
+        # Enable Tailscale Endpoint if Tailscale ephemeral auth keys proivded
+        ts_auth_key = query.get("ts-auth-key", [""])[0]
+        ts_exit_node = query.get("ts-exit-node", [""])[0]
+        ts_hostname = query.get("ts-hostname", ["ts-sb"])[0]
+
         # ipv6-onlu=1 -> enable ipv6 (not stable yet)
         # is_ipv6 = query.get("ipv6-only", ["0"])[0] == "1"
 
-        if path != "/client.json":
+        if path != "/client.json" or path != "/help":
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b"Not Found")
+            return
+
+        if path == "/help":
+            help_msg = (
+                "Usage: /client.json?platform=android&version=12&nextdns-path=YOUR_PATH\n"
+                "Parameters:\n"
+                "- platform: android, ios, or empty (for mac, linux, windows)\n"
+                "- version: 11 for sing-box 1.11+, 12 for sing-box 1.12+\n"
+                "- nextdns-path: your private NextDNS path (optional)\n"
+                "- ts-auth-key: your Tailscale ephemeral auth key (optional)\n"
+                "- ts-exit-node: your Tailscale exit node IP (optional)\n"
+                "- ts-hostname: your Tailscale hostname (optional, default: ts-sb)\n"
+            )
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(help_msg)))
+            self.end_headers()
+            self.wfile.write(help_msg.encode())
             return
 
         try:
@@ -89,7 +112,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "rewrite_ttl": 60,
                     "client_subnet": "1.1.1.1"
                 }
+
+                # Enable Tailscale Endpoint if auth key and exit node provided, only for sing-box 1.12+
+                if ts_auth_key and ts_exit_node:
+                    remote_data["endpoints"] = {
+                        "type": "tailscale",
+                        "tag": ts_hostname + "-ep",
+                        "auth_key": ts_auth_key,
+                        "ephemeral": True,
+                        "hostname": ts_hostname,
+                        "accept_routes": True,
+                        "advertise_exit_node": False,
+                        "udp_timeout": "5m",
+                        "domain_resolver": "dns-remote",
+                        "exit_node": ts_exit_node
+                    }
             # fmt: on
+                    for item in remote_data["outbounds"]:
+                        if item.get("type") == "urltest" or item.get("type") == "selector":
+                            item["outbounds"].append(ts_hostname + "-ep")
 
             body = json.dumps(remote_data, indent=2).encode()
             self.send_response(200)
