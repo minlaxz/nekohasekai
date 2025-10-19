@@ -24,6 +24,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # version=11 or version=12 -> sing-box version 1.11 or 1.12
         version = query.get("version", ["12"])[0]
 
+        private_nextdns_path = query.get("nextdns-path", [""])[0]
+
         # ipv6-onlu=1 -> enable ipv6 (not stable yet)
         # is_ipv6 = query.get("ipv6-only", ["0"])[0] == "1"
 
@@ -49,14 +51,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             remote_data["outbounds"] = replaced
 
             if is_android or is_ios:
-                remote_data["route"]["override_android_vpn"] = "true"
+                remote_data["route"]["override_android_vpn"] = True
 
             # fmt: off
             if version.startswith("11"):
                 remote_data["dns"]["servers"] = [
                     {
                         "tag": "dns-remote",
-                        "address": "quic://dns.adguard-dns.com",
+                        "address": f"https://dns.nextdns.io/{private_nextdns_path}" if private_nextdns_path else "https://dns.nextdns.io/",
                         "address_resolver": "dns-direct",
                         "address_strategy": "ipv4_only",
                         "detour": "direct"
@@ -67,12 +69,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "detour": "direct"
                     }
                 ]
-            else:
+            else: # default to version 1.12+
                 remote_data["dns"]["servers"] = [
                     {
                         "tag": "dns-remote",
-                        "type": "quic",
-                        "server": "dns.adguard-dns.com",
+                        "type": "https",
+                        "server": "dns.nextdns.io",
+                        "path": private_nextdns_path if private_nextdns_path else "/",
                         "domain_resolver": "dns-direct"
                     },
                     {
