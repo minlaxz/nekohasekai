@@ -1,23 +1,11 @@
 {
   "dns": {
-    "servers": [
-      {
-        "tag": "dns-remote",
-        "address": "quic://dns.adguard-dns.com",
-        "address_resolver": "dns-direct",
-        "address_strategy": "ipv4_only",
-        "detour": "direct"
-      },
-      {
-        "tag": "dns-direct",
-        "address": "1.1.1.1",
-        "detour": "direct"
-      }
-    ],
+    "servers": [],
     "rules": [
       {
         "query_type": [
-          "A"
+          "A",
+          "AAAA"
         ],
         "server": "dns-fake",
         "rewrite_ttl": 3600,
@@ -75,6 +63,17 @@
     {
       "tag": "direct",
       "type": "direct"
+    },
+    {
+      "type": "urltest",
+      "tag": "Pullup",
+      "outbounds": [
+        "direct",
+        "shadowsocks"
+      ],
+      "url": "http://www.gstatic.com/generate_204",
+      "interval": "1m",
+      "tolerance": 100
     },
     {
       "type": "selector",

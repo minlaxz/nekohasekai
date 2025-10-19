@@ -22,7 +22,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         is_ios = "ios" in platform
 
         # version=11 or version=12 -> sing-box version 1.11 or 1.12
-        version = query.get("version", [""])[0]
+        version = query.get("version", ["12"])[0]
+
+        # ipv6-onlu=1 -> enable ipv6 (not stable yet)
+        # is_ipv6 = query.get("ipv6-only", ["0"])[0] == "1"
 
         if path != "/client.json":
             self.send_response(404)
@@ -53,7 +56,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 remote_data["dns"]["servers"].append(
                     {
                         "tag": "dns-fake",
-                        "type": "fakeip"
+                        "address": "fakeip"
+                    },
+                    {
+                        "tag": "dns-remote",
+                        "address": "quic://dns.adguard-dns.com",
+                        "address_resolver": "dns-direct",
+                        "address_strategy": "ipv4_only",
+                        "detour": "direct"
+                    },
+                    {
+                        "tag": "dns-direct",
+                        "address": "1.1.1.1",
+                        "detour": "direct"
                     }
                 )
                 remote_data["dns"]["fakeip"] = {
@@ -68,6 +83,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "type": "fakeip",
                         "inet4_range": "10.10.0.0/16",
                         "inet6_range": "fc00::/18"
+                    },
+                    {
+                        "tag": "dns-remote",
+                        "type": "quic",
+                        "server": "dns.adguard-dns.com",
+                        "domain_resolver": "dns-direct",
+                        "detour": "direct"
+                    },
+                    {
+                        "tag": "dns-direct",
+                        "type": "udp",
+                        "server": "1.1.1.1",
+                        "detour": "direct"
                     }
                 )
             # fmt: on
