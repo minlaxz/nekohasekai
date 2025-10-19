@@ -1,9 +1,9 @@
-- [v1](/v1/) 
+- [v1](./v1/) 
     + old version
     + using multiple proxies
     + complicated setup
     + using supervisor to manage multiple services in single container
-- [v2](/v2/)
+- [v2](./v2/)
     + new version
     + using only shadowsocks
     + simple setup

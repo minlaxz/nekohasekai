@@ -14,15 +14,16 @@ upupup() {
   SERVER_IP="$(wget -q -O- https://ipecho.net/plain)"
 
   if [[ "$SERVER_IP" =~ : ]]; then
-    local DOMAIN_STRATEGY=prefer_ipv4
+    local DOMAIN_STRATEGY=ipv6_only
   else
     local DOMAIN_STRATEGY=ipv4_only
   fi
 
   local SS_ENCRYPTION_METHOD=${CUSTOM_SS_ENCRYPTION_METHOD:="chacha20-ietf-poly1305"}
-  local SS_PASSWORD=${CUSTOM_SS_PASSWORD:-"$($WORK_DIR/sing-box generate rand --base64 16)"}
-  local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
-  local NODE_NAME=${NODE_NAME:-"sing-box"}
+  local SS_ENCRYPTION_PASSWORD=${CUSTOM_SS_ENCRYPTION_PASSWORD:-"$($WORK_DIR/sing-box generate rand --base64 16)"}
+
+#   local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
+#   local NODE_NAME=${NODE_NAME:-"sing-box"}
 
   cat > $WORK_DIR/conf/00_log.json << EOF
   {
@@ -33,6 +34,7 @@ upupup() {
       }
   }
 EOF
+    hint "Generated log config."
 
   cat > $WORK_DIR/conf/01_outbounds.json << EOF
   {
@@ -48,6 +50,7 @@ EOF
       ]
   }
 EOF
+    hint "Generated outbound config."
 
   cat > $WORK_DIR/conf/02_route.json << EOF
   {
@@ -57,6 +60,7 @@ EOF
       }
   }
 EOF
+    hint "Generated route config."
 
   cat > $WORK_DIR/conf/03_experimental.json << EOF
   {
@@ -75,6 +79,7 @@ EOF
       }
   }
 EOF
+    hint "Generated clash config."
 
   cat > $WORK_DIR/conf/04_dns.json << EOF
   // As no sniff in outbound, do not affect this as well
@@ -89,6 +94,7 @@ EOF
       }
   }
 EOF
+    hint "Generated dns config."
 
   [ "${SHADOWSOCKS}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWSOCKS}_shadowsocks_inbounds.json << EOF
   {
@@ -99,11 +105,13 @@ EOF
               "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
               "method": "${SS_ENCRYPTION_METHOD}",
-              "password": "${SS_PASSWORD}"
+              "password": "${SS_ENCRYPTION_PASSWORD}",
+              "users": []
           }
       ]
   }
 EOF
+    hint "Generated shadowsocks inbound config."
 
   [ "${SHADOWSOCKSX}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWSOCKS}_shadowsocks_inbounds.json << EOF
   {
@@ -114,7 +122,8 @@ EOF
               "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
               "method": "${SS_ENCRYPTION_METHOD}",
-              "password": "${SS_PASSWORD}",
+              "password": "${SS_ENCRYPTION_PASSWORD}",
+              "users": [],
               "multiplex": {
                   "enabled": true,
                   "padding": true
@@ -123,42 +132,14 @@ EOF
       ]
   }
 EOF
-
-  [ "${HTTP}" = 'true' ] && ((PORT++)) && PORT_HTTP=$PORT && cat > $WORK_DIR/conf/${PORT_HTTP}_http_inbounds.json << EOF
-  {
-      "inbounds":[
-          {
-              "type": "http",
-              "listen": "0.0.0.0",
-              "listen_port": ${PORT_HTTP},
-              "users": [],
-              "set_system_proxy": false
-          }
-      ]
-  }
-EOF
-
-  [ "${HTTP}" = 'true' ] && ((PORT++)) && PORT_HTTP_DETOUR=$PORT && cat > $WORK_DIR/conf/${PORT_HTTP_DETOUR}_http_detour_inbounds.json << EOF
-  {
-      "inbounds":[
-          {
-              "type": "http",
-              "listen": "0.0.0.0",
-              "listen_port": ${PORT_HTTP_DETOUR},
-              "users": [],
-              "set_system_proxy": false,
-              "detour": "shadowsocks"
-          }
-      ]
-  }
-EOF
+    hint "Generated shadowsocksx inbound config."
 
   [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SOCKS}_socks_inbounds.json << EOF
   {
       "inbounds":[
           {
               "type": "socks",
-              "tag": "${NODE_NAME} socks",
+              "tag": "socks",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_SOCKS},
               "users": []
@@ -166,17 +147,18 @@ EOF
       ]
   }
 EOF
+    hint "Generated socks inbound config."
 
 INBOUND_REPLACE=""
 
 if [ "${SHADOWSOCKS}" = "true" ]; then
   [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"ipv4_only","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_PASSWORD}"'"}'
+  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_PASSWORD}"'"}'
 fi
 
 if [ "${SHADOWSOCKSX}" = "true" ]; then
   [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"ipv4_only","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SHADOWTLS_PASSWORD}"'","multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
+  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_PASSWORD}"'","multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
 fi
 
 # local SING_BOX_JSON=$(wget -qO- --tries=3 --timeout=2 ${TEMPLATE_PATH})
