@@ -12,29 +12,27 @@
         "tag": "dns-direct",
         "address": "1.1.1.1",
         "detour": "direct"
-      },
-      {
-        "tag": "dns-fake",
-        "type": "fakeip",
-        "inet4_range": "10.10.0.0/16",
-        "inet6_range": "fc00::/18"
       }
     ],
     "rules": [
+      {
+        "query_type": [
+          "A"
+        ],
+        "server": "dns-fake",
+        "rewrite_ttl": 3600,
+        "action": "route"
+      },
       {
         "outbound": "any",
         "server": "dns-direct",
         "action": "route"
       },
       {
-        "query_type": ["A"],
-        "server": "dns-fake",
-        "rewrite_ttl": 3600,
-        "action": "route"
-      },
-      {
         "domain_suffix": ".mm",
-        "rule_set": ["geosite-mm"],
+        "rule_set": [
+          "geosite-mm"
+        ],
         "server": "dns-direct",
         "rewrite_ttl": 3600,
         "action": "route"
@@ -214,34 +212,34 @@
         "type": "logical",
         "mode": "or",
         "rules": [
-            {
-               "protocol": "dns"
-            },
-            {
-               "port": 53
-            }
-         ],
-         "action": "hijack-dns"
+          {
+            "protocol": "dns"
+          },
+          {
+            "port": 53
+          }
+        ],
+        "action": "hijack-dns"
       },
       {
         "type": "logical",
         "mode": "or",
         "rules": [
-            {
-              "network": "tcp",
-              "port": 853
-            },
-            {
-              "network": "udp",
-              "port": [
-                443,
-                853
-              ]
-            },
-            {
-              "protocol": "stun"
-            }
-          ],
+          {
+            "network": "tcp",
+            "port": 853
+          },
+          {
+            "network": "udp",
+            "port": [
+              443,
+              853
+            ]
+          },
+          {
+            "protocol": "stun"
+          }
+        ],
         "action": "reject",
         "method": "drop"
       },
@@ -267,7 +265,6 @@
               "geosite-whatsapp",
               "geosite-twitter",
               "geosite-tiktok",
-              "geosite-minlaxz",
               "geosite-github"
             ]
           },
@@ -295,7 +292,6 @@
       }
     ],
     "final": "Unregistered",
-    "override_android_vpn": true,
     "auto_detect_interface": true
   },
   "log": {
@@ -312,7 +308,7 @@
       ],
       "access_control_allow_private_network": true
     },
-  "cache_file": {
+    "cache_file": {
       "enabled": true,
       "path": "cache.db",
       "store_fakeip": true,

@@ -111,7 +111,7 @@ EOF
       ]
   }
 EOF
-    hint "Generated shadowsocks inbound config."
+    [ "${SHADOWSOCKS}" = 'true' ] && hint "Generated shadowsocks inbound config."
 
   [ "${SHADOWSOCKSX}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWSOCKS}_shadowsocks_inbounds.json << EOF
   {
@@ -132,7 +132,7 @@ EOF
       ]
   }
 EOF
-    hint "Generated shadowsocksx inbound config."
+    [ "${SHADOWSOCKSX}" = 'true' ] && hint "Generated shadowsocksx inbound config."
 
   [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SOCKS}_socks_inbounds.json << EOF
   {
@@ -147,7 +147,7 @@ EOF
       ]
   }
 EOF
-    hint "Generated socks inbound config."
+    [ "${SOCKS}" = 'true' ] && hint "Generated socks inbound config."
 
 INBOUND_REPLACE=""
 
