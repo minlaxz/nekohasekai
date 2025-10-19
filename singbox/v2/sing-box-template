@@ -3,7 +3,7 @@
     "servers": [
       {
         "tag": "dns-remote",
-        "address": "https://dns.adguard-dns.com/dns-query",
+        "address": "quic://dns.adguard-dns.com",
         "address_resolver": "dns-direct",
         "address_strategy": "ipv4_only",
         "detour": "direct"
@@ -40,7 +40,7 @@
         "action": "route"
       }
     ],
-    "final": "dns-direct",
+    "final": "dns-remote",
     "independent_cache": true,
     "strategy": "ipv4_only"
   },
@@ -163,14 +163,6 @@
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/tiktok.srs",
         "download_detour": "direct",
         "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-minlaxz",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-minlaxz.srs",
-        "download_detour": "direct",
-        "update_interval": "1h"
       },
       {
         "tag": "geosite-github",

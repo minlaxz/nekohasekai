@@ -1,0 +1,4 @@
+FROM python:3.11-slim
+WORKDIR /app
+COPY config_server.py .
+CMD ["python", "config_server.py"]

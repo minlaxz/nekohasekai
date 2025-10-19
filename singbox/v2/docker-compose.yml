@@ -1,6 +1,6 @@
 services:
     sing-box:
-        image: ghcr.io/minlaxz/nekohasekai:singbox-v2
+        image: ghcr.io/minlaxz/nekohasekai:sing-box-v2
         container_name: sing-box-v2
         restart: unless-stopped
         ports:
@@ -10,19 +10,16 @@ services:
         volumes:
             - public:/sing-box/public
 
-      json-server:
-        build: .
-        container_name: json-server
-        restart: unless-stopped
-        depends_on:
-          - sing-box-v2
-        ports:
-          - "127.0.0.1:8851:8851"
-        volumes:
-          - public:/data:ro
-        environment:
-          - LOCAL_JSON_PATH=/data/local.json
-          - REMOTE_JSON_URL=https://example.com/remote.json
+    config-server:
+      image: ghcr.io/minlaxz/nekohasekai:config-server
+      container_name: config-server
+      restart: unless-stopped
+      depends_on:
+        - sing-box-v2
+      ports:
+        - "127.0.0.1:8851:8851"
+      volumes:
+        - public:/data:ro
 
 volumes:
     public:
