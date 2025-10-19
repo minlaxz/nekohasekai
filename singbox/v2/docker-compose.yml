@@ -15,7 +15,7 @@ services:
       container_name: config-server
       restart: unless-stopped
       depends_on:
-        - sing-box-v2
+        - sing-box
       ports:
         - "127.0.0.1:8851:8851"
       volumes:

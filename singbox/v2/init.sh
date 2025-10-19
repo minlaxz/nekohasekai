@@ -167,19 +167,25 @@ EOF
   }
 EOF
 
-[ "${SHADOWSOCKS}" = 'true' ] &&
-local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"chacha20-ietf-poly1305\", \"password\": \"${SHADOWTLS_PASSWORD}\" }," &&
+INBOUND_REPLACE=""
 
-[ "${SHADOWSOCKSX}" = 'true' ] &&
-local INBOUND_REPLACE+=" { \"type\": \"shadowsocks\", \"tag\": \"shadowsocks\", \"server\": \"${SERVER_IP}\", \"domain_strategy\": \"ipv4_only\", \"server_port\": $PORT_SHADOWSOCKS, \"method\": \"chacha20-ietf-poly1305\", \"password\": \"${SHADOWTLS_PASSWORD}\", \"multiplex\": { \"enabled\": true, \"protocol\": \"h2mux\", \"max_connections\": 8, \"min_streams\": 16, \"padding\": true } }," &&
+if [ "${SHADOWSOCKS}" = "true" ]; then
+  [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
+  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"ipv4_only","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_PASSWORD}"'"}'
+fi
+
+if [ "${SHADOWSOCKSX}" = "true" ]; then
+  [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
+  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"ipv4_only","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SHADOWTLS_PASSWORD}"'","multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
+fi
 
 # local SING_BOX_JSON=$(wget -qO- --tries=3 --timeout=2 ${TEMPLATE_PATH})
 # echo $SING_BOX_JSON | sed 's#, {[^}]\+"tun-in"[^}]\+}##' | sed "s#\"<INBOUND_REPLACE>\",#$INBOUND_REPLACE#;" | jq > $WORK_DIR/public/client.json
-echo $INBOUND_REPLACE | jq > $WORK_DIR/public/local.json
+echo $INBOUND_REPLACE | jq '.' > "$WORK_DIR/public/local.json"
 
 }
 
-upupup
 info "starting..."
-/sing-box/sing-box run -C $WORK_DIR/conf
+upupup
 info "started."
+/sing-box/sing-box run -C $WORK_DIR/conf
