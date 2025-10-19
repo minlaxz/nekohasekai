@@ -153,12 +153,12 @@ INBOUND_REPLACE=""
 
 if [ "${SHADOWSOCKS}" = "true" ]; then
   [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_PASSWORD}"'"}'
+  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_ENCRYPTION_PASSWORD}"'"}'
 fi
 
 if [ "${SHADOWSOCKSX}" = "true" ]; then
   [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_PASSWORD}"'","multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
+  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_ENCRYPTION_PASSWORD}"'","multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
 fi
 
 # local SING_BOX_JSON=$(wget -qO- --tries=3 --timeout=2 ${TEMPLATE_PATH})
