@@ -115,7 +115,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
                 # Enable Tailscale Endpoint if auth key and exit node provided, only for sing-box 1.12+
                 if ts_auth_key and ts_exit_node:
-                    remote_data["endpoints"] = {
+                    remote_data["endpoints"] = [{
                         "type": "tailscale",
                         "tag": ts_hostname + "-ep",
                         "auth_key": ts_auth_key,
@@ -126,7 +126,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "udp_timeout": "5m",
                         "domain_resolver": "dns-remote",
                         "exit_node": ts_exit_node
-                    }
+                    }]
             # fmt: on
                     for item in remote_data["outbounds"]:
                         if item.get("type") == "urltest" or item.get("type") == "selector":
