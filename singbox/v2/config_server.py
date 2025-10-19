@@ -53,7 +53,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             # fmt: off
             if version.startswith("11"):
-                remote_data["dns"]["servers"].append(
+                remote_data["dns"]["servers"] = [
                     {
                         "tag": "dns-fake",
                         "address": "fakeip"
@@ -70,14 +70,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "address": "1.1.1.1",
                         "detour": "direct"
                     }
-                )
+                ]
                 remote_data["dns"]["fakeip"] = {
                     "enabled": "true",
                     "inet4_range": "10.10.0.0/16",
                     "inet6_range": "fc00::/18"
                 }
             else:
-                remote_data["dns"]["servers"].append(
+                remote_data["dns"]["servers"] = [
                     {
                         "tag": "dns-fake",
                         "type": "fakeip",
@@ -97,7 +97,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "server": "1.1.1.1",
                         "detour": "direct"
                     }
-                )
+                ]
             # fmt: on
 
             body = json.dumps(remote_data, indent=2).encode()
