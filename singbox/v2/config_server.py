@@ -43,6 +43,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         ts_exit_node = query.get("ts-exit-node", [""])[0]
         ts_hostname = query.get("ts-hostname", ["ts-sb"])[0]
 
+        dns_detour = query.get("dns-detour", ["direct"])[0]
+
         # ipv6-only=1 -> enable ipv6 (not stable yet)
         # is_ipv6 = query.get("ipv6-only", ["0"])[0] == "1"
 
@@ -58,7 +60,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "Parameters:\n"
                 "- platform: android, ios, or empty (for mac, linux, windows)\n"
                 "- version: 11 for sing-box 1.11+, 12 for sing-box 1.12+\n"
-                "- nextdns-path: your private NextDNS path (optional)\n"
+                "- nextdns-path: your private NextDNS profile (optional)\n"
+                "- dns-detour: specify any from outbound list, direct will be used otherwise\n"
                 "- ts-auth-key: your Tailscale ephemeral auth key (optional)\n"
                 "- ts-exit-node: your Tailscale exit node IP (optional)\n"
                 "- ts-hostname: your Tailscale hostname (optional, default: ts-sb)\n"
@@ -136,12 +139,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "address": f"https://dns.nextdns.io/{private_nextdns_path}" if private_nextdns_path else "https://dns.nextdns.io/",
                         "address_resolver": "dns-direct",
                         "address_strategy": "ipv4_only",
-                        "detour": "direct"
+                        "detour": dns_detour
                     },
                     {
                         "tag": "dns-direct",
                         "address": "1.1.1.1",
-                        "detour": "direct"
+                        "detour": dns_detour
                     }
                 ]
             else: # default to version 1.12+
@@ -151,12 +154,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "type": "https",
                         "server": "dns.nextdns.io",
                         "path": private_nextdns_path if private_nextdns_path else "/",
-                        "domain_resolver": "dns-direct"
+                        "domain_resolver": "dns-direct",
+                        "detour": dns_detour
                     },
                     {
                         "tag": "dns-direct",
                         "type": "udp",
-                        "server": "1.1.1.1"
+                        "server": "1.1.1.1",
+                        "detour": dns_detour
                     }
                 ]
                 remote_data["route"]["default_domain_resolver"] = {

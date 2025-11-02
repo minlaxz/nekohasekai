@@ -21,6 +21,7 @@ upupup() {
 
   local SS_ENCRYPTION_METHOD=${CUSTOM_SS_ENCRYPTION_METHOD:="chacha20-ietf-poly1305"}
   local SS_ENCRYPTION_PASSWORD=${CUSTOM_SS_ENCRYPTION_PASSWORD:-"$($WORK_DIR/sing-box generate rand --base64 16)"}
+  local REALITY_KEYPAIR=$($WORK_DIR/sing-box generate reality-keypair) && AUTO_REALITY_PRIVATE=$(awk '/PrivateKey/{print $NF}' <<< "$REALITY_KEYPAIR") && AUTO_REALITY_PUBLIC=$(awk '/PublicKey/{print $NF}' <<< "$REALITY_KEYPAIR")
   local REALITY_PRIVATE=${CUSTOM_REALITY_PRIVATE:-AUTO_REALITY_PRIVATE}
   local REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-AUTO_REALITY_PUBLIC}
   local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
@@ -112,21 +113,21 @@ EOF
               "users": [
                   {
                       "uuid": "${UUID}",
-                      "flow": ""
+                      "flow": "xtls-rprx-vision"
                   }
               ],
               "tls": {
                   "enabled": true,
-                  "server_name": "fast.com",
+                  "server_name": "ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net",
                   "reality": {
                       "enabled": true,
                       "handshake": {
-                          "server": "fast.com",
+                          "server": "ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net",
                           "server_port": 443
                       },
                       "private_key": "${REALITY_PRIVATE}",
                       "short_id": [
-                          ""
+                          "0123456789abcdef"
                       ]
                   }
               }
@@ -148,21 +149,21 @@ EOF
               "users": [
                   {
                       "uuid": "${UUID}",
-                      "flow": ""
+                      "flow": "xtls-rprx-vision"
                   }
               ],
               "tls": {
                   "enabled": true,
-                  "server_name": "fast.com",
+                  "server_name": "ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net",
                   "reality": {
                       "enabled": true,
                       "handshake": {
-                          "server": "fast.com",
+                          "server": "ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net",
                           "server_port": 443
                       },
                       "private_key": "${REALITY_PRIVATE}",
                       "short_id": [
-                          ""
+                          "0123456789abcdef"
                       ]
                   }
               },
@@ -233,12 +234,12 @@ INBOUND_REPLACE="["
 
 if [ "${XTLS_REALITY}" = "true" ]; then
   [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"fast.com","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}}}'
+  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"xtls-rprx-vision","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":"0123456789abcdef"}}}'
 fi
 
 if [ "${XTLS_REALITYX}" = "true" ]; then
   [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"fast.com","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}},"multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
+  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"xtls-rprx-vision","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":"0123456789abcdef"}},"multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
 fi
 
 if [ "${SHADOWSOCKS}" = "true" ]; then
