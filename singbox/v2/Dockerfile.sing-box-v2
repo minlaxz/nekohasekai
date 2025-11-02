@@ -1,8 +1,18 @@
-FROM alpine:latest
+FROM alpine/openssl:latest AS openssl
+
+RUN openssl ecparam -genkey -name prime256v1 -out /private.key && \
+    openssl req -new -x509 -days 36500 -key /private.key -out /cert.pem -subj "/CN=fast.com"
+
+
+FROM alpine:latest AS singbox
 ARG TARGETARCH
 ENV ARCH=$TARGETARCH
 
 WORKDIR /sing-box
+
+COPY --from=openssl /private.key /sing-box/cert/private.key
+COPY --from=openssl /cert.pem /sing-box/cert/cert.pem
+COPY init.sh .
 
 RUN apk update && apk add --no-cache bash jq curl
 
@@ -10,8 +20,7 @@ RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/rele
     curl -LJ "https://github.com/SagerNet/sing-box/releases/download/v${ONLINE_VERSION}/sing-box-${ONLINE_VERSION}-linux-${ARCH}.tar.gz" \
       -o /sing-box.tar.gz && \
     tar xz -C /sing-box -f /sing-box.tar.gz --strip-components=1 && \
-    rm -rf /sing-box.tar.gz /var/cache/apk/*
+    rm -rf /sing-box.tar.gz /var/cache/apk/* && \
+    chmod +x /sing-box/init.sh
 
-COPY init.sh .
-RUN chmod +x /sing-box/init.sh
 CMD ["./init.sh"]

@@ -21,6 +21,10 @@ upupup() {
 
   local SS_ENCRYPTION_METHOD=${CUSTOM_SS_ENCRYPTION_METHOD:="chacha20-ietf-poly1305"}
   local SS_ENCRYPTION_PASSWORD=${CUSTOM_SS_ENCRYPTION_PASSWORD:-"$($WORK_DIR/sing-box generate rand --base64 16)"}
+  local REALITY_PRIVATE=${CUSTOM_REALITY_PRIVATE:-AUTO_REALITY_PRIVATE}
+  local REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-AUTO_REALITY_PUBLIC}
+  local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
+
 
 #   local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
 #   local NODE_NAME=${NODE_NAME:-"sing-box"}
@@ -96,6 +100,82 @@ EOF
 EOF
     hint "Generated dns config."
 
+  [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_XTLS_REALITY}_xtls-reality_inbounds.json << EOF
+  //  "public_key": "${REALITY_PUBLIC}"
+  {
+      "inbounds":[
+          {
+              "type": "vless",
+              "tag": "${NODE_NAME} xtls-reality",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_XTLS_REALITY},
+              "users": [
+                  {
+                      "uuid": "${UUID}",
+                      "flow": ""
+                  }
+              ],
+              "tls": {
+                  "enabled": true,
+                  "server_name": "fast.com",
+                  "reality": {
+                      "enabled": true,
+                      "handshake": {
+                          "server": "fast.com",
+                          "server_port": 443
+                      },
+                      "private_key": "${REALITY_PRIVATE}",
+                      "short_id": [
+                          ""
+                      ]
+                  }
+              }
+          }
+      ]
+  }
+EOF
+    [ "${XTLS_REALITY}" = 'true' ] && hint "Generated xtls-reality inbound config."
+
+  [ "${XTLS_REALITYX}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_XTLS_REALITY}_xtls-reality_inbounds.json << EOF
+  //  "public_key": "${REALITY_PUBLIC}"
+  {
+      "inbounds":[
+          {
+              "type": "vless",
+              "tag": "xtls-reality",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_XTLS_REALITY},
+              "users": [
+                  {
+                      "uuid": "${UUID}",
+                      "flow": ""
+                  }
+              ],
+              "tls": {
+                  "enabled": true,
+                  "server_name": "fast.com",
+                  "reality": {
+                      "enabled": true,
+                      "handshake": {
+                          "server": "fast.com",
+                          "server_port": 443
+                      },
+                      "private_key": "${REALITY_PRIVATE}",
+                      "short_id": [
+                          ""
+                      ]
+                  }
+              },
+              "multiplex": {
+                  "enabled": true,
+                  "padding": true
+              }
+          }
+      ]
+  }
+EOF
+    [ "${XTLS_REALITYX}" = 'true' ] && hint "Generated xtls-reality-x inbound config."
+
   [ "${SHADOWSOCKS}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWSOCKS}_shadowsocks_inbounds.json << EOF
   {
       "inbounds": [
@@ -151,6 +231,16 @@ EOF
 
 INBOUND_REPLACE=""
 
+if [ "${XTLS_REALITY}" = "true" ]; then
+  [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
+  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"udp","tls":{"enabled":true,"server_name":"fast.com","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}}}'
+fi
+
+if [ "${XTLS_REALITYX}" = "true" ]; then
+  [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
+  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"udp","tls":{"enabled":true,"server_name":"fast.com","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}},"multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
+fi
+
 if [ "${SHADOWSOCKS}" = "true" ]; then
   [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
   INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_ENCRYPTION_PASSWORD}"'"}'
@@ -160,6 +250,8 @@ if [ "${SHADOWSOCKSX}" = "true" ]; then
   [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
   INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_ENCRYPTION_PASSWORD}"'","multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
 fi
+
+
 
 # local SING_BOX_JSON=$(wget -qO- --tries=3 --timeout=2 ${TEMPLATE_PATH})
 # echo $SING_BOX_JSON | sed 's#, {[^}]\+"tun-in"[^}]\+}##' | sed "s#\"<INBOUND_REPLACE>\",#$INBOUND_REPLACE#;" | jq > $WORK_DIR/public/client.json
