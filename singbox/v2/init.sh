@@ -117,11 +117,11 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "server_name": "addons.mozilla.org",
+                  "server_name": "fast.com",
                   "reality": {
                       "enabled": true,
                       "handshake": {
-                          "server": "addons.mozilla.org",
+                          "server": "fast.com",
                           "server_port": 443
                       },
                       "private_key": "${REALITY_PRIVATE}",
@@ -153,11 +153,11 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "server_name": "addons.mozilla.org",
+                  "server_name": "fast.com",
                   "reality": {
                       "enabled": true,
                       "handshake": {
-                          "server": "addons.mozilla.org",
+                          "server": "fast.com",
                           "server_port": 443
                       },
                       "private_key": "${REALITY_PRIVATE}",
@@ -233,12 +233,12 @@ INBOUND_REPLACE="["
 
 if [ "${XTLS_REALITY}" = "true" ]; then
   [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"addons.mozilla.org","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}}}'
+  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"fast.com","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}}}'
 fi
 
 if [ "${XTLS_REALITYX}" = "true" ]; then
   [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"addons.mozilla.org","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}},"multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
+  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"fast.com","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}},"multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
 fi
 
 if [ "${SHADOWSOCKS}" = "true" ]; then
