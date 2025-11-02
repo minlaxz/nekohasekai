@@ -73,7 +73,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             with open(LOCAL_JSON_PATH) as f:
                 local_data = json.load(f)
-
             with urllib.request.urlopen(REMOTE_JSON_URL) as r:
                 remote_data = json.load(r)
 
@@ -81,7 +80,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             for item in remote_data.get("outbounds", []):
                 match item:
                     case "<OUTBOUND_REPLACE>":
-                        replaced.append(local_data)
+                        for i in local_data:
+                            replaced.append(i)
                     case "<PULLUP_REPLACE>":
                         # fmt: off
                         replaced.append({
