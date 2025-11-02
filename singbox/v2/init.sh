@@ -256,6 +256,6 @@ echo $INBOUND_REPLACE | jq '.' > "$WORK_DIR/public/local.json"
 }
 
 info "starting..."
- 
+upupup
 info "started."
 /sing-box/sing-box run -C $WORK_DIR/conf
