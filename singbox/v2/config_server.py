@@ -11,12 +11,23 @@ REMOTE_JSON_URL = os.getenv(
 )
 
 
+def get_outbounds() -> list[str]:
+    outbounds = ["direct"]
+    if os.getenv("SHADOWSOCKS") or os.getenv("SHADOWSOCKSX"):
+        outbounds.append("shadowsocks")
+    if os.getenv("XTLS_REALITY") or os.getenv("XTLS_REALITYX"):
+        outbounds.append("xtls-reality")
+    return outbounds
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
-        query = urllib.parse.parse_qs(parsed.query)
 
+        query = urllib.parse.parse_qs(parsed.query)
+        path = parsed.path
+
+        # platform=android -> is_android = True
         platform = query.get("platform", [""])[0].split("&")
         is_android = "android" in platform
         is_ios = "ios" in platform
@@ -24,6 +35,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # version=11 or version=12 -> sing-box version 1.11 or 1.12
         version = query.get("version", ["12"])[0]
 
+        # nextdns-path=YOUR_PATH -> private NextDNS path
         private_nextdns_path = query.get("nextdns-path", [""])[0]
 
         # Enable Tailscale Endpoint if Tailscale ephemeral auth keys proivded
@@ -31,13 +43,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         ts_exit_node = query.get("ts-exit-node", [""])[0]
         ts_hostname = query.get("ts-hostname", ["ts-sb"])[0]
 
-        # ipv6-onlu=1 -> enable ipv6 (not stable yet)
+        # ipv6-only=1 -> enable ipv6 (not stable yet)
         # is_ipv6 = query.get("ipv6-only", ["0"])[0] == "1"
 
         if path not in ("/client.json", "/help"):
             self.send_response(404)
             self.end_headers()
-            self.wfile.write(b"Not Found")
+            self.wfile.write(b"Sorry, Not Found")
             return
 
         if path == "/help":
@@ -67,10 +79,50 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             replaced = []
             for item in remote_data.get("outbounds", []):
-                if item == "<INBOUND_REPLACE>":
-                    replaced.append(local_data)
-                else:
-                    replaced.append(item)
+                match item:
+                    case "<OUTBOUND_REPLACE>":
+                        replaced.append(local_data)
+                    case "<PULLUP_REPLACE>":
+                        # fmt: off
+                        replaced.append({
+                            "type": "urltest",
+                            "tag": "Pullup",
+                            "outbounds": get_outbounds(),
+                            "url": "http://www.gstatic.com/generate_204",
+                            "interval": "1m",
+                            "tolerance": 100
+                        })
+                        # fmt: on
+                    case "<REGISTERED_REPLACE>":
+                        # fmt: off
+                        replaced.append({
+                            "type": "selector",
+                            "tag": "Registered",
+                            "outbounds": get_outbounds(),
+                            "default": get_outbounds()[1]
+                        })
+                        # fmt: on
+                    case "<UNREGISTERED_REPLACE>":
+                        # fmt: off
+                        replaced.append({
+                            "type": "selector",
+                            "tag": "Unregistered",
+                            "outbounds": get_outbounds(),
+                            "default": get_outbounds()[0]
+                        })
+                        # fmt: on
+                    case "<OPTIONS_P0RN_REPLACE>":
+                        # fmt: off
+                        replaced.append({
+                            "type": "selector",
+                            "tag": "Options P0rn",
+                            "outbounds": get_outbounds(),
+                            "default": get_outbounds()[0]
+                        })
+                        # fmt: on
+                    case _:
+                        # `direct` maybe?
+                        replaced.append(item)
             remote_data["outbounds"] = replaced
 
             if is_android or is_ios:

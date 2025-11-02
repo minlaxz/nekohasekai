@@ -106,7 +106,7 @@ EOF
       "inbounds":[
           {
               "type": "vless",
-              "tag": "${NODE_NAME} xtls-reality",
+              "tag": "xtls-reality",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_XTLS_REALITY},
               "users": [
@@ -117,11 +117,11 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "server_name": "fast.com",
+                  "server_name": "addons.mozilla.org",
                   "reality": {
                       "enabled": true,
                       "handshake": {
-                          "server": "fast.com",
+                          "server": "addons.mozilla.org",
                           "server_port": 443
                       },
                       "private_key": "${REALITY_PRIVATE}",
@@ -153,11 +153,11 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "server_name": "fast.com",
+                  "server_name": "addons.mozilla.org",
                   "reality": {
                       "enabled": true,
                       "handshake": {
-                          "server": "fast.com",
+                          "server": "addons.mozilla.org",
                           "server_port": 443
                       },
                       "private_key": "${REALITY_PRIVATE}",
@@ -229,37 +229,33 @@ EOF
 EOF
     [ "${SOCKS}" = 'true' ] && hint "Generated socks inbound config."
 
-INBOUND_REPLACE=""
+INBOUND_REPLACE="["
 
 if [ "${XTLS_REALITY}" = "true" ]; then
-  [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"udp","tls":{"enabled":true,"server_name":"fast.com","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}}}'
+  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
+  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"addons.mozilla.org","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}}}'
 fi
 
 if [ "${XTLS_REALITYX}" = "true" ]; then
-  [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"udp","tls":{"enabled":true,"server_name":"fast.com","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}},"multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
+  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
+  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"addons.mozilla.org","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":""}},"multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
 fi
 
 if [ "${SHADOWSOCKS}" = "true" ]; then
-  [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
+  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
   INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_ENCRYPTION_PASSWORD}"'"}'
 fi
 
 if [ "${SHADOWSOCKSX}" = "true" ]; then
-  [ -n "$INBOUND_REPLACE" ] && INBOUND_REPLACE+=','
+  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
   INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_ENCRYPTION_PASSWORD}"'","multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
 fi
 
-
-
-# local SING_BOX_JSON=$(wget -qO- --tries=3 --timeout=2 ${TEMPLATE_PATH})
-# echo $SING_BOX_JSON | sed 's#, {[^}]\+"tun-in"[^}]\+}##' | sed "s#\"<INBOUND_REPLACE>\",#$INBOUND_REPLACE#;" | jq > $WORK_DIR/public/client.json
+INBOUND_REPLACE+="]"
 echo $INBOUND_REPLACE | jq '.' > "$WORK_DIR/public/local.json"
-
 }
 
 info "starting..."
-upupup
+ 
 info "started."
 /sing-box/sing-box run -C $WORK_DIR/conf

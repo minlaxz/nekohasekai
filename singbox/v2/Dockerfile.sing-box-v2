@@ -1,7 +1,7 @@
 FROM alpine/openssl:latest AS openssl
 
 RUN openssl ecparam -genkey -name prime256v1 -out /private.key && \
-    openssl req -new -x509 -days 36500 -key /private.key -out /cert.pem -subj "/CN=fast.com"
+    openssl req -new -x509 -days 36500 -key /private.key -out /cert.pem -subj "/CN=mozilla.org"
 
 
 FROM alpine:latest AS singbox

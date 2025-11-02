@@ -34,49 +34,15 @@
     }
   ],
   "outbounds": [
-    "<INBOUND_REPLACE>",
     {
       "tag": "direct",
       "type": "direct"
     },
-    {
-      "type": "urltest",
-      "tag": "Pullup",
-      "outbounds": [
-        "direct",
-        "shadowsocks"
-      ],
-      "url": "http://www.gstatic.com/generate_204",
-      "interval": "1m",
-      "tolerance": 100
-    },
-    {
-      "type": "selector",
-      "tag": "Registered",
-      "outbounds": [
-        "direct",
-        "shadowsocks"
-      ],
-      "default": "shadowsocks"
-    },
-    {
-      "type": "selector",
-      "tag": "Unregistered",
-      "outbounds": [
-        "direct",
-        "shadowsocks"
-      ],
-      "default": "direct"
-    },
-    {
-      "type": "selector",
-      "tag": "Options P0rn",
-      "outbounds": [
-        "direct",
-        "shadowsocks"
-      ],
-      "default": "direct"
-    }
+    "<OUTBOUND_REPLACE>",
+    "<PULLUP_REPLACE>",
+    "<REGISTERED_REPLACE>",
+    "<UNREGISTERED_REPLACE>",
+    "<OPTIONS_P0RN_REPLACE>"
   ],
   "route": {
     "rule_set": [
