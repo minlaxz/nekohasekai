@@ -11,42 +11,176 @@ REMOTE_JSON_URL = os.getenv(
 )
 
 
-def get_outbounds() -> list[str]:
-    outbounds = ["direct"]
-    if os.getenv("SHADOWSOCKS") or os.getenv("SHADOWSOCKSX"):
-        outbounds.append("shadowsocks")
-    if os.getenv("XTLS_REALITY") or os.getenv("XTLS_REALITYX"):
-        outbounds.append("xtls-reality")
-    return outbounds
-
-
 class Handler(http.server.BaseHTTPRequestHandler):
+    def __load(self):
+        try:
+            with open(LOCAL_JSON_PATH) as f:
+                self.local_data = json.load(f)
+            with urllib.request.urlopen(REMOTE_JSON_URL) as r:
+                self.remote_data = json.load(r)
+        except Exception as e:
+            self.send_response(500)
+            self.end_headers()
+            msg = f"Error: {str(e)}"
+            self.wfile.write(msg.encode())
+
+    def __send_help(self):
+        help_msg = (
+            "Usage: /client.json?platform=android&version=12&nextdns-path=YOUR_PATH\n"
+            "Parameters:\n"
+            "- platform: android, ios, or empty (for mac, linux, windows)\n"
+            "- version: 11 for sing-box 1.11+, 12 for sing-box 1.12+\n"
+            "- dns-path: your private NextDNS profile (optional)\n"
+            "- dns-detour: specify any from outbound list, direct will be used if empty\n"
+            "- dns-final: specify any from dns server list, dns-remote will be used if empty\n"
+            "- route-detour: specify any from outbound list, direct will be used if empty\n"
+            "- log-level: specify any from docs, warn will be used if empty\n"
+            "- ts-auth-key: your Tailscale ephemeral auth key (optional)\n"
+            "- ts-exit-node: your Tailscale exit node IP (optional)\n"
+            "- ts-hostname: your Tailscale hostname (optional, default: ts-sb)\n"
+        )
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(help_msg)))
+        self.end_headers()
+        self.wfile.write(help_msg.encode())
+        return
+
+    def __inject_dns(self):
+        if self.__version.startswith("11"):
+            # fmt: off
+            self.remote_data["dns"]["servers"] = [
+                {
+                    "tag": "dns-remote",
+                    "address": f"https://dns.nextdns.io/{self.__dns_path}"
+                    if self.__dns_path
+                    else "https://dns.nextdns.io/",
+                    "address_resolver": "dns-direct",
+                    "address_strategy": "ipv4_only",
+                    "detour": self.__dns_detour
+                },
+                {
+                    "tag": "dns-direct",
+                    "address": "1.1.1.1",
+                    "detour": self.__dns_detour
+                }
+            ]
+        else:
+            # fmt: off
+            self.remote_data["dns"]["servers"] = [
+                {
+                    "tag": "dns-remote",
+                    "type": "https",
+                    "server": "dns.nextdns.io",
+                    "path": self.__dns_path if self.__dns_path else "/",
+                    "domain_resolver": "dns-direct",
+                    "detour": self.__dns_detour
+                },
+                {
+                    "tag": "dns-direct",
+                    "type": "udp",
+                    "server": "1.1.1.1",
+                    "detour": self.__dns_detour
+                }
+            ]
+            self.remote_data["route"]["default_domain_resolver"] = {
+                "server": "dns-direct",
+                "rewrite_ttl": 60,
+                "client_subnet": "1.1.1.1"
+            }
+        self.remote_data["dns"]["final"] = self.__dns_final
+
+    def __inject_outbounds(self):
+        replaced = []
+        for item in self.remote_data.get("outbounds", []):
+            match item:
+                case "<OUTBOUND_REPLACE>":
+                    for i in self.local_data:
+                        replaced.append(i)
+                case "<PULLUP_REPLACE>":
+                    # fmt: off
+                    replaced.append({
+                        "type": "urltest",
+                        "tag": "Pullup",
+                        "outbounds": self.__outbounds,
+                        "url": "http://www.gstatic.com/generate_204",
+                        "interval": "1m",
+                        "tolerance": 100
+                    })
+                    # fmt: on
+                case "<REGISTERED_REPLACE>":
+                    # fmt: off
+                    replaced.append({
+                        "type": "selector",
+                        "tag": "Registered",
+                        "outbounds": self.__outbounds,
+                        "default": self.__outbounds[1] if len(self.__outbounds) > 1 else self.__outbounds[0]
+                    })
+                    # fmt: on
+                case "<UNREGISTERED_REPLACE>":
+                    # fmt: off
+                    replaced.append({
+                        "type": "selector",
+                        "tag": "Unregistered",
+                        "outbounds": self.__outbounds,
+                        "default": self.__outbounds[0]
+                    })
+                    # fmt: on
+                case "<OPTIONS_P0RN_REPLACE>":
+                    # fmt: off
+                    replaced.append({
+                        "type": "selector",
+                        "tag": "Options P0rn",
+                        "outbounds": self.__outbounds,
+                        "default": self.__outbounds[0]
+                    })
+                    # fmt: on
+                case _:
+                    # `direct` maybe?
+                    replaced.append(item)
+        self.remote_data["outbounds"] = replaced
+
+    def __inject_others(self):
+        if all([
+            self.__ts_auth_key,
+            self.__ts_exit_node,
+            self.__ts_hostname,
+        ]) and self.__version.startswith("12"):
+            # fmt: off
+            self.remote_data["endpoints"] = [
+                {
+                    "type": "tailscale",
+                    "tag": self.__ts_hostname + "-ep",
+                    "auth_key": self.__ts_auth_key,
+                    "ephemeral": True,
+                    "hostname": self.__ts_hostname,
+                    "accept_routes": True,
+                    "advertise_exit_node": False,
+                    "udp_timeout": "5m",
+                    "domain_resolver": "dns-remote",
+                    "exit_node": self.__ts_exit_node
+                }
+            ]
+            # fmt: on
+            for item in self.remote_data["outbounds"]:
+                if item.get("type") == "urltest" or item.get("type") == "selector":
+                    item["outbounds"].append(self.__ts_hostname + "-ep")
+        for i in self.remote_data["route"]["rule_set"]:
+            i["download_detour"] = self.__route_detour
+
+        self.remote_data["log"]["level"] = self.__log_level
+
+    @property
+    def __outbounds(self):
+        _ = ["direct"]
+        for i in self.local_data:
+            _.append(i.get("tag"))
+        return _
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
-
         query = urllib.parse.parse_qs(parsed.query)
         path = parsed.path
-
-        # platform=android -> is_android = True
-        platform = query.get("platform", [""])[0].split("&")
-        is_android = "android" in platform
-        is_ios = "ios" in platform
-
-        # version=11 or version=12 -> sing-box version 1.11 or 1.12
-        version = query.get("version", ["12"])[0]
-
-        # nextdns-path=YOUR_PATH -> private NextDNS path
-        private_nextdns_path = query.get("nextdns-path", [""])[0]
-
-        # Enable Tailscale Endpoint if Tailscale ephemeral auth keys proivded
-        ts_auth_key = query.get("ts-auth-key", [""])[0]
-        ts_exit_node = query.get("ts-exit-node", [""])[0]
-        ts_hostname = query.get("ts-hostname", ["ts-sb"])[0]
-
-        dns_detour = query.get("dns-detour", ["direct"])[0]
-
-        # ipv6-only=1 -> enable ipv6 (not stable yet)
-        # is_ipv6 = query.get("ipv6-only", ["0"])[0] == "1"
 
         if path not in ("/client.json", "/help"):
             self.send_response(404)
@@ -55,152 +189,37 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
 
         if path == "/help":
-            help_msg = (
-                "Usage: /client.json?platform=android&version=12&nextdns-path=YOUR_PATH\n"
-                "Parameters:\n"
-                "- platform: android, ios, or empty (for mac, linux, windows)\n"
-                "- version: 11 for sing-box 1.11+, 12 for sing-box 1.12+\n"
-                "- nextdns-path: your private NextDNS profile (optional)\n"
-                "- dns-detour: specify any from outbound list, direct will be used otherwise\n"
-                "- ts-auth-key: your Tailscale ephemeral auth key (optional)\n"
-                "- ts-exit-node: your Tailscale exit node IP (optional)\n"
-                "- ts-hostname: your Tailscale hostname (optional, default: ts-sb)\n"
-            )
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
-            self.send_header("Content-Length", str(len(help_msg)))
-            self.end_headers()
-            self.wfile.write(help_msg.encode())
-            return
+            self.__send_help()
 
-        try:
-            with open(LOCAL_JSON_PATH) as f:
-                local_data = json.load(f)
-            with urllib.request.urlopen(REMOTE_JSON_URL) as r:
-                remote_data = json.load(r)
+        # Otherwise
+        # self.__query: dict = query
+        # self.__path: str = path
+        self.__platform: list = query.get("platform", [""])[0].split("&")
+        self.__version: str = query.get("version", ["12"])[0]
+        self.__dns_path = query.get("dns-path", [""])[0]
+        self.__dns_detour = query.get("dns-detour", ["direct"])[0]
+        self.__dns_final = query.get("dns-final", ["dns-remote"])[0]
+        self.__route_detour = query.get("route-detour", ["direct"])[0]
+        self.__log_level = query.get("log-level", ["warn"])[0]
 
-            replaced = []
-            for item in remote_data.get("outbounds", []):
-                match item:
-                    case "<OUTBOUND_REPLACE>":
-                        for i in local_data:
-                            replaced.append(i)
-                    case "<PULLUP_REPLACE>":
-                        # fmt: off
-                        replaced.append({
-                            "type": "urltest",
-                            "tag": "Pullup",
-                            "outbounds": get_outbounds(),
-                            "url": "http://www.gstatic.com/generate_204",
-                            "interval": "1m",
-                            "tolerance": 100
-                        })
-                        # fmt: on
-                    case "<REGISTERED_REPLACE>":
-                        # fmt: off
-                        replaced.append({
-                            "type": "selector",
-                            "tag": "Registered",
-                            "outbounds": get_outbounds(),
-                            "default": get_outbounds()[1]
-                        })
-                        # fmt: on
-                    case "<UNREGISTERED_REPLACE>":
-                        # fmt: off
-                        replaced.append({
-                            "type": "selector",
-                            "tag": "Unregistered",
-                            "outbounds": get_outbounds(),
-                            "default": get_outbounds()[0]
-                        })
-                        # fmt: on
-                    case "<OPTIONS_P0RN_REPLACE>":
-                        # fmt: off
-                        replaced.append({
-                            "type": "selector",
-                            "tag": "Options P0rn",
-                            "outbounds": get_outbounds(),
-                            "default": get_outbounds()[0]
-                        })
-                        # fmt: on
-                    case _:
-                        # `direct` maybe?
-                        replaced.append(item)
-            remote_data["outbounds"] = replaced
+        self.__ts_auth_key = query.get("ts-auth-key", [""])[0]
+        self.__ts_exit_node = query.get("ts-exit-node", [""])[0]
+        self.__ts_hostname = query.get("ts-hostname", [""])[0]
+        # self.__ipv6_only: bool = query.get("ipv6-only", ["false"])[0] == "true"
+        # self__enable_ipv6: bool = query.get("enable-ipv6", ["false"])[0] == "true"
+        self.__load()
+        self.__inject_dns()
+        self.__inject_outbounds()
+        self.__inject_others()
+        if "android" in self.__platform or "ios" in self.__platform:
+            self.remote_data["route"]["override_android_vpn"] = True
 
-            if is_android or is_ios:
-                remote_data["route"]["override_android_vpn"] = True
-
-            # fmt: off
-            if version.startswith("11"):
-                remote_data["dns"]["servers"] = [
-                    {
-                        "tag": "dns-remote",
-                        "address": f"https://dns.nextdns.io/{private_nextdns_path}" if private_nextdns_path else "https://dns.nextdns.io/",
-                        "address_resolver": "dns-direct",
-                        "address_strategy": "ipv4_only",
-                        "detour": dns_detour
-                    },
-                    {
-                        "tag": "dns-direct",
-                        "address": "1.1.1.1",
-                        "detour": dns_detour
-                    }
-                ]
-            else: # default to version 1.12+
-                remote_data["dns"]["servers"] = [
-                    {
-                        "tag": "dns-remote",
-                        "type": "https",
-                        "server": "dns.nextdns.io",
-                        "path": private_nextdns_path if private_nextdns_path else "/",
-                        "domain_resolver": "dns-direct",
-                        "detour": dns_detour
-                    },
-                    {
-                        "tag": "dns-direct",
-                        "type": "udp",
-                        "server": "1.1.1.1",
-                        "detour": dns_detour
-                    }
-                ]
-                remote_data["route"]["default_domain_resolver"] = {
-                    "server": "dns-direct",
-                    "rewrite_ttl": 60,
-                    "client_subnet": "1.1.1.1"
-                }
-
-                # Enable Tailscale Endpoint if auth key and exit node provided, only for sing-box 1.12+
-                if ts_auth_key and ts_exit_node:
-                    remote_data["endpoints"] = [{
-                        "type": "tailscale",
-                        "tag": ts_hostname + "-ep",
-                        "auth_key": ts_auth_key,
-                        "ephemeral": True,
-                        "hostname": ts_hostname,
-                        "accept_routes": True,
-                        "advertise_exit_node": False,
-                        "udp_timeout": "5m",
-                        "domain_resolver": "dns-remote",
-                        "exit_node": ts_exit_node
-                    }]
-            # fmt: on
-                    for item in remote_data["outbounds"]:
-                        if item.get("type") == "urltest" or item.get("type") == "selector":
-                            item["outbounds"].append(ts_hostname + "-ep")
-
-            body = json.dumps(remote_data, indent=2).encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
-        except Exception as e:
-            self.send_response(500)
-            self.end_headers()
-            msg = f"Error: {str(e)}"
-            self.wfile.write(msg.encode())
+        body = json.dumps(self.remote_data, indent=2).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
 
 if __name__ == "__main__":
