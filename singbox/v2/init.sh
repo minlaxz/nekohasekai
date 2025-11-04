@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 WORK_DIR=/sing-box
 mkdir -p $WORK_DIR/certs
@@ -356,6 +355,8 @@ EOF
 fi
 
 INBOUND_REPLACE+="]"
+echo "Generated public inbound config."
+echo "$INBOUND_REPLACE"
 echo "$INBOUND_REPLACE" | jq '.' > "$WORK_DIR/public/local.json"
 }
 
