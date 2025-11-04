@@ -160,7 +160,7 @@ EOF
     [ "${SHADOWSOCKS}" = 'true' ] && hint "Generated shadowsocks inbound config."
 
 # === TROJAN ===
-    ["${TROJAN}" == 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/${PORT_TROJAN}_trojan_inbounds.json << EOF
+  [ "${TROJAN}" == 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/${PORT_TROJAN}_trojan_inbounds.json << EOF
   {
       "inbounds":[
           {
