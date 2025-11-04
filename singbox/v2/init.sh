@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 WORK_DIR=/sing-box
 mkdir -p $WORK_DIR/certs
@@ -191,6 +192,7 @@ EOF
       "inbounds": [
           {
               "type": "shadowtls",
+              "tag": "shadowtls",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWTLS},
               "detour": "shadowtls-in",
@@ -212,7 +214,7 @@ EOF
               "listen": "127.0.0.1",
               "network": "tcp",
               "method": "${SS_ENCRYPTION_METHOD}",
-              "password": "${SS_ENCRYPTION_PASSWORD}",
+              "password": "${SS_ENCRYPTION_PASSWORD}"
           }
       ]
   }
