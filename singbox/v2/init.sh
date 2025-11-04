@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 WORK_DIR=/sing-box
 mkdir -p $WORK_DIR/certs
