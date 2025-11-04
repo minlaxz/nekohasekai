@@ -1,17 +1,9 @@
-FROM alpine/openssl:latest AS openssl
-
-RUN openssl ecparam -genkey -name prime256v1 -out /private.key && \
-    openssl req -new -x509 -days 36500 -key /private.key -out /cert.pem -subj "/CN=nflxvideo.net"
-
-
 FROM alpine:latest AS singbox
 ARG TARGETARCH
 ENV ARCH=$TARGETARCH
 
 WORKDIR /sing-box
 
-COPY --from=openssl /private.key /sing-box/cert/private.key
-COPY --from=openssl /cert.pem /sing-box/cert/cert.pem
 COPY init.sh .
 
 RUN apk update && apk add --no-cache bash jq curl

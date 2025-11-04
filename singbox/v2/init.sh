@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 WORK_DIR=/sing-box
+mkdir -p $WORK_DIR/certs
 mkdir -p $WORK_DIR/conf
 mkdir -p $WORK_DIR/public
 PORT=${START_PORT:-1080}
-# TEMPLATE_PATH="https://raw.githubusercontent.com/minlaxz/nekohasekai/main/singbox/v2/sing-box-template"
+DOMAIN=${CUSTOM_DOMAIN:-example.com}
 
 warning() { echo -e "\033[31m\033[01m$*\033[0m"; }
 info() { echo -e "\033[32m\033[01m$*\033[0m"; }
@@ -29,6 +30,9 @@ upupup() {
 
 #   local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
 #   local NODE_NAME=${NODE_NAME:-"sing-box"}
+
+  openssl ecparam -genkey -name prime256v1 -out ${WORK_DIR}/certs/private.key && \
+  openssl req -new -x509 -days 36500 -key ${WORK_DIR}/certs/private.key -out ${WORK_DIR}/certs/cert.pem -subj "/CN=${DOMAIN}"
 
   cat > $WORK_DIR/conf/00_log.json << EOF
   {
@@ -74,7 +78,7 @@ EOF
               "external_controller": "0.0.0.0:8820",
               "external_ui": "metacubexd",
               "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
-              "external_ui_download_detour": "direct",
+              "external_ui_download_detour": "direct-out",
               "default_mode": "rule"
           },
           "cache_file": {
@@ -101,13 +105,13 @@ EOF
 EOF
     hint "Generated dns config."
 
+# === XTLS_REALITY ===
   [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_XTLS_REALITY}_xtls-reality_inbounds.json << EOF
   //  "public_key": "${REALITY_PUBLIC}"
   {
       "inbounds":[
           {
               "type": "vless",
-              "tag": "xtls-reality",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_XTLS_REALITY},
               "users": [
@@ -118,11 +122,11 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "server_name": "ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net",
+                  "server_name": "${DOMAIN}",
                   "reality": {
                       "enabled": true,
                       "handshake": {
-                          "server": "ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net",
+                          "server": "${DOMAIN}",
                           "server_port": 443
                       },
                       "private_key": "${REALITY_PRIVATE}",
@@ -137,46 +141,7 @@ EOF
 EOF
     [ "${XTLS_REALITY}" = 'true' ] && hint "Generated xtls-reality inbound config."
 
-  [ "${XTLS_REALITYX}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_XTLS_REALITY}_xtls-reality_inbounds.json << EOF
-  //  "public_key": "${REALITY_PUBLIC}"
-  {
-      "inbounds":[
-          {
-              "type": "vless",
-              "tag": "xtls-reality",
-              "listen": "0.0.0.0",
-              "listen_port": ${PORT_XTLS_REALITY},
-              "users": [
-                  {
-                      "uuid": "${UUID}",
-                      "flow": "xtls-rprx-vision"
-                  }
-              ],
-              "tls": {
-                  "enabled": true,
-                  "server_name": "ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net",
-                  "reality": {
-                      "enabled": true,
-                      "handshake": {
-                          "server": "ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net",
-                          "server_port": 443
-                      },
-                      "private_key": "${REALITY_PRIVATE}",
-                      "short_id": [
-                          "0123456789abcdef"
-                      ]
-                  }
-              },
-              "multiplex": {
-                  "enabled": true,
-                  "padding": true
-              }
-          }
-      ]
-  }
-EOF
-    [ "${XTLS_REALITYX}" = 'true' ] && hint "Generated xtls-reality-x inbound config."
-
+# === SHADOWSOCKS ===
   [ "${SHADOWSOCKS}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWSOCKS}_shadowsocks_inbounds.json << EOF
   {
       "inbounds": [
@@ -194,27 +159,67 @@ EOF
 EOF
     [ "${SHADOWSOCKS}" = 'true' ] && hint "Generated shadowsocks inbound config."
 
-  [ "${SHADOWSOCKSX}" = 'true' ] && ((PORT++)) && PORT_SHADOWSOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWSOCKS}_shadowsocks_inbounds.json << EOF
+# === TROJAN ===
+    ["${TROJAN}" == 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/${PORT_TROJAN}_trojan_inbounds.json << EOF
   {
       "inbounds":[
           {
-              "type": "shadowsocks",
+              "type": "trojan",
               "listen": "0.0.0.0",
-              "listen_port": ${PORT_SHADOWSOCKS},
-              "network": "tcp",
-              "method": "${SS_ENCRYPTION_METHOD}",
-              "password": "${SS_ENCRYPTION_PASSWORD}",
-              "users": [],
-              "multiplex": {
-                  "enabled": true,
-                  "padding": true
+              "listen_port": ${PORT_TROJAN},
+              "users": [
+                  {
+                      "password": "${UUID}"
+                  }
+              ],
+              "tls": {
+                "enabled": true,
+                "server_name": "${DOMAIN}",
+                "certificate_path": "${WORK_DIR}/certs/cert.pem",
+                "key_path": "${WORK_DIR}/certs/private.key",
+                "alpn": ["http/1.1", "h2", "h3"]
               }
           }
       ]
   }
 EOF
-    [ "${SHADOWSOCKSX}" = 'true' ] && hint "Generated shadowsocksx inbound config."
+    [ "${TROJAN}" = 'true' ] && hint "Generated trojan inbound config."
 
+# === SHADOWTLS ===
+  [ "${SHADOWTLS}" == 'true' ] && ((PORT++)) && PORT_SHADOWTLS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWTLS}_shadowtls_inbounds.json << EOF
+  {
+      "inbounds": [
+          {
+              "type": "shadowtls",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_SHADOWTLS},
+              "detour": "shadowtls-in",
+              "version": 3,
+              "users": [
+                  {
+                      "password": "${UUID}"
+                  }
+              ],
+              "handshake": {
+                  "server": "${DOMAIN}",
+                  "server_port": 443
+              },
+              "strict_mode": true
+          },
+          {
+              "type": "shadowsocks",
+              "tag": "shadowtls-in",
+              "listen": "127.0.0.1",
+              "network": "tcp",
+              "method": "${SS_ENCRYPTION_METHOD}",
+              "password": "${SS_ENCRYPTION_PASSWORD}",
+          }
+      ]
+  }
+EOF
+    [ "${SHADOWTLS}" = 'true' ] && hint "Generated shadowtls inbound config."
+
+# === SOCKS ===
   [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SOCKS}_socks_inbounds.json << EOF
   {
       "inbounds":[
@@ -231,29 +236,125 @@ EOF
     [ "${SOCKS}" = 'true' ] && hint "Generated socks inbound config."
 
 INBOUND_REPLACE="["
+append_comma_if_needed() {
+  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
+}
 
+# === XTLS_REALITY ===
 if [ "${XTLS_REALITY}" = "true" ]; then
-  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"xtls-rprx-vision","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":"0123456789abcdef"}}}'
+  append_comma_if_needed
+  INBOUND_REPLACE+=$(
+    cat <<EOF
+{
+  "type": "vless",
+  "tag": "xtls-reality",
+  "server": "${SERVER_IP}",
+  "domain_strategy": "${DOMAIN_STRATEGY}",
+  "server_port": ${PORT_XTLS_REALITY},
+  "uuid": "${UUID}",
+  "flow": "xtls-rprx-vision",
+  "packet_encoding": "xudp",
+  "tls": {
+    "enabled": true,
+    "server_name": "${DOMAIN}",
+    ""
+    "utls": {
+      "enabled": true,
+      "fingerprint": "chrome"
+    },
+    "reality": {
+      "enabled": true,
+      "public_key": "${REALITY_PUBLIC}",
+      "short_id": "0123456789abcdef"
+    }
+  }
+}
+EOF
+  )
 fi
 
-if [ "${XTLS_REALITYX}" = "true" ]; then
-  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"vless","tag":"xtls-reality","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_XTLS_REALITY}"',"uuid":"'"${UUID}"'","flow":"xtls-rprx-vision","packet_encoding":"xudp","tls":{"enabled":true,"server_name":"ipv4-c002-rgn001-telenormy-isp.1.oca.nflxvideo.net","utls":{"enabled":true,"fingerprint":"chrome"},"reality":{"enabled":true,"public_key":"'"${REALITY_PUBLIC}"'","short_id":"0123456789abcdef"}},"multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
-fi
-
+# === SHADOWSOCKS ===
 if [ "${SHADOWSOCKS}" = "true" ]; then
-  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_ENCRYPTION_PASSWORD}"'"}'
+  append_comma_if_needed
+  INBOUND_REPLACE+=$(
+    cat <<EOF
+{
+  "type": "shadowsocks",
+  "tag": "shadowsocks",
+  "server": "${SERVER_IP}",
+  "domain_strategy": "${DOMAIN_STRATEGY}",
+  "server_port": ${PORT_SHADOWSOCKS},
+  "method": "${SS_ENCRYPTION_METHOD}",
+  "password": "${SS_ENCRYPTION_PASSWORD}"
+}
+EOF
+  )
 fi
 
-if [ "${SHADOWSOCKSX}" = "true" ]; then
-  [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
-  INBOUND_REPLACE+='{"type":"shadowsocks","tag":"shadowsocks","server":"'"${SERVER_IP}"'","domain_strategy":"'"${DOMAIN_STRATEGY}"'","server_port":'"${PORT_SHADOWSOCKS}"',"method":"'"${SS_ENCRYPTION_METHOD}"'","password":"'"${SS_ENCRYPTION_PASSWORD}"'","multiplex":{"enabled":true,"protocol":"h2mux","max_connections":8,"min_streams":16,"padding":true}}'
+# === TROJAN ===
+if [ "${TROJAN}" = "true" ]; then
+  append_comma_if_needed
+  INBOUND_REPLACE+=$(
+    cat <<EOF
+{
+  "type": "trojan",
+  "tag": "trojan",
+  "server": "${SERVER_IP}",
+  "domain_strategy": "${DOMAIN_STRATEGY}",
+  "server_port": ${PORT_TROJAN},
+  "password": "${UUID}",
+  "tls": {
+    "enabled": true,
+    "insecure": true,
+    "server_name": "${DOMAIN}",
+    "alpn": ["http/1.1", "h2", "h3"],
+    "utls": {
+      "enabled": true,
+      "fingerprint": "chrome"
+    }
+  }
+}
+EOF
+  )
+fi
+
+
+# === SHADOWTLS ===
+if [ "${SHADOWTLS}" = "true" ]; then
+  append_comma_if_needed
+  INBOUND_REPLACE+=$(
+    cat <<EOF
+{
+  "type": "shadowsocks",
+  "tag": "shadowtls",
+  "method": "${SS_ENCRYPTION_METHOD}",
+  "password": "${SS_ENCRYPTION_PASSWORD}",
+  "detour": "shadowtls-out",
+  "udp_over_tcp": false
+},
+{
+  "type": "shadowtls",
+  "tag": "shadowtls-out",
+  "server": "${SERVER_IP}",
+  "domain_strategy": "${DOMAIN_STRATEGY}",
+  "server_port": ${PORT_SHADOWTLS},
+  "version": 3,
+  "password": "${UUID}",
+  "tls": {
+    "enabled": true,
+    "server_name": "${DOMAIN}",
+    "utls": {
+      "enabled": true,
+      "fingerprint": "chrome"
+    }
+  }
+}
+EOF
+  )
 fi
 
 INBOUND_REPLACE+="]"
-echo $INBOUND_REPLACE | jq '.' > "$WORK_DIR/public/local.json"
+echo "$INBOUND_REPLACE" | jq '.' > "$WORK_DIR/public/local.json"
 }
 
 info "starting..."
