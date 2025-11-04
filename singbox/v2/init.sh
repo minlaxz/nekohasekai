@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 WORK_DIR=/sing-box
 mkdir -p $WORK_DIR/certs
@@ -257,8 +258,8 @@ if [ "${XTLS_REALITY}" = "true" ]; then
   "packet_encoding": "xudp",
   "tls": {
     "enabled": true,
+    "insecure": true,
     "server_name": "${DOMAIN}",
-    ""
     "utls": {
       "enabled": true,
       "fingerprint": "chrome"
