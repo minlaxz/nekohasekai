@@ -4,7 +4,7 @@ import urllib.request
 import urllib.parse
 import os
 
-LOCAL_JSON_PATH = os.getenv("LOCAL_JSON_PATH", "data/local.json")
+LOCAL_JSON_PATH = os.getenv("LOCAL_JSON_PATH", "/data/local.json")
 REMOTE_JSON_URL = os.getenv(
     "REMOTE_JSON_URL",
     "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/singbox/v2/sing-box-template",
