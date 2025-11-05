@@ -282,7 +282,7 @@ if [ "${XTLS_REALITY}" = "true" ]; then
       "up_mbps": 20,
       "down_mbps": 20
     }
-  }
+  },
   "tls": {
     "enabled": true,
     "server_name": "${TLS_SERVER_NAME}",
