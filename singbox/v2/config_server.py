@@ -128,7 +128,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "type": "urltest",
                         "tag": "Check",
                         "outbounds": self.__outbounds,
-                        "url": "https://ss-sb.minlaxz.lol/check",
+                        "url": "https://ss-sb.minlaxz.lol/check?dp=" + self.__dns_path,
                         "interval": "30s",
                         "tolerance": 100
                     })
@@ -202,20 +202,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             _.append(i.get("tag"))
         return _
 
-    def do_GET(self):
+    def do_HEAD(self):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
         path = parsed.path
-
-        if path not in ("/c", "/h", "/check", "/tinini"):
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Sorry, Not Found")
-            return
-
-        if path == "/h":
-            self.__send_help()
-
         if path == "/check":
             self.__dns_path = query.get("dp", [""])[0]  # dp
             user_id = (
@@ -256,6 +246,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
+        else:
+            self.send_response(404)
+            self.end_headers()
+            return
+
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(parsed.query)
+        path = parsed.path
+
+        if path not in ("/c", "/h", "/tinini"):
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b"Sorry, Not Found")
+            return
+
+        if path == "/h":
+            self.__send_help()
 
         # Otherwise
         # self.__query: dict = query
