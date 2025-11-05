@@ -4,7 +4,7 @@ import urllib.request
 import urllib.parse
 import os
 
-LOCAL_JSON_PATH = os.getenv("LOCAL_JSON_PATH", "/data/local.json")
+LOCAL_JSON_PATH = os.getenv("LOCAL_JSON_PATH", "data/local.json")
 REMOTE_JSON_URL = os.getenv(
     "REMOTE_JSON_URL",
     "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/singbox/v2/sing-box-template",
@@ -216,8 +216,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.mapping = {"ss": "shadowsocks", "d": "direct", "l": "local"}
 
         # fmt: off
-        self.__platform: list = query.get("p", [""])[0].split("&")  # p
-        self.__version: str = "12" if self.__platform != "i" else query.get("v", ["12"])[0] # v
+        self.__platform: str = query.get("p", [""])[0]  # p
+        self.__version: str = query.get("v", ["12"])[0] # v
         self.__dns_path = query.get("dp", [""])[0]  # dp
         self.__dns_final = query.get("df", ["dns-remote"])[0]  # df
 
@@ -249,7 +249,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.__inject_dns()
         self.__inject_outbounds()
         self.__inject_others()
-        if "a" in self.__platform or "i" in self.__platform:
+        if self.__platform in ["a", "i"]:
             self.remote_data["route"]["override_android_vpn"] = True
 
         body = json.dumps(self.remote_data, indent=2).encode()
