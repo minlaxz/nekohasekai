@@ -39,9 +39,7 @@
       "type": "direct"
     },
     "<OUTBOUND_REPLACE>",
-    "<PULLUP_REPLACE>",
-    "<REGISTERED_REPLACE>",
-    "<UNREGISTERED_REPLACE>",
+    "<OTHER_REPLACE>",
     "<OPTIONS_P0RN_REPLACE>"
   ],
   "route": {
@@ -222,7 +220,7 @@
             ]
           }
         ],
-        "outbound": "Registered"
+        "outbound": "Ruled"
       },
       {
         "rule_set": [
@@ -231,7 +229,7 @@
         "outbound": "direct"
       }
     ],
-    "final": "Unregistered",
+    "final": "Un-Ruled",
     "auto_detect_interface": true
   },
   "log": {

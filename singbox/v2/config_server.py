@@ -152,7 +152,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     for i in self.local_data:
                         if i["tag"] in self.__modes:
                             replaced.append(i)
-                case "<PULLUP_REPLACE>":
+                case "<OTHER_REPLACE>":
                     # fmt: off
                     replaced.append({
                         "type": "urltest",
@@ -164,29 +164,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     })
                     replaced.append({
                         "type": "urltest",
-                        "tag": "Check",
-                        "outbounds": self.__outbounds,
+                        "tag": "Un-Ruled",
+                        "outbounds": self.__outbounds[1:] if len(self.__outbounds) > 1 else self.__outbounds,
                         "url": "https://ss-sb.minlaxz.lol/check?dp=" + self.__dns_path,
                         "interval": "30s",
                         "tolerance": 100
                     })
-                    # fmt: on
-                case "<REGISTERED_REPLACE>":
-                    # fmt: off
+                    # ? Could be removed
                     replaced.append({
                         "type": "selector",
-                        "tag": "Registered",
+                        "tag": "Ruled",
                         "outbounds": self.__outbounds,
                         "default": self.__outbounds[1] if len(self.__outbounds) > 1 else self.__outbounds[0]
-                    })
-                    # fmt: on
-                case "<UNREGISTERED_REPLACE>":
-                    # fmt: off
-                    replaced.append({
-                        "type": "selector",
-                        "tag": "Unregistered",
-                        "outbounds": self.__outbounds,
-                        "default": self.__outbounds[0]
                     })
                     # fmt: on
                 case "<OPTIONS_P0RN_REPLACE>":

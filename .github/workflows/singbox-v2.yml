@@ -2,6 +2,11 @@ name: "Build and push singbox image v2"
 
 on:
   workflow_dispatch:
+  push: 
+    branches:
+      - main
+    paths:
+      - 'singbox/v2/**'
 
 env:
   REGISTRY: ghcr.io
