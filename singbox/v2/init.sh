@@ -5,7 +5,10 @@ mkdir -p $WORK_DIR/certs
 mkdir -p $WORK_DIR/conf
 mkdir -p $WORK_DIR/public
 PORT=${START_PORT:-1080}
-DOMAIN=${CUSTOM_DOMAIN:-example.com}
+COMMON_NAME=${CUSTOM_COMMON_NAME:-mozilla.org}
+TLS_SERVER_NAME=${CUSTOM_TLS_SERVER_NAME:-addons.mozilla.org}
+TLS_REALITY_HANDSHAKE_SERVER=${CUSTOM_TLS_REALITY_HANDSHAKE_SERVER:-$TLS_SERVER_NAME}
+SHORT_ID=${CUSTOM_SHORT_ID:-0123456789abcdef}
 
 warning() { echo -e "\033[31m\033[01m$*\033[0m"; }
 info() { echo -e "\033[32m\033[01m$*\033[0m"; }
@@ -20,8 +23,9 @@ upupup() {
     local DOMAIN_STRATEGY=ipv4_only
   fi
 
-  local SS_ENCRYPTION_METHOD=${CUSTOM_SS_ENCRYPTION_METHOD:="chacha20-ietf-poly1305"}
+  local SS_ENCRYPTION_METHOD=${CUSTOM_SS_ENCRYPTION_METHOD:="xchacha20-ietf-poly1305"}
   local SS_ENCRYPTION_PASSWORD=${CUSTOM_SS_ENCRYPTION_PASSWORD:-"$($WORK_DIR/sing-box generate rand --base64 16)"}
+
   local REALITY_KEYPAIR=$($WORK_DIR/sing-box generate reality-keypair) && AUTO_REALITY_PRIVATE=$(awk '/PrivateKey/{print $NF}' <<< "$REALITY_KEYPAIR") && AUTO_REALITY_PUBLIC=$(awk '/PublicKey/{print $NF}' <<< "$REALITY_KEYPAIR")
   local REALITY_PRIVATE=${CUSTOM_REALITY_PRIVATE:-AUTO_REALITY_PRIVATE}
   local REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-AUTO_REALITY_PUBLIC}
@@ -32,7 +36,7 @@ upupup() {
 #   local NODE_NAME=${NODE_NAME:-"sing-box"}
 
   openssl ecparam -genkey -name prime256v1 -out ${WORK_DIR}/certs/private.key && \
-  openssl req -new -x509 -days 36500 -key ${WORK_DIR}/certs/private.key -out ${WORK_DIR}/certs/cert.pem -subj "/CN=${DOMAIN}"
+  openssl req -new -x509 -days 36500 -key ${WORK_DIR}/certs/private.key -out ${WORK_DIR}/certs/cert.pem -subj "/CN=${COMMON_NAME}"
 
   cat > $WORK_DIR/conf/00_log.json << EOF
   {
@@ -112,6 +116,7 @@ EOF
       "inbounds":[
           {
               "type": "vless",
+              "tag": "xtls-reality-in",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_XTLS_REALITY},
               "users": [
@@ -122,16 +127,16 @@ EOF
               ],
               "tls": {
                   "enabled": true,
-                  "server_name": "${DOMAIN}",
+                  "server_name": "${TLS_SERVER_NAME}",
                   "reality": {
                       "enabled": true,
                       "handshake": {
-                          "server": "${DOMAIN}",
+                          "server": "${TLS_REALITY_HANDSHAKE_SERVER}",
                           "server_port": 443
                       },
                       "private_key": "${REALITY_PRIVATE}",
                       "short_id": [
-                          "0123456789abcdef"
+                          "${SHORT_ID}"
                       ]
                   }
               }
@@ -174,7 +179,7 @@ EOF
               ],
               "tls": {
                 "enabled": true,
-                "server_name": "${DOMAIN}",
+                "server_name": "${TLS_SERVER_NAME}",
                 "certificate_path": "${WORK_DIR}/certs/cert.pem",
                 "key_path": "${WORK_DIR}/certs/private.key",
                 "alpn": ["http/1.1", "h2", "h3"]
@@ -187,6 +192,7 @@ EOF
 
 # === SHADOWTLS ===
   [ "${SHADOWTLS}" == 'true' ] && ((PORT++)) && PORT_SHADOWTLS=$PORT && cat > $WORK_DIR/conf/${PORT_SHADOWTLS}_shadowtls_inbounds.json << EOF
+  // "users": [ needs version: 3
   {
       "inbounds": [
           {
@@ -202,7 +208,7 @@ EOF
                   }
               ],
               "handshake": {
-                  "server": "${DOMAIN}",
+                  "server": "${COMMON_NAME}",
                   "server_port": 443
               },
               "strict_mode": true
@@ -258,7 +264,7 @@ if [ "${XTLS_REALITY}" = "true" ]; then
   "tls": {
     "enabled": true,
     "insecure": true,
-    "server_name": "${DOMAIN}",
+    "server_name": "${COMMON_NAME}",
     "utls": {
       "enabled": true,
       "fingerprint": "chrome"
@@ -307,7 +313,7 @@ if [ "${TROJAN}" = "true" ]; then
   "tls": {
     "enabled": true,
     "insecure": true,
-    "server_name": "${DOMAIN}",
+    "server_name": "${COMMON_NAME}",
     "alpn": ["http/1.1", "h2", "h3"],
     "utls": {
       "enabled": true,
@@ -343,7 +349,7 @@ if [ "${SHADOWTLS}" = "true" ]; then
   "password": "${UUID}",
   "tls": {
     "enabled": true,
-    "server_name": "${DOMAIN}",
+    "server_name": "${COMMON_NAME}",
     "utls": {
       "enabled": true,
       "fingerprint": "chrome"
