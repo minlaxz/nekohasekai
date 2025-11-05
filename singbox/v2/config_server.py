@@ -12,11 +12,49 @@ REMOTE_JSON_URL = os.getenv(
     "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/singbox/v2/sing-box-template",
 )
 
+r = redis.Redis(host="redis", port=6379, db=0)
+
 
 class Handler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.r = redis.Redis(host="redis", port=6379, db=0)
+    def _handle_check(self, query):
+        """Handles /check endpoint for both GET and HEAD methods."""
+        self.__dns_path = query.get("dp", [""])[0]  # dp
+        user_id = self.__dns_path.split("/")[1] if "/" in self.__dns_path else "unknown"
+
+        client_ip, client_port = self.client_address
+        real_ip = self.headers.get("X-Forwarded-For", client_ip)
+        ip_key = f"client:{real_ip}"
+        now = time.time()
+
+        # --- duplicate detection ---
+        last_check = r.get(ip_key)
+        is_duplicate = False
+        if last_check:
+            last_time = float(last_check)
+            if now - last_time < 30:
+                is_duplicate = True
+
+        r.set(ip_key, now, ex=60)  # keep timestamp for 60s
+
+        # --- log + store in Redis ---
+        if is_duplicate:
+            print(f"[DUPLICATE] IP {real_ip} (User {user_id}) checked again too soon.")
+            r.incr(f"dup_count:{real_ip}")
+        else:
+            print(f"Check from {real_ip} (User {user_id})")
+
+        data = {
+            "ip": client_ip,
+            "port": client_port,
+            "real_ip": real_ip,
+        }
+        r.hset(f"user:{user_id}", mapping=data)
+        r.hset(f"user:{user_id}", "last_check", now)
+
+        # --- send 204 No Content ---
+        self.send_response(204)
+        self.end_headers()
+        return
 
     def __load(self):
         try:
@@ -206,60 +244,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
         path = parsed.path
+
         if path == "/check":
-            self.__dns_path = query.get("dp", [""])[0]  # dp
-            user_id = (
-                self.__dns_path.split("/")[1] if "/" in self.__dns_path else "unknown"
-            )
-            client_ip, client_port = self.client_address
-            real_ip = self.headers.get("X-Forwarded-For", client_ip)
-            ip_key = f"client:{real_ip}"
-            now = time.time()
-
-            print(
-                f"Check from User ID: {user_id}, IP: {client_ip}, Port: {client_port}, Real IP: {real_ip}"
-            )
-
-            last_check = self.r.get(ip_key)
-            is_duplicate = False
-            if last_check:
-                last_time = float(last_check)
-                if now - last_time < 30:
-                    # duplicate call within 30 seconds
-                    is_duplicate = True
-            self.r.set(ip_key, now, ex=60)
-            if is_duplicate:
-                print(
-                    f"[DUPLICATE] IP {real_ip} (User {user_id}) checked again too soon."
-                )
-                self.r.incr(f"dup_count:{real_ip}")
-            else:
-                print(f"Check from {real_ip} (User {user_id})")
-
-            data = {
-                "ip": client_ip,
-                "port": client_port,
-                "real_ip": real_ip,
-            }
-            self.r.hset(f"user:{user_id}", mapping=data)
-            self.r.hset(f"user:{user_id}", "last_check", time.time())
-            self.send_response(204)
-            self.end_headers()
-            return
+            self._handle_check(query)
         else:
             self.send_response(404)
             self.end_headers()
-            return
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
         path = parsed.path
 
-        if path not in ("/c", "/h", "/tinini"):
+        if path not in ("/c", "/h", "/tinini", "/check"):
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b"Sorry, Not Found")
+            return
+
+        if path == "/check":
+            self._handle_check(query)
             return
 
         if path == "/h":
