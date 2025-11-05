@@ -31,6 +31,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "- platform: android, ios, or empty (for mac, linux, windows)\n"
             "- version: 11 for sing-box 1.11+, 12 for sing-box 1.12+\n"
             "- dns-path: your private NextDNS profile (optional)\n"
+            "- dns-remote-detour: specify any from outbound list, direct will be used if empty\n"
             "- dns-detour: specify any from outbound list, direct will be used if empty\n"
             "- dns-final: specify any from dns server list, dns-remote will be used if empty\n"
             "- route-detour: specify any from outbound list, direct will be used if empty\n"
@@ -55,14 +56,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "address": f"https://dns.nextdns.io/{self.__dns_path}"
                     if self.__dns_path
                     else "https://dns.nextdns.io/",
-                    "address_resolver": "dns-direct",
+                    "address_resolver": "dns-local",
                     "address_strategy": "ipv4_only",
-                    "detour": self.__dns_detour
+                    "detour": self.__dns_remote_detour
                 },
                 {
-                    "tag": "dns-direct",
-                    "address": "1.1.1.1",
-                    "detour": self.__dns_detour
+                    "tag": "dns-local",
+                    "address": "local"
                 }
             ]
         else:
@@ -73,18 +73,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "type": "https",
                     "server": "dns.nextdns.io",
                     "path": self.__dns_path if self.__dns_path else "/",
-                    "domain_resolver": "dns-direct",
-                    "detour": self.__dns_detour
-                },
-                {
-                    "tag": "dns-direct",
-                    "type": "udp",
-                    "server": "1.1.1.1",
-                    "detour": self.__dns_detour
+                    "domain_resolver": "dns-local",
+                    "detour": self.__dns_remote_detour
                 }
             ]
+            if self.__dns_detour == "direct":
+                # local DNS server with direct detour makes no sense
+                self.remote_data["dns"]["servers"].append({
+                    "tag": "dns-local",
+                    "type": "local"
+                })
+            else:
+                self.remote_data["dns"]["servers"].append({
+                    "tag": "dns-local",
+                    "type": "local",
+                    "detour": self.__dns_detour
+                })
             self.remote_data["route"]["default_domain_resolver"] = {
-                "server": "dns-direct",
+                "server": "dns-local",
                 "rewrite_ttl": 60,
                 "client_subnet": "1.1.1.1"
             }
@@ -96,7 +102,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             match item:
                 case "<OUTBOUND_REPLACE>":
                     for i in self.local_data:
-                        replaced.append(i)
+                        if i["tag"] in self.__modes:
+                            replaced.append(i)
                 case "<PULLUP_REPLACE>":
                     # fmt: off
                     replaced.append({
@@ -197,10 +204,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.__platform: list = query.get("platform", [""])[0].split("&")
         self.__version: str = query.get("version", ["12"])[0]
         self.__dns_path = query.get("dns-path", [""])[0]
+        self.__dns_remote_detour = query.get("dns-remote-detour", ["direct"])[0]
         self.__dns_detour = query.get("dns-detour", ["direct"])[0]
         self.__dns_final = query.get("dns-final", ["dns-remote"])[0]
         self.__route_detour = query.get("route-detour", ["direct"])[0]
         self.__log_level = query.get("log-level", ["warn"])[0]
+        self.__modes = query.get("modes", [""])[0].split("&")
 
         self.__ts_auth_key = query.get("ts-auth-key", [""])[0]
         self.__ts_exit_node = query.get("ts-exit-node", [""])[0]

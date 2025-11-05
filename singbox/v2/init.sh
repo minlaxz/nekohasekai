@@ -166,7 +166,16 @@ EOF
               "network": "tcp",
               "method": "${SS_ENCRYPTION_METHOD}",
               "password": "${SS_ENCRYPTION_PASSWORD}",
-              "users": []
+              "users": [],
+              "multiplex": {
+                  "enabled": true,
+                  "padding": false,
+                  "brutal": {
+                    "enabled": true,
+                    "up_mbps": 100,
+                    "down_mbps": 100
+                  }
+              }
           }
       ]
   }
