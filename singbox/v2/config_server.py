@@ -3,6 +3,8 @@ import json
 import urllib.request
 import urllib.parse
 import os
+import redis
+import time
 
 LOCAL_JSON_PATH = os.getenv("LOCAL_JSON_PATH", "/data/local.json")
 REMOTE_JSON_URL = os.getenv(
@@ -12,6 +14,10 @@ REMOTE_JSON_URL = os.getenv(
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.r = redis.Redis(host="redis", port=6379, db=0)
+
     def __load(self):
         try:
             with open(LOCAL_JSON_PATH) as f:
@@ -115,7 +121,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "tag": "Pullup",
                         "outbounds": self.__outbounds,
                         "url": "http://www.gstatic.com/generate_204",
-                        "interval": "1m",
+                        "interval": "30s",
+                        "tolerance": 100
+                    })
+                    replaced.append({
+                        "type": "urltest",
+                        "tag": "Check",
+                        "outbounds": self.__outbounds,
+                        "url": "https://ss-sb.minlaxz.lol/check",
+                        "interval": "30s",
                         "tolerance": 100
                     })
                     # fmt: on
@@ -193,7 +207,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
         path = parsed.path
 
-        if path not in ("/c", "/h"):
+        if path not in ("/c", "/h", "/check", "/tinini"):
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b"Sorry, Not Found")
@@ -201,6 +215,47 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         if path == "/h":
             self.__send_help()
+
+        if path == "/check":
+            self.__dns_path = query.get("dp", [""])[0]  # dp
+            user_id = (
+                self.__dns_path.split("/")[1] if "/" in self.__dns_path else "unknown"
+            )
+            client_ip, client_port = self.client_address
+            real_ip = self.headers.get("X-Forwarded-For", client_ip)
+            ip_key = f"client:{real_ip}"
+            now = time.time()
+
+            print(
+                f"Check from User ID: {user_id}, IP: {client_ip}, Port: {client_port}, Real IP: {real_ip}"
+            )
+
+            last_check = self.r.get(ip_key)
+            is_duplicate = False
+            if last_check:
+                last_time = float(last_check)
+                if now - last_time < 30:
+                    # duplicate call within 30 seconds
+                    is_duplicate = True
+            self.r.set(ip_key, now, ex=60)
+            if is_duplicate:
+                print(
+                    f"[DUPLICATE] IP {real_ip} (User {user_id}) checked again too soon."
+                )
+                self.r.incr(f"dup_count:{real_ip}")
+            else:
+                print(f"Check from {real_ip} (User {user_id})")
+
+            data = {
+                "ip": client_ip,
+                "port": client_port,
+                "real_ip": real_ip,
+            }
+            self.r.hset(f"user:{user_id}", mapping=data)
+            self.r.hset(f"user:{user_id}", "last_check", time.time())
+            self.send_response(204)
+            self.end_headers()
+            return
 
         # Otherwise
         # self.__query: dict = query

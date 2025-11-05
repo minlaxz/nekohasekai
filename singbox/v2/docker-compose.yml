@@ -1,25 +1,34 @@
 services:
-    sing-box:
-        image: ghcr.io/minlaxz/nekohasekai:sing-box-v2
-        container_name: sing-box-v2
-        restart: unless-stopped
-        ports:
-            - "8840-8850:8840-8850"
-        env_file:
-            - .env
-        volumes:
-            - public:/sing-box/public
+  sing-box:
+    image: ghcr.io/minlaxz/nekohasekai:sing-box-v2
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "8840-8850:8840-8850/tcp"
+      - "8840-8850:8840-8850/udp"
+    env_file:
+      - .env
+    volumes:
+      - public:/sing-box/public
 
-    config-server:
-      image: ghcr.io/minlaxz/nekohasekai:config-server
-      container_name: config-server
-      restart: unless-stopped
-      depends_on:
-        - sing-box
-      ports:
-        - "127.0.0.1:8851:8851"
-      volumes:
-        - public:/data:ro
+  config-server:
+    image: ghcr.io/minlaxz/nekohasekai:config-server
+    pull_policy: always
+    restart: unless-stopped
+    depends_on:
+      - sing-box
+    ports:
+      - "127.0.0.1:8851:8851"
+    env_file:
+      - .env
+    volumes:
+      - public:/data:ro
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    expose:
+      - "6379"
 
 volumes:
-    public:
+  public:
