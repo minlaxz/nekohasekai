@@ -139,6 +139,15 @@ EOF
                           "${SHORT_ID}"
                       ]
                   }
+              },
+              "multiplex": {
+                  "enabled": true,
+                  "padding": false,
+                  "brutal": {
+                    "enabled": true,
+                    "up_mbps": 100,
+                    "down_mbps": 100
+                  }
               }
           }
       ]
@@ -261,10 +270,22 @@ if [ "${XTLS_REALITY}" = "true" ]; then
   "uuid": "${UUID}",
   "flow": "xtls-rprx-vision",
   "packet_encoding": "xudp",
+  "multiplex": {
+    "enabled": true,
+    "protocol": "h2mux",
+    "max_connections": 4,
+    "min_streams": 4,
+    "max_streams": 0,
+    "padding": false,
+    "brutal": {
+      "enabled": true,
+      "up_mbps": 20,
+      "down_mbps": 20
+    }
+  }
   "tls": {
     "enabled": true,
-    "insecure": true,
-    "server_name": "${COMMON_NAME}",
+    "server_name": "${TLS_SERVER_NAME}",
     "utls": {
       "enabled": true,
       "fingerprint": "chrome"
