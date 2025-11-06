@@ -14,7 +14,8 @@ warning() { echo -e "\033[31m\033[01m$*\033[0m"; }
 info() { echo -e "\033[32m\033[01m$*\033[0m"; }
 hint() { echo -e "\033[33m\033[01m$*\033[0m"; }
 
-upupup() {
+init() {
+  info "Initializing sing-box configuration..."
   SERVER_IP="$(wget -q -O- https://ipecho.net/plain)"
 
   if [[ "$SERVER_IP" =~ : ]]; then
@@ -58,7 +59,7 @@ EOF
             "server": "warp",
             "server_port": 1080,
             "version": "5",
-            "network": "udp",
+            "network": "tcp",
             "udp_over_tcp": false,
             "domain_resolver": {
                   "server": "local",
@@ -334,7 +335,8 @@ if [ "${SHADOWSOCKS}" = "true" ]; then
   "domain_strategy": "${DOMAIN_STRATEGY}",
   "server_port": ${PORT_SHADOWSOCKS},
   "method": "${SS_ENCRYPTION_METHOD}",
-  "password": "${SS_ENCRYPTION_PASSWORD}"
+  "password": "${SS_ENCRYPTION_PASSWORD}",
+  "network": "tcp"
 }
 EOF
   )
@@ -409,6 +411,7 @@ echo "$INBOUND_REPLACE" | jq '.' > "$WORK_DIR/public/local.json"
 }
 
 info "starting..."
-upupup
+local SKIP_INIT=${SKIP_INIT:="false"}
+[ "$SKIP_INIT" != "true" ] && init
 info "started."
 /sing-box/sing-box run -C $WORK_DIR/conf
