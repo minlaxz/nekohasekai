@@ -338,7 +338,7 @@ if [ "${SHADOWSOCKS}" = "true" ]; then
   "password": "${SS_ENCRYPTION_PASSWORD}",
   "network": "tcp",
   "udp_over_tcp": {
-    "enabled": true
+    "enabled": true,
     "version": 2
   }
 }
