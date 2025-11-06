@@ -11,6 +11,7 @@ REMOTE_JSON_URL = os.getenv(
     "REMOTE_JSON_URL",
     "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/singbox/v2/sing-box-template",
 )
+URL_TEST = os.getenv("URL_TEST", "")
 
 r = redis.Redis(host="redis", port=6379, db=0)
 
@@ -30,7 +31,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         last_check = r.get(ip_key)
         is_duplicate = False
         if last_check:
-            last_time = float(last_check)
+            last_time = float(last_check)  # type: ignore
             if now - last_time < 30:
                 is_duplicate = True
 
@@ -49,7 +50,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "real_ip": real_ip,
         }
         r.hset(f"user:{user_id}", mapping=data)
-        r.hset(f"user:{user_id}", "last_check", now)
+        r.hset(f"user:{user_id}", "last_check", now)  # type: ignore
 
         # --- send 204 No Content ---
         self.send_response(204)
@@ -151,6 +152,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 case "<OUTBOUND_REPLACE>":
                     for i in self.local_data:
                         if i["tag"] in self.__modes:
+                            # https://sing-box.sagernet.org/configuration/shared/udp-over-tcp/#application-support
+                            if i.get("type") == "shadowsocks" and self.__version.startswith("11"):
+                                i["udp_over_tcp"]["version"] = 1
                             replaced.append(i)
                 case "<OTHER_REPLACE>":
                     # fmt: off
@@ -158,24 +162,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "type": "urltest",
                         "tag": "Pullup",
                         "outbounds": self.__outbounds,
-                        "url": "http://www.gstatic.com/generate_204",
+                        "url": "https://www.gstatic.com/generate_204",
                         "interval": "30s",
                         "tolerance": 100
                     })
                     replaced.append({
                         "type": "urltest",
-                        "tag": "Un-Ruled",
+                        "tag": "Ruled",
                         "outbounds": self.__outbounds[1:] if len(self.__outbounds) > 1 else self.__outbounds,
-                        "url": "https://ss-sb.minlaxz.lol/check?dp=" + self.__dns_path,
+                        "url": f"{URL_TEST}?dp={self.__dns_path}",
                         "interval": "30s",
                         "tolerance": 100
                     })
                     # ? Could be removed
                     replaced.append({
-                        "type": "selector",
-                        "tag": "Ruled",
-                        "outbounds": self.__outbounds,
-                        "default": self.__outbounds[1] if len(self.__outbounds) > 1 else self.__outbounds[0]
+                        "type": "urltest",
+                        "tag": "Un-Ruled",
+                        "outbounds": self.__outbounds[1:] if len(self.__outbounds) > 1 else self.__outbounds,
+                        "url": f"{URL_TEST}?dp={self.__dns_path}",
+                        "interval": "30s",
+                        "tolerance": 100
                     })
                     # fmt: on
                 case "<OPTIONS_P0RN_REPLACE>":

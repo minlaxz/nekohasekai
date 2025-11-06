@@ -336,7 +336,11 @@ if [ "${SHADOWSOCKS}" = "true" ]; then
   "server_port": ${PORT_SHADOWSOCKS},
   "method": "${SS_ENCRYPTION_METHOD}",
   "password": "${SS_ENCRYPTION_PASSWORD}",
-  "network": "tcp"
+  "network": "tcp",
+  "udp_over_tcp": {
+    "enabled": true
+    "version": 2
+  }
 }
 EOF
   )

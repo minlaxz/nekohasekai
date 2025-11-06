@@ -207,11 +207,6 @@
             ]
           },
           {
-            "domain_keyword": [
-              "minlaxz"
-            ]
-          },
-          {
             "domain_regex": "^(bard|gemini)\\.google\\.com$"
           },
           {
