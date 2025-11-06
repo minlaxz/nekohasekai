@@ -53,9 +53,14 @@ EOF
   {
       "outbounds": [
           {
-              "type": "direct",
-              "tag": "direct-out",
-              "domain_resolver": {
+            "type": "socks",
+            "tag": "socks-out",
+            "server": "warp",
+            "server_port": 1080,
+            "version": "5",
+            "network": "udp",
+            "udp_over_tcp": false,
+            "domain_resolver": {
                   "server": "local",
                   "strategy": "${DOMAIN_STRATEGY}"
               }
@@ -64,7 +69,14 @@ EOF
   }
 EOF
     hint "Generated outbound config."
-
+# {
+#     "type": "direct",
+#     "tag": "direct-out",
+#     "domain_resolver": {
+#         "server": "local",
+#         "strategy": "${DOMAIN_STRATEGY}"
+#     }
+# }
   cat > $WORK_DIR/conf/02_route.json << EOF
   {
       "route": {
@@ -82,7 +94,7 @@ EOF
               "external_controller": "0.0.0.0:8820",
               "external_ui": "metacubexd",
               "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
-              "external_ui_download_detour": "direct-out",
+              "external_ui_download_detour": "socks-out",
               "default_mode": "rule"
           },
           "cache_file": {
