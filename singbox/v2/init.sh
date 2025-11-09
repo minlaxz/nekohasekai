@@ -80,12 +80,22 @@ EOF
       "rule_set": [],
       "rules": [
         {
+          "inbound": "xtls-reality-in",
+          "action": "sniff",
+          "timeout": "1s"
+        },
+        {
+          "inbound": "xtls-reality-in",
+          "action": "resolve",
+          "strategy": "ipv4_only"
+        },
+        {
           "type": "logical",
           "mode": "or",
           "rules": [
             {
-              "domain_suffix": [
-                "ipchicken.com"
+              "domain_keyword": [
+                "ipchicken"
               ]
             }
           ],
@@ -185,6 +195,7 @@ EOF
       "inbounds": [
           {
               "type": "shadowsocks",
+              "tag": "shadowsocks-in",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWSOCKS},
               "network": "tcp",
