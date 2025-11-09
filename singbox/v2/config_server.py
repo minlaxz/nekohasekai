@@ -301,7 +301,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # self.__modes = [
         #     self.mapping.get(i, i) for i in modes if i
         # ]  # mo
-        self.__modes = ["shadowsocs", "xtls-reality"]
+        self.__modes = ["shadowsocks", "xtls-reality"]
 
         self.__personal_uuid = query.get("puuid", [""])[0]  # puuid
 

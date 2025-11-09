@@ -182,3 +182,5 @@ generate-geoip-geosite*
 *.lst
 git-ignored
 .DS_Store
+
+**/data

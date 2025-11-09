@@ -1,18 +1,21 @@
-- [v1](./v1/) 
-    + old version
-    + using multiple proxies
-    + complicated setup
-    + using supervisor to manage multiple services in single container
+- [v1](./v1/)
+  - using multiple proxies
+  - using supervisor to manage multiple services in single container
+  - credits https://github.com/fscarmen/sing-box
 - [v2](./v2/)
-    + new version
-    + using only shadowsocks
-    + simple setup
-    + using docker compose to manage multiple containers
+  - using only shadowsocks
+  - using docker compose to manage multiple containers
+  - dynamic config generation
+  - tailscale endpoint as exit node
+  - rerouting tailscale outbound to Cloudflare warp
 
 ### Note for DNS Settings
-With sing-box, it's possible to handle answering DNS queries both from server side or client side. But it's more flexiable to configure DNS server settings from the client side rather than the server side.
+
+Sing-box supports to resolve DNS queires from server side, client side or both.
+It's more flexiable to configure DNS server settings from the client side rather than the server side using some public remote DNS.
 
 ### Notes for common issues
+
 1. Server: Disable `sniff`, otherwise _no recent network activity will occur_.
 2. Server: Disable `sniff_override_destination`, otherwise _DNS will not be used_.
 3. Client: Remove `fakeip` to enable `direct` network.

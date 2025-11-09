@@ -2,20 +2,9 @@ name: Build sing-box rules (optional OONI)
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '30 0 * * *'
-  #   - cron: '30 1 * * *'
-  #   - cron: '30 2 * * *'
-  #   - cron: '30 3 * * *'
-  #   - cron: '30 4 * * *'
-  #   - cron: '30 5 * * *'
-  #   - cron: '30 6 * * *'
-  #   - cron: '30 7 * * *'
-  #   - cron: '30 8 * * *'
-  #   - cron: '30 9 * * *'
-  #   - cron: '30 10 * * *'
-  #   - cron: '30 11 * * *'
-  #   - cron: '30 12 * * *'
+  schedule:
+  # Run every day at 6 past 9 UTC
+    - cron: "6 9 * * *"
 
 # env:
 #   oonimm-output: ooni/oonimm.lst
