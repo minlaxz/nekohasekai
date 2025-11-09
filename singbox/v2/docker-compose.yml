@@ -1,4 +1,23 @@
 services:
+  warp:
+    image: ghcr.io/minlaxz/warp-docker:2025.6.1335.0-3.2.4
+    hostname: ss-sb-warp
+    device_cgroup_rules:
+      - 'c 10:200 rwm'
+    ports:
+      - "127.0.0.1:1080:1080"
+    env_file:
+      - .env
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    volumes:
+      - data:/var/lib/cloudflare-warp
+
   sing-box:
     image: ghcr.io/minlaxz/nekohasekai:sing-box-v2
     pull_policy: always
@@ -30,5 +49,15 @@ services:
     expose:
       - "6379"
 
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - sing-box
+    ports:
+      - "80:80"
+      - "443:443"
+
 volumes:
   public:
+  data:

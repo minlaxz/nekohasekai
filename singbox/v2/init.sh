@@ -8,7 +8,7 @@ PORT=${START_PORT:-1080}
 COMMON_NAME=${CUSTOM_COMMON_NAME:-mozilla.org}
 TLS_SERVER_NAME=${CUSTOM_TLS_SERVER_NAME:-addons.mozilla.org}
 TLS_REALITY_HANDSHAKE_SERVER=${CUSTOM_TLS_REALITY_HANDSHAKE_SERVER:-$TLS_SERVER_NAME}
-SHORT_ID=${CUSTOM_SHORT_ID:-0123456789abcdef}
+SHORT_ID=${CUSTOM_SHORT_ID:-abcdef1234567890}
 
 warning() { echo -e "\033[31m\033[01m$*\033[0m"; }
 info() { echo -e "\033[32m\033[01m$*\033[0m"; }
@@ -32,19 +32,14 @@ init() {
   local REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-AUTO_REALITY_PUBLIC}
   local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
 
-
-#   local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
-#   local NODE_NAME=${NODE_NAME:-"sing-box"}
-
   openssl ecparam -genkey -name prime256v1 -out ${WORK_DIR}/certs/private.key && \
   openssl req -new -x509 -days 36500 -key ${WORK_DIR}/certs/private.key -out ${WORK_DIR}/certs/cert.pem -subj "/CN=${COMMON_NAME}"
 
   cat > $WORK_DIR/conf/00_log.json << EOF
   {
       "log": {
-          "level": "warn",
-          "timestamp": true,
-          "output": "$WORK_DIR/sing.log"
+          "level": "trace",
+          "timestamp": true
       }
   }
 EOF
@@ -65,25 +60,41 @@ EOF
                   "server": "local",
                   "strategy": "${DOMAIN_STRATEGY}"
               }
+          },
+          {
+            "type": "direct",
+            "tag": "direct-out",
+            "domain_resolver": {
+              "server": "local",
+              "strategy": "${DOMAIN_STRATEGY}"
+            }
           }
       ]
   }
 EOF
     hint "Generated outbound config."
-# {
-#     "type": "direct",
-#     "tag": "direct-out",
-#     "domain_resolver": {
-#         "server": "local",
-#         "strategy": "${DOMAIN_STRATEGY}"
-#     }
-# }
+
   cat > $WORK_DIR/conf/02_route.json << EOF
   {
-      "route": {
-          "rule_set": [],
-          "rules": []
-      }
+    "route": {
+      "rule_set": [],
+      "rules": [
+        {
+          "type": "logical",
+          "mode": "or",
+          "rules": [
+            {
+              "domain_suffix": [
+                "ipchicken.com"
+              ]
+            }
+          ],
+          "outbound": "socks-out"
+        }
+      ],
+      "final": "direct-out",
+      "auto_detect_interface": true
+    }
   }
 EOF
     hint "Generated route config."
@@ -92,15 +103,15 @@ EOF
   {
       "experimental": {
           "clash_api": {
-              "external_controller": "0.0.0.0:8820",
+              "external_controller": "0.0.0.0:${START_PORT}",
               "external_ui": "metacubexd",
               "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
-              "external_ui_download_detour": "socks-out",
+              "external_ui_download_detour": "direct-out",
               "default_mode": "rule"
           },
           "cache_file": {
               "enabled": true,
-              "path": "$WORK_DIR/cache.db"
+              "path": "cache.db"
           }
       }
   }

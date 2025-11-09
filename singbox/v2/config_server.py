@@ -275,7 +275,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # Wi-Fi
         # /c?p=a&dp=YOUR_PATH&mo=ss&dd=d
         # /c?p=i&dp=YOUR_PATH&mo=ss&dd=d
-        self.mapping = {"ss": "shadowsocks", "d": "direct", "l": "local"}
+        self.mapping = {"ss": "shadowsocks", "xr": "xtls-reality", "d": "direct", "l": "local"}
 
         # fmt: off
         self.__platform: str = query.get("p", [""])[0]  # p
