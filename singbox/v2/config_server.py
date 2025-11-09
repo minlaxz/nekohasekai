@@ -73,15 +73,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         help_msg = (
             "Usage: /client.json?platform=android&version=12&nextdns-path=YOUR_PATH\n"
             "Parameters:\n"
-            "- p: android, ios, or empty for mac, linux, windows\n"
-            "- v: 11 for sing-box 1.11+, 12 for sing-box 1.12+, or empty for 12\n"
-            "- dp: your private NextDNS profile (optional)\n"
-            "- dd: specify any from outbound list, direct will be used if empty\n"
-            "- df: specify any from dns server list, dns-remote will be used if empty\n"
-            "- rdr: local or DNS IP, 1.1.1.1 will be used if empty\n"
-            "- mo: specify any from outbound tags, separated by &\n"
-            "- rd: specify any from outbound list, direct will be used if empty\n"
-            "- ll: specify any from docs, warn will be used if empty\n"
+            "- p: platform: android, ios, or empty for mac, linux, windows\n"
+            "- v: version: 11 for sing-box 1.11+, 12 for sing-box 1.12+, or empty for 12\n"
+            "- dp: dns-path: your private NextDNS profile (optional)\n"
+            "- dd: dns-detour: specify any from outbound list, direct will be used if empty\n"
+            "- df: dns-final: specify any from dns server list, dns-remote will be used if empty\n"
+            "- rdr: remote-dns-detour: local or DNS IP, 1.1.1.1 will be used if empty\n"
+            "- mo: modes: specify any from outbound tags, separated by tac, -\n"
+            "- rd: route-detour: specify any from outbound list, direct will be used if empty\n"
+            "- ll: log-level: specify any from docs, warn will be used if empty\n"
             "- tak: your Tailscale ephemeral auth key (optional)\n"
             "- ten: your Tailscale exit node IP (optional)\n"
             "- th: your Tailscale hostname (optional, default: ts-sb)\n"
@@ -185,12 +185,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     replaced.append({
                         "type": "selector",
                         "tag": "Un-Ruled",
-                        "outbounds": self.__outbounds[0],
+                        "outbounds": self.__outbounds[0:1],
                         "default": self.__outbounds[0]
                     })
                     # fmt: on
                 case _:
-                    # `direct` maybe?
+                    # ? clinet side `direct` outbound
                     replaced.append(item)
         self.remote_data["outbounds"] = replaced
 

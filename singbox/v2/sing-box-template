@@ -182,8 +182,8 @@
             "domain_regex": "^(bard|gemini)\\.google\\.com$"
           },
           {
-            "domain_suffix": [
-              "proton.me"
+            "domain_keyword": [
+              "minlaxz"
             ]
           }
         ],
