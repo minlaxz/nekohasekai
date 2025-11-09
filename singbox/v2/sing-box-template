@@ -39,19 +39,10 @@
       "type": "direct"
     },
     "<OUTBOUND_REPLACE>",
-    "<OTHER_REPLACE>",
-    "<OPTIONS_P0RN_REPLACE>"
+    "<OTHER_REPLACE>"
   ],
   "route": {
     "rule_set": [
-      {
-        "tag": "geosite-category-porn",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-porn.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
       {
         "tag": "geosite-facebook",
         "type": "remote",
@@ -89,14 +80,6 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-tiktok",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/tiktok.srs",
         "download_detour": "direct",
         "update_interval": "1d"
       },
@@ -186,23 +169,12 @@
         "mode": "or",
         "rules": [
           {
-            "rule_set": "geosite-category-porn"
-          }
-        ],
-        "outbound": "Options P0rn"
-      },
-      {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
             "rule_set": [
               "geosite-facebook",
               "geosite-messenger",
               "geosite-instagram",
               "geosite-whatsapp",
               "geosite-twitter",
-              "geosite-tiktok",
               "geosite-github"
             ]
           },

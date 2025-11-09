@@ -31,6 +31,7 @@ init() {
   local REALITY_PRIVATE=${CUSTOM_REALITY_PRIVATE:-AUTO_REALITY_PRIVATE}
   local REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-AUTO_REALITY_PUBLIC}
   local UUID=${CUSTOM_UUID:-"$($WORK_DIR/sing-box generate uuid)"}
+  local PERSONAL_UUID=${CUSTOM_PERSONAL_UUID:-$UUID}
 
   openssl ecparam -genkey -name prime256v1 -out ${WORK_DIR}/certs/private.key && \
   openssl req -new -x509 -days 36500 -key ${WORK_DIR}/certs/private.key -out ${WORK_DIR}/certs/cert.pem -subj "/CN=${COMMON_NAME}"
@@ -97,6 +98,11 @@ EOF
               "domain_keyword": [
                 "ipchicken"
               ]
+            },
+            {
+              "auth_user": [
+                "personal-user"
+              ]
             }
           ],
           "outbound": "socks-out"
@@ -155,7 +161,13 @@ EOF
               "listen_port": ${PORT_XTLS_REALITY},
               "users": [
                   {
+                      "name": "user",
                       "uuid": "${UUID}",
+                      "flow": "xtls-rprx-vision"
+                  },
+                  {
+                      "name": "personal-user",
+                      "uuid": "${PERSONAL_UUID}",
                       "flow": "xtls-rprx-vision"
                   }
               ],

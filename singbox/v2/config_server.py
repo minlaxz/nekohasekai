@@ -153,8 +153,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     for i in self.local_data:
                         if i["tag"] in self.__modes:
                             # https://sing-box.sagernet.org/configuration/shared/udp-over-tcp/#application-support
-                            if i.get("type") == "shadowsocks" and self.__version.startswith("11"):
+                            if i.get(
+                                "type"
+                            ) == "shadowsocks" and self.__version.startswith("11"):
                                 i["udp_over_tcp"]["version"] = 1
+                            if (
+                                i.get("type") == "xtls-reality"
+                                and self.__personal_uuid
+                            ):
+                                i["uuid"] = self.__personal_uuid
                             replaced.append(i)
                 case "<OTHER_REPLACE>":
                     # fmt: off
@@ -178,16 +185,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     replaced.append({
                         "type": "selector",
                         "tag": "Un-Ruled",
-                        "outbounds": self.__outbounds,
-                        "default": self.__outbounds[0]
-                    })
-                    # fmt: on
-                case "<OPTIONS_P0RN_REPLACE>":
-                    # fmt: off
-                    replaced.append({
-                        "type": "selector",
-                        "tag": "Options P0rn",
-                        "outbounds": self.__outbounds,
+                        "outbounds": self.__outbounds[0],
                         "default": self.__outbounds[0]
                     })
                     # fmt: on
@@ -271,9 +269,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # /cjson?p=i&dp=YOUR_PATH&rdr=local&mo=ss
 
         # Wi-Fi
-        # /c?p=a&dp=YOUR_PATH&mo=ss&dd=d
-        # /c?p=i&dp=YOUR_PATH&mo=ss&dd=d
-        self.mapping = {"ss": "shadowsocks", "xr": "xtls-reality", "d": "direct", "l": "local"}
+        # /c?p=a&dp=YOUR_PATH&mo=ss-xr&dd=d
+        # /c?p=i&dp=YOUR_PATH&mo=ss-xr&dd=d
+        self.mapping = {
+            "ss": "shadowsocks",
+            "xr": "xtls-reality",
+            "d": "direct",
+            "l": "local",
+        }
 
         # fmt: off
         self.__platform: str = query.get("p", [""])[0]  # p
@@ -298,6 +301,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.__modes = [
             self.mapping.get(i, i) for i in modes if i
         ]  # mo
+
+        self.__personal_uuid = query.get("puuid", [""])[0]  # psi
 
         self.__ts_auth_key = query.get("tak", [""])[0]  # tak
         self.__ts_exit_node = query.get("ten", [""])[0]  # ten
