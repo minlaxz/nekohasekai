@@ -297,12 +297,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         __ll__ = query.get("ll", ["warn"])[0]  # ll
         self.__log_level = self.mapping.get(__ll__, __ll__)
 
-        modes = query.get("mo", [""])[0].split("-")
-        self.__modes = [
-            self.mapping.get(i, i) for i in modes if i
-        ]  # mo
+        # modes = query.get("mo", [""])[0].split("-")
+        # self.__modes = [
+        #     self.mapping.get(i, i) for i in modes if i
+        # ]  # mo
+        self.__modes = ["shadowsocs", "xtls-reality"]
 
-        self.__personal_uuid = query.get("puuid", [""])[0]  # psi
+        self.__personal_uuid = query.get("puuid", [""])[0]  # puuid
 
         self.__ts_auth_key = query.get("tak", [""])[0]  # tak
         self.__ts_exit_node = query.get("ten", [""])[0]  # ten
@@ -328,4 +329,5 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.getenv("CONFIG_SERVER_PORT", 8851))
+    print(f"Starting config server on port {port}...")
     http.server.HTTPServer(("0.0.0.0", port), Handler).serve_forever()
