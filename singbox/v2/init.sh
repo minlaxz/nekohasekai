@@ -337,7 +337,7 @@ if [ "${XTLS_REALITY}" = "true" ]; then
     "reality": {
       "enabled": true,
       "public_key": "${REALITY_PUBLIC}",
-      "short_id": "0123456789abcdef"
+      "short_id": "${SHORT_ID}"
     }
   }
 }

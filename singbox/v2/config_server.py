@@ -176,12 +176,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     })
                     # ? Could be removed
                     replaced.append({
-                        "type": "urltest",
+                        "type": "selector",
                         "tag": "Un-Ruled",
-                        "outbounds": self.__outbounds[1:] if len(self.__outbounds) > 1 else self.__outbounds,
-                        "url": f"{URL_TEST}?dp={self.__dns_path}",
-                        "interval": "30s",
-                        "tolerance": 100
+                        "outbounds": self.__outbounds,
+                        "default": self.__outbounds[0]
                     })
                     # fmt: on
                 case "<OPTIONS_P0RN_REPLACE>":
@@ -296,8 +294,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         __ll__ = query.get("ll", ["warn"])[0]  # ll
         self.__log_level = self.mapping.get(__ll__, __ll__)
 
+        modes = query.get("mo", [""])[0].split("-")
         self.__modes = [
-            self.mapping.get(i, i) for i in query.get("mo", [""])[0].split("&") if i
+            self.mapping.get(i, i) for i in modes if i
         ]  # mo
 
         self.__ts_auth_key = query.get("tak", [""])[0]  # tak
