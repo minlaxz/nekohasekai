@@ -89,26 +89,10 @@
         "update_interval": "1d"
       },
       {
-        "tag": "geoip-instagram",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/instagram.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
         "tag": "geosite-whatsapp",
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-whatsapp",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/whatsapp.srs",
         "download_detour": "direct",
         "update_interval": "1d"
       },
@@ -133,14 +117,6 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-github",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/github.srs",
         "download_detour": "direct",
         "update_interval": "1d"
       },
@@ -231,13 +207,10 @@
               "geosite-messenger",
               "geoip-messenger",
               "geosite-instagram",
-              "geoip-instagram",
               "geosite-whatsapp",
-              "geoip-whatsapp",
               "geosite-twitter",
               "geoip-twitter",
-              "geosite-github",
-              "geoip-github"
+              "geosite-github"
             ]
           },
           {
