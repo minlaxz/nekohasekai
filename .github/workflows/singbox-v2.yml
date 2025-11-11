@@ -6,7 +6,8 @@ on:
     branches:
       - main
     paths:
-      - 'singbox/v2/**'
+      - 'singbox/v2/config_server.py'
+      - 'singbox/v2/init.sh'
 
 env:
   REGISTRY: ghcr.io
