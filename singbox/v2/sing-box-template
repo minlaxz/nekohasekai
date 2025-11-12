@@ -7,7 +7,7 @@
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,
-    "reverse_mapping": true,
+    "reverse_mapping": false,
     "client_subnet": "1.1.1.1"
   },
   "inbounds": [
@@ -50,14 +50,6 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-twitter",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/twitter.srs",
         "download_detour": "direct",
         "update_interval": "1d"
       },
@@ -128,7 +120,6 @@
             "rule_set": [
               "geosite-meta",
               "geosite-twitter",
-              "geoip-twitter",
               "geosite-github"
             ]
           },
