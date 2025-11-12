@@ -7,7 +7,7 @@
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,
-    "reverse_mapping": false,
+    "reverse_mapping": true,
     "client_subnet": "1.1.1.1"
   },
   "inbounds": [
@@ -17,23 +17,12 @@
       "domain_strategy": "ipv4_only",
       "interface_name": "utun1",
       "address": [
-        "10.69.69.0/28",
-        "fd00::1/126"
+        "10.69.69.0/28"
       ],
       "mtu": 1400,
       "auto_route": true,
       "strict_route": true,
       "stack": "gvisor",
-      "sniff": true,
-      "sniff_override_destination": true
-    },
-    {
-      "type": "http",
-      "tag": "http-in",
-      "domain_strategy": "ipv4_only",
-      "listen": "0.0.0.0",
-      "listen_port": 2080,
-      "tcp_fast_open": false,
       "sniff": true,
       "sniff_override_destination": true
     }
@@ -49,42 +38,10 @@
   "route": {
     "rule_set": [
       {
-        "tag": "geosite-facebook",
+        "tag": "geosite-meta",
         "type": "remote",
         "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-facebook",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/facebook.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-messenger",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-instagram",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
-        "download_detour": "direct",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-whatsapp",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/meta.srs",
         "download_detour": "direct",
         "update_interval": "1d"
       },
@@ -136,21 +93,6 @@
         "strategy": "ipv4_only"
       },
       {
-        "inbound": "tun-in",
-        "action": "sniff",
-        "timeout": "1s"
-      },
-      {
-        "inbound": "http-in",
-        "action": "resolve",
-        "strategy": "ipv4_only"
-      },
-      {
-        "inbound": "http-in",
-        "action": "sniff",
-        "timeout": "1s"
-      },
-      {
         "type": "logical",
         "mode": "or",
         "rules": [
@@ -184,11 +126,7 @@
         "rules": [
           {
             "rule_set": [
-              "geosite-facebook",
-              "geoip-facebook",
-              "geosite-messenger",
-              "geosite-instagram",
-              "geosite-whatsapp",
+              "geosite-meta",
               "geosite-twitter",
               "geoip-twitter",
               "geosite-github"
@@ -197,6 +135,11 @@
           {
             "domain_keyword": [
               "minlaxz"
+            ]
+          },
+          {
+            "domain_suffix": [
+              "engineerforce.io"
             ]
           }
         ],

@@ -175,7 +175,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     replaced.append({
                         "type": "urltest",
                         "tag": "Ruled",
-                        "outbounds": self.__outbounds[1:] if len(self.__outbounds) > 1 else self.__outbounds,
+                        "outbounds": self.__outbounds[1:2] if len(self.__outbounds) > 1 else self.__outbounds,
                         "url": f"{URL_TEST}?dp={self.__dns_path}",
                         "interval": "30s",
                         "tolerance": 100
