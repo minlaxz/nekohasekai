@@ -157,11 +157,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                 "type"
                             ) == "shadowsocks" and self.__version.startswith("11"):
                                 i["udp_over_tcp"]["version"] = 1
-                            if (
-                                i.get("type") == "xtls-reality"
-                                and self.__personal_uuid
-                            ):
-                                i["uuid"] = self.__personal_uuid
+                            if i.get("type") == "xtls-reality":
+                                if self.__platform == "i":
+                                    i = i.pop("packet_encoding")
+                                if self.__personal_uuid:
+                                    i["uuid"] = self.__personal_uuid
                             replaced.append(i)
                 case "<OTHER_REPLACE>":
                     # fmt: off

@@ -173,16 +173,6 @@
               853,
               5222
             ]
-          },
-          {
-            "network": "udp",
-            "port": [
-              443,
-              853
-            ]
-          },
-          {
-            "protocol": "stun"
           }
         ],
         "action": "reject",
@@ -213,9 +203,25 @@
         "outbound": "Ruled"
       },
       {
-        "rule_set": [
-          "geoip-private",
-          "geoip-mm"
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": [
+              "geoip-private",
+              "geoip-mm"
+            ]
+          },
+          {
+            "network": "udp",
+            "port": [
+              443,
+              853
+            ]
+          },
+          {
+            "protocol": "stun"
+          }
         ],
         "outbound": "direct"
       }
