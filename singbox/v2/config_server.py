@@ -155,8 +155,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                             # https://sing-box.sagernet.org/configuration/shared/udp-over-tcp/#application-support
                             if self.__version.startswith("11"):
                                 if self.__platform in ["i"]:
-                                    if i.get("tag") == "shadowsocks":
-                                        i["udp_over_tcp"]["version"] = 1
+                                    # if i.get("tag") == "shadowsocks":
+                                    #     i["udp_over_tcp"]["version"] = 1
                                     if i.get("tag") == "xtls-reality":
                                         i.pop("packet_encoding")
                             if self.__personal_uuid:

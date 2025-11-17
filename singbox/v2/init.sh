@@ -317,19 +317,6 @@ EOF
         "listen_port": ${PORT_SSM},
         "servers": {
           "/": "shadowsocks-in"
-        },
-        "tls": {
-          "enabled": true,
-          "server_name": "${TLS_SERVER_NAME}",
-          "reality": {
-            "enabled": true,
-            "handshake": {
-                "server": "${TLS_REALITY_HANDSHAKE_SERVER}",
-                "server_port": 443
-            },
-            "private_key": "${REALITY_PRIVATE}",
-            "short_id": ["${SHORT_ID}"]
-          }
         }
       }
     ]
