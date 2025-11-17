@@ -153,7 +153,7 @@ EOF
   [ "${XTLS_REALITY}" = 'true' ] && ((PORT++)) && PORT_XTLS_REALITY=$PORT && cat > $WORK_DIR/conf/${PORT_XTLS_REALITY}_xtls-reality_inbounds.json << EOF
   //  "public_key": "${REALITY_PUBLIC}"
   {
-      "inbounds":[
+      "inbounds": [
           {
               "type": "vless",
               "tag": "xtls-reality-in",
@@ -231,7 +231,7 @@ EOF
 # === TROJAN ===
   [ "${TROJAN}" == 'true' ] && ((PORT++)) && PORT_TROJAN=$PORT && cat > $WORK_DIR/conf/${PORT_TROJAN}_trojan_inbounds.json << EOF
   {
-      "inbounds":[
+      "inbounds": [
           {
               "type": "trojan",
               "listen": "0.0.0.0",
@@ -293,7 +293,7 @@ EOF
 # === SOCKS ===
   [ "${SOCKS}" = 'true' ] && ((PORT++)) && PORT_SOCKS=$PORT && cat > $WORK_DIR/conf/${PORT_SOCKS}_socks_inbounds.json << EOF
   {
-      "inbounds":[
+      "inbounds": [
           {
               "type": "socks",
               "tag": "socks",
@@ -310,26 +310,28 @@ EOF
   [ "${SSM}" = 'true' ] && ((PORT++)) && PORT_SSM=$PORT && cat > $WORK_DIR/conf/${PORT_SSM}_ssm.json << EOF
   {
     "services": [
-      "type": "ssm-api",
-      "listen": "0.0.0.0",
-      "listen_port": ${PORT_SSM},
-      "servers": {
-        "/": "shadowsocks-in"
-      },
-      "tls": {
-        "enabled": true,
-        "server_name": "${TLS_SERVER_NAME}",
-        "reality": {
+      {
+        "type": "ssm-api",
+        "listen": "0.0.0.0",
+        "listen_port": ${PORT_SSM},
+        "servers": {
+          "/": "shadowsocks-in"
+        },
+        "tls": {
           "enabled": true,
-          "handshake": {
-              "server": "${TLS_REALITY_HANDSHAKE_SERVER}",
-              "server_port": 443
-          },
-          "private_key": "${REALITY_PRIVATE}",
-          "short_id": ["${SHORT_ID}"]
+          "server_name": "${TLS_SERVER_NAME}",
+          "reality": {
+            "enabled": true,
+            "handshake": {
+                "server": "${TLS_REALITY_HANDSHAKE_SERVER}",
+                "server_port": 443
+            },
+            "private_key": "${REALITY_PRIVATE}",
+            "short_id": ["${SHORT_ID}"]
+          }
         }
       }
-    }]
+    ]
   }
 EOF
 
