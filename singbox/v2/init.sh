@@ -210,7 +210,6 @@ EOF
               "tag": "shadowsocks-in",
               "listen": "0.0.0.0",
               "listen_port": ${PORT_SHADOWSOCKS},
-              "network": "tcp",
               "method": "${SS_ENCRYPTION_METHOD}",
               "password": "${SS_ENCRYPTION_PASSWORD}",
               "users": [],
@@ -307,6 +306,33 @@ EOF
 EOF
     [ "${SOCKS}" = 'true' ] && hint "Generated socks inbound config."
 
+# SSM-API
+  [ "${SSM}" = 'true' ] && ((PORT++)) && PORT_SSM=$PORT && cat > $WORK_DIR/conf/${PORT_SSM}_ssm.json << EOF
+  {
+    "services": [
+      "type": "ssm-api",
+      "listen": "0.0.0.0",
+      "listen_port": ${PORT_SSM},
+      "servers": {
+        "/": "shadowsocks-in"
+      },
+      "tls": {
+        "enabled": true,
+        "server_name": "${TLS_SERVER_NAME}",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+              "server": "${TLS_REALITY_HANDSHAKE_SERVER}",
+              "server_port": 443
+          },
+          "private_key": "${REALITY_PRIVATE}",
+          "short_id": ["${SHORT_ID}"]
+        }
+      }
+    }]
+  }
+EOF
+
 INBOUND_REPLACE="["
 append_comma_if_needed() {
   [ "$INBOUND_REPLACE" != "[" ] && INBOUND_REPLACE+=','
@@ -369,12 +395,7 @@ if [ "${SHADOWSOCKS}" = "true" ]; then
   "domain_strategy": "${DOMAIN_STRATEGY}",
   "server_port": ${PORT_SHADOWSOCKS},
   "method": "${SS_ENCRYPTION_METHOD}",
-  "password": "${SS_ENCRYPTION_PASSWORD}",
-  "network": "tcp",
-  "udp_over_tcp": {
-    "enabled": true,
-    "version": 2
-  }
+  "password": "${SS_ENCRYPTION_PASSWORD}"
 }
 EOF
   )
