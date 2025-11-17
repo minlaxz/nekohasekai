@@ -213,6 +213,31 @@ EOF
               "method": "${SS_ENCRYPTION_METHOD}",
               "password": "${SS_ENCRYPTION_PASSWORD}",
               "users": [],
+              "managed": false,
+              "multiplex": {
+                  "enabled": true,
+                  "padding": false,
+                  "brutal": {
+                    "enabled": true,
+                    "up_mbps": 100,
+                    "down_mbps": 100
+                  }
+              }
+          }
+      ]
+  }
+EOF
+  [ "${SS}" = 'true' ] && ((PORT++)) && PORT_SS=$PORT && cat > $WORK_DIR/conf/${PORT_SS}_ss_inbounds.json << EOF
+  {
+      "inbounds": [
+          {
+              "type": "shadowsocks",
+              "tag": "ss-in",
+              "listen": "0.0.0.0",
+              "listen_port": ${PORT_SS},
+              "method": "${SS_ENCRYPTION_METHOD}",
+              "password": "${SS_ENCRYPTION_PASSWORD}",
+              "users": [],
               "managed": true,
               "multiplex": {
                   "enabled": true,
@@ -315,8 +340,9 @@ EOF
         "type": "ssm-api",
         "listen": "0.0.0.0",
         "listen_port": ${PORT_SSM},
+        "cache_path": "$WORK_DIR/conf/s1.cache.json",
         "servers": {
-          "/": "shadowsocks-in"
+          "/": "ss-in"
         }
       }
     ]
