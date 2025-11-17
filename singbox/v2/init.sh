@@ -213,6 +213,7 @@ EOF
               "method": "${SS_ENCRYPTION_METHOD}",
               "password": "${SS_ENCRYPTION_PASSWORD}",
               "users": [],
+              "managed": true,
               "multiplex": {
                   "enabled": true,
                   "padding": false,
