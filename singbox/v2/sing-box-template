@@ -7,7 +7,7 @@
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,
-    "reverse_mapping": false,
+    "reverse_mapping": true,
     "client_subnet": "1.1.1.1"
   },
   "inbounds": [
@@ -160,7 +160,7 @@
         "outbound": "direct"
       }
     ],
-    "final": "Un-Ruled",
+    "final": "direct",
     "auto_detect_interface": true
   },
   "log": {

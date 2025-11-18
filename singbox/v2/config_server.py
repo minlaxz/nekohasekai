@@ -11,7 +11,7 @@ REMOTE_JSON_URL = os.getenv(
     "REMOTE_JSON_URL",
     "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/singbox/v2/sing-box-template",
 )
-URL_TEST = os.getenv("URL_TEST", "")
+CONFIG_DOMAIN = os.getenv("CONFIG_DOMAIN", "")
 
 r = redis.Redis(host="redis", port=6379, db=0)
 
@@ -19,8 +19,9 @@ r = redis.Redis(host="redis", port=6379, db=0)
 class Handler(http.server.BaseHTTPRequestHandler):
     def _handle_check(self, query):
         """Handles /check endpoint for both GET and HEAD methods."""
-        self.__dns_path = query.get("dp", [""])[0]  # dp
-        user_id = self.__dns_path.split("/")[1] if "/" in self.__dns_path else "unknown"
+        # TODO To check j and k with ssm-api for abuse usage
+        # If j is not found in ssm database, k will be removed from users list.
+        user_id = self.__ss_user if self.__ss_user else "unknown"
 
         client_ip, client_port = self.client_address
         real_ip = self.headers.get("X-Forwarded-For", client_ip)
@@ -71,20 +72,30 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def __send_help(self):
         help_msg = (
-            "Usage: /client.json?platform=android&version=12&nextdns-path=YOUR_PATH\n"
+            "Usage: /c?p=i&v=11\n"
             "Parameters:\n"
-            "- p: platform: android, ios, or empty for mac, linux, windows\n"
-            "- v: version: 11 for sing-box 1.11+, 12 for sing-box 1.12+, or empty for 12\n"
-            "- dp: dns-path: your private NextDNS profile (optional)\n"
-            "- dd: dns-detour: specify any from outbound list, direct will be used if empty\n"
-            "- df: dns-final: specify any from dns server list, dns-remote will be used if empty\n"
-            "- rdr: remote-dns-detour: local or DNS IP, 1.1.1.1 will be used if empty\n"
-            "- mo: modes: specify any from outbound tags, separated by tac, -\n"
-            "- rd: route-detour: specify any from outbound list, direct will be used if empty\n"
-            "- ll: log-level: specify any from docs, warn will be used if empty\n"
-            "- tak: your Tailscale ephemeral auth key (optional)\n"
-            "- ten: your Tailscale exit node IP (optional)\n"
-            "- th: your Tailscale hostname (optional, default: ts-sb)\n"
+            "- p: platform:\n"
+            "android, ios, mac, linux, windows or empty for android\n"
+            "- v: version:\n"
+            "11 for sing-box 1.11+, 12 for sing-box 1.12+, or empty for 12\n"
+            "- dp: dns-path:\n"
+            "private NextDNS profile, or / by default\n"
+            "- dd: dns-detour:\n"
+            "any from outbounds, direct for 1.11+ or outbounds[0] for 1.12+ by default\n"
+            "- df: dns-final:\n"
+            "any from dns.servers, 'dns-remote' by deafult\n"
+            "- rdr: remote-dns-detour:\n"
+            "local or DNS IP, 1.1.1.1 by default\n"
+            "- rd: route-detour:\n"
+            "any from outbound list, direct by deafult\n"
+            "- ll: log-level:\n"
+            "trace, default, info, warn, error, critical, warn by default\n"
+            "- tak: tailscale auth key:\n"
+            "Tailscale ephemeral auth key, skip by default\n"
+            "- ten: tailscale exit node\n"
+            "Tailscale exit node IP, skip by default\n"
+            "- th: tailscale host name:\n"
+            "Tailscale hostname, skip by default, ts-sb if tak and ten exists\n"
         )
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
@@ -99,9 +110,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.remote_data["dns"]["servers"] = [
                 {
                     "tag": "dns-remote",
-                    "address": f"https://dns.nextdns.io/{self.__dns_path}"
-                    if self.__dns_path
-                    else "https://dns.nextdns.io/",
+                    "address": f"https://dns.nextdns.io{self.__dns_path}",
                     "address_resolver": "dns-resolver",
                     "address_strategy": "ipv4_only",
                     "detour": self.__dns_detour
@@ -119,7 +128,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "tag": "dns-remote",
                     "type": "https",
                     "server": "dns.nextdns.io",
-                    "path": self.__dns_path if self.__dns_path else "/",
+                    "path": self.__dns_path,
                     "domain_resolver": "dns-resolver",
                     "detour": self.__dns_detour
                 }
@@ -142,32 +151,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "client_subnet": "1.1.1.1"
             }
         self.remote_data["dns"]["final"] = self.__dns_final
+        # Next plan
         # WIFI -> dns-direct --> dns-remote
         # MOBILE -> dns-local --> dns-remote
 
     def __inject_outbounds(self):
-        replaced = []
+        outbounds = []
         for item in self.remote_data.get("outbounds", []):
             match item:
                 case "<OUTBOUND_REPLACE>":
                     for i in self.local_data:
-                        if i["tag"] in self.__modes:
-                            # https://sing-box.sagernet.org/configuration/shared/udp-over-tcp/#application-support
-                            if self.__version.startswith("11"):
-                                if self.__platform in ["i"]:
-                                    if i.get("tag") == "shadowsocks":
-                                        # i["udp_over_tcp"]["version"] = 1
-                                        if self.__ss_password:
-                                            i["server_port"] = i["server_port"] + 1
-                                            i["password"] = self.__ss_password
-                                    if i.get("tag") == "xtls-reality":
-                                        i.pop("packet_encoding")
-                            if self.__personal_uuid:
-                                i["uuid"] = self.__personal_uuid
-                            replaced.append(i)
+                        if i.get("tag") == "shadowsocks":
+                            if self.__ss_password:
+                                i["server_port"] = i["server_port"] + 1
+                                i["password"] = self.__ss_password
+                            outbounds.append(i)
                 case "<OTHER_REPLACE>":
                     # fmt: off
-                    replaced.append({
+                    outbounds.append({
                         "type": "urltest",
                         "tag": "Pullup",
                         "outbounds": self.__outbounds,
@@ -175,26 +176,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "interval": "30s",
                         "tolerance": 100
                     })
-                    replaced.append({
+                    outbounds.append({
                         "type": "urltest",
                         "tag": "Ruled",
-                        "outbounds": ["shadowsocks"],
-                        "url": f"{URL_TEST}?dp={self.__dns_path}",
+                        "outbounds": self.__outbounds[1],
+                        "url": f"https://{CONFIG_DOMAIN}/check?j={self.__ss_user}&k={self.__ss_password}",
                         "interval": "30s",
                         "tolerance": 100
-                    })
-                    # ? Could be removed
-                    replaced.append({
-                        "type": "selector",
-                        "tag": "Un-Ruled",
-                        "outbounds": ["direct"],
-                        "default": "direct"
                     })
                     # fmt: on
                 case _:
                     # ? clinet side `direct` outbound
-                    replaced.append(item)
-        self.remote_data["outbounds"] = replaced
+                    outbounds.append(item)
+        self.remote_data["outbounds"] = outbounds
 
     def __inject_others(self):
         if all([
@@ -249,7 +243,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
         path = parsed.path
 
-        if path not in ("/c", "/h", "/tinini", "/check"):
+        if path not in ("/c", "/h", "/check"):
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b"Sorry, Not Found")
@@ -281,36 +275,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
         }
 
         # fmt: off
-        self.__platform: str = query.get("p", [""])[0]  # p
+        self.__platform: str = query.get("p", ["a"])[0]  # p
         self.__version: str = query.get("v", ["12"])[0] # v
-        self.__dns_path = query.get("dp", [""])[0]  # dp
+        self.__dns_path = query.get("dp", ["/"])[0]  # dp
         self.__dns_final = query.get("df", ["dns-remote"])[0]  # df
+        self.__dns_detour = query.get("dd", ["direct"])[0]  # dd
+        self.__remote_dns_resolver = query.get("rdr", ["1.1.1.1"])[0]  # rdr
+        self.__route_detour = query.get("rd", ["direct"])[0]  # rd
+        self.__log_level = query.get("ll", ["warn"])[0]  # ll
 
-        __dd__ = query.get("dd", ["d"])[0] # dd
-        self.__dns_detour = self.mapping.get(__dd__, __dd__)
-
-
-        __rdr__ = query.get("rdr", ["1.1.1.1"])[0] # rdr
-        self.__remote_dns_resolver = self.mapping.get(__rdr__, __rdr__)
-
-        __rd__ = query.get("rd", ["d"])[0]  # rd
-        self.__route_detour = self.mapping.get(__rd__, __rd__)
-
-        __ll__ = query.get("ll", ["warn"])[0]  # ll
-        self.__log_level = self.mapping.get(__ll__, __ll__)
-
-        # modes = query.get("mo", [""])[0].split("-")
-        # self.__modes = [
-        #     self.mapping.get(i, i) for i in modes if i
-        # ]  # mo
-        self.__modes = ["shadowsocks", "xtls-reality"]
-
-        self.__ss_password = query.get("k", [""])[0] # shadowsocks custom password
-        self.__personal_uuid = query.get("puuid", [""])[0]  # puuid
+        self.__ss_user = query.get("j", [""])[0]  # shadowsocks custom user
+        self.__ss_password = query.get("k", [""])[0]  # shadowsocks custom password
 
         self.__ts_auth_key = query.get("tak", [""])[0]  # tak
         self.__ts_exit_node = query.get("ten", [""])[0]  # ten
-        self.__ts_hostname = query.get("th", [""])[0] or "ts-sb"  # th
+        self.__ts_hostname = query.get("th", ["ts-sb"])[0]  # th
 
         # self.__ipv6_only: bool = query.get("ipv6-only", ["false"])[0] == "true"
         # self__enable_ipv6: bool = query.get("enable-ipv6", ["false"])[0] == "true"

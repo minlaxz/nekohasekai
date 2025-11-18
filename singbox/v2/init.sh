@@ -5,6 +5,7 @@ mkdir -p $WORK_DIR/certs
 mkdir -p $WORK_DIR/conf
 mkdir -p $WORK_DIR/public
 PORT=${START_PORT:-1080}
+SSM_PORT=${END_PORT:-1090}
 COMMON_NAME=${CUSTOM_COMMON_NAME:-mozilla.org}
 TLS_SERVER_NAME=${CUSTOM_TLS_SERVER_NAME:-addons.mozilla.org}
 TLS_REALITY_HANDSHAKE_SERVER=${CUSTOM_TLS_REALITY_HANDSHAKE_SERVER:-$TLS_SERVER_NAME}
@@ -333,13 +334,13 @@ EOF
     [ "${SOCKS}" = 'true' ] && hint "Generated socks inbound config."
 
 # SSM-API
-  [ "${SSM}" = 'true' ] && ((PORT++)) && PORT_SSM=$PORT && cat > $WORK_DIR/conf/${PORT_SSM}_ssm.json << EOF
+  [ "${SSM}" = 'true' ] && cat > $WORK_DIR/conf/${SSM_PORT}_ssm.json << EOF
   {
     "services": [
       {
         "type": "ssm-api",
         "listen": "0.0.0.0",
-        "listen_port": ${PORT_SSM},
+        "listen_port": ${SSM_PORT},
         "cache_path": "$WORK_DIR/conf/s1.cache.json",
         "servers": {
           "/": "ss-in"
