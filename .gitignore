@@ -184,3 +184,5 @@ git-ignored
 .DS_Store
 
 **/data
+data.json
+outs.json

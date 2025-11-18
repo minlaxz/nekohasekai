@@ -179,7 +179,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     outbounds.append({
                         "type": "urltest",
                         "tag": "Ruled",
-                        "outbounds": self.__outbounds[1],
+                        "outbounds": self.__outbounds[1:],  # exclude direct
                         "url": f"https://{CONFIG_DOMAIN}/check?j={self.__ss_user}&k={self.__ss_password}",
                         "interval": "30s",
                         "tolerance": 100
