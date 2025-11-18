@@ -155,8 +155,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                             # https://sing-box.sagernet.org/configuration/shared/udp-over-tcp/#application-support
                             if self.__version.startswith("11"):
                                 if self.__platform in ["i"]:
-                                    # if i.get("tag") == "shadowsocks":
-                                    #     i["udp_over_tcp"]["version"] = 1
+                                    if i.get("tag") == "shadowsocks":
+                                        # i["udp_over_tcp"]["version"] = 1
+                                        if self.__ss_password:
+                                            i["server_port"] = i["server_port"] + 1
+                                            i["password"] = self.__ss_password
                                     if i.get("tag") == "xtls-reality":
                                         i.pop("packet_encoding")
                             if self.__personal_uuid:
@@ -175,7 +178,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     replaced.append({
                         "type": "urltest",
                         "tag": "Ruled",
-                        "outbounds": self.__outbounds[1:2] if len(self.__outbounds) > 1 else self.__outbounds,
+                        "outbounds": ["shadowsocks"],
                         "url": f"{URL_TEST}?dp={self.__dns_path}",
                         "interval": "30s",
                         "tolerance": 100
@@ -184,8 +187,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     replaced.append({
                         "type": "selector",
                         "tag": "Un-Ruled",
-                        "outbounds": self.__outbounds[0:1],
-                        "default": self.__outbounds[0]
+                        "outbounds": ["direct"],
+                        "default": "direct"
                     })
                     # fmt: on
                 case _:
@@ -302,6 +305,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # ]  # mo
         self.__modes = ["shadowsocks", "xtls-reality"]
 
+        self.__ss_password = query.get("k", [""])[0] # shadowsocks custom password
         self.__personal_uuid = query.get("puuid", [""])[0]  # puuid
 
         self.__ts_auth_key = query.get("tak", [""])[0]  # tak
