@@ -19,8 +19,12 @@ r = redis.Redis(host="redis", port=6379, db=0)
 class Handler(http.server.BaseHTTPRequestHandler):
     def _handle_check(self, query):
         """Handles /check endpoint for both GET and HEAD methods."""
+
         # TODO To check j and k with ssm-api for abuse usage
         # If j is not found in ssm database, k will be removed from users list.
+        self.__ss_user = query.get("j", [""])[0]  # shadowsocks custom user
+        self.__ss_password = query.get("k", [""])[0]  # shadowsocks custom password
+
         user_id = self.__ss_user if self.__ss_user else "unknown"
 
         client_ip, client_port = self.client_address
