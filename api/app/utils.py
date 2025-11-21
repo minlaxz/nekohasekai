@@ -3,7 +3,10 @@ import json
 import requests
 
 LOCAL_JSON_PATH: str = os.getenv("LOCAL_JSON_PATH", "outs.json")
-REMOTE_JSON_URL: str = os.getenv("REMOTE_JSON_URL", "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template")
+REMOTE_JSON_URL: str = os.getenv(
+    "REMOTE_JSON_URL",
+    "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template",
+)
 CONFIG_DOMAIN: str = os.getenv("CONFIG_DOMAIN", "www.gstatic.com")
 
 
@@ -102,6 +105,7 @@ class Loader:
             }
 
     def __inject_outbounds__(self) -> None:
+        # fmt: off
         outbounds: list[dict[str, str | int | list[str]]] = [
             {"type": "direct", "tag": "direct"}
         ]
@@ -118,7 +122,7 @@ class Loader:
                 "outbounds": outbound_names,
                 "url": "https://www.gstatic.com/generate_204",
                 "interval": "30s",
-                "tolerance": 100,
+                "tolerance": 100
             })
             outbounds.append({
                 "type": "urltest",
@@ -126,7 +130,7 @@ class Loader:
                 "outbounds": outbound_names[1:],  # exclude `direct`
                 "url": f"https://{CONFIG_DOMAIN}/generate_204?j={self.user_name}&k={self.user_psk}",
                 "interval": "30s",
-                "tolerance": 100,
+                "tolerance": 100
             })
         self.remote_data["outbounds"] = outbounds
 
