@@ -1,0 +1,183 @@
+{
+  "dns": {
+    "servers": [],
+    "final": "dns-remote",
+    "independent_cache": false,
+    "strategy": "ipv4_only",
+    "disable_cache": false,
+    "disable_expire": false,
+    "cache_capacity": 10240,
+    "reverse_mapping": true,
+    "client_subnet": "1.1.1.1"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "domain_strategy": "ipv4_only",
+      "interface_name": "utun1",
+      "address": [
+        "10.69.69.0/28"
+      ],
+      "mtu": 1400,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "gvisor",
+      "sniff": true,
+      "sniff_override_destination": true
+    }
+  ],
+  "outbounds": [],
+  "route": {
+    "rule_set": [
+      {
+        "tag": "geosite-meta",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/meta.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-twitter",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-github",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-private",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/private.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-mm",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/mm.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      }
+    ],
+    "rules": [
+      {
+        "inbound": "tun-in",
+        "action": "resolve",
+        "strategy": "ipv4_only"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "protocol": "dns"
+          },
+          {
+            "port": 53
+          }
+        ],
+        "action": "hijack-dns"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "network": "tcp",
+            "port": [
+              853,
+              5222
+            ]
+          }
+        ],
+        "action": "reject",
+        "method": "drop"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": [
+              "geosite-meta",
+              "geosite-twitter",
+              "geosite-github"
+            ]
+          },
+          {
+            "domain_keyword": [
+              "minlaxz"
+            ]
+          },
+          {
+            "domain_suffix": [
+              "engineerforce.io",
+              "dify.io",
+              "lightsail.aws.amazon.com"
+            ]
+          }
+        ],
+        "outbound": "Ruled"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": [
+              "geoip-private",
+              "geoip-mm"
+            ]
+          },
+          {
+            "network": "udp",
+            "port": [
+              443,
+              853
+            ]
+          },
+          {
+            "protocol": "stun"
+          }
+        ],
+        "outbound": "direct"
+      }
+    ],
+    "final": "direct",
+    "auto_detect_interface": true
+  },
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "0.0.0.0:6969",
+      "access_control_allow_origin": [
+        "http://127.0.0.1",
+        "https://yacd.haishan.me",
+        "https://d.metacubex.one"
+      ],
+      "access_control_allow_private_network": true
+    },
+    "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "store_fakeip": true,
+      "store_rdrc": true,
+      "rdrc_timeout": "1d"
+    }
+  }
+}

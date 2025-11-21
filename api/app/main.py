@@ -1,0 +1,113 @@
+from typing import Union, Callable, Type, Any, Dict
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+from fastapi.templating import Jinja2Templates
+from starlette.templating import _TemplateResponse
+from fastapi.responses import JSONResponse, Response
+from fastapi.requests import Request
+from fastapi.exceptions import RequestValidationError
+
+from .utils import Loader
+
+
+async def not_found(request: Request, exc: Any) -> Response:
+    print(f"404 Error: {exc.detail}")
+    return JSONResponse(
+        status_code=404,
+        content={"message": "The resource you are looking for is not found."},
+    )
+
+
+exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
+    404: not_found,
+}
+
+app = FastAPI(exception_handlers=exceptions)
+
+
+class User(BaseModel):
+    username: str
+    psk: str
+    is_active: Union[bool, None] = True
+
+
+@app.get("/")
+def read_root() -> _TemplateResponse:
+    """_Nginx Default Page_
+
+    Returns:
+        _TemplateResponse: _nginx default page_
+    """
+    templates = Jinja2Templates(directory="templates")
+    return templates.TemplateResponse("index.html", {"request": {}})
+
+
+@app.get("/help")
+def read_help() -> _TemplateResponse:
+    """_Help_
+
+    Returns:
+        _TemplateResponse: _help_
+    """
+    templates = Jinja2Templates(directory="templates")
+    return templates.TemplateResponse("help.html", {"request": {}})
+
+
+@app.head("/generate_204", response_class=JSONResponse, status_code=200)
+def health_check(j: Union[str, None] = None, k: Union[str, None] = None) -> Response:
+    if j is None or k is None:
+        raise RequestValidationError([
+            {
+                "loc": ["query", "j" if j is None else "k"],
+                "msg": "field required",
+                "type": "value_error.missing",
+            }
+        ])
+    return Response(status_code=204)
+
+
+@app.get("/c")
+def read_config(
+    p: Union[str, None] = "a",
+    v: Union[int, None] = 12,
+    dp: Union[str, None] = "/",
+    dd: Union[str, None] = "shadowsocks",
+    df: Union[str, None] = "dns-remote",
+    dr: Union[str, None] = "1.1.1.1",
+    rd: Union[str, None] = "direct",
+    ll: Union[str, None] = "warn",
+    j: Union[str, None] = None,
+    k: Union[str, None] = None,
+) -> dict[str, Any]:
+    if j is None or k is None:
+        raise RequestValidationError([
+            {
+                "loc": ["query", "j" if j is None else "k"],
+                "msg": "field required",
+                "type": "value_error.missing",
+            }
+        ])
+    loader = Loader(
+        platform=p,
+        version=v,
+        dns_path=dp,
+        dns_detour=dd,
+        dns_final=df,
+        dns_resolver=dr,
+        log_level=ll,
+        route_detour=rd,
+        user_name=j,
+        user_psk=k,
+    )
+    return loader.unwarp()
+
+
+@app.get("/users/{name}")
+def read_user(name: str, q: Union[str, None] = None):
+    return {"name": name, "q": q}
+
+
+@app.put("/users/{name}")
+def update_user(name: str, user: User) -> dict[str, str]:
+    return {"name": name, "psk": user.psk}
