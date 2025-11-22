@@ -3,12 +3,11 @@ from typing import Union, Callable, Type, Any, Dict
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
-from starlette.templating import _TemplateResponse
 from fastapi.responses import JSONResponse, Response
 from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
 
-from .utils import Loader, Checker
+from .utils import Checker
 
 
 async def not_found(request: Request, exc: Any) -> Response:
@@ -33,7 +32,7 @@ class User(BaseModel):
 
 
 @app.get("/")
-def read_root() -> _TemplateResponse:
+def read_root():
     """_Nginx Default Page_
 
     Returns:
@@ -44,7 +43,7 @@ def read_root() -> _TemplateResponse:
 
 
 @app.get("/help")
-def read_help() -> _TemplateResponse:
+def read_help():
     """_Help_
 
     Returns:
@@ -110,7 +109,7 @@ def read_config(
 
 
 @app.get("/users/{name}")
-def read_user(name: str, q: Union[str, None] = None):
+def read_user(name: str, q: Union[str, None] = None) -> dict[str, str | None]:
     return {"name": name, "q": q}
 
 

@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 import os
 import json
 import requests
@@ -10,17 +12,17 @@ CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
 class Loader:
     def __init__(
         self,
-        platform,
-        version,
-        dns_path,
-        dns_detour,
-        dns_final,
-        dns_resolver,
-        log_level,
-        route_detour,
-        username,
-        psk,
-        please,
+        platform: str,
+        version: int,
+        dns_path: str,
+        dns_detour: str,
+        dns_final: str,
+        dns_resolver: str,
+        log_level: str,
+        route_detour: str,
+        username: str,
+        psk: str,
+        please: bool = False,
     ) -> None:
         self.local_path = LOCAL_JSON_PATH
         self.remote_url = REMOTE_JSON_URL
@@ -38,7 +40,7 @@ class Loader:
         self.please = please
         try:
             with open(self.local_path, "r", encoding="utf-8") as file:
-                self.local_data = json.load(file)
+                self.local_data: Dict[str, Any] = json.load(file)
         except (FileNotFoundError, json.JSONDecodeError):
             self.local_data = {}
 
@@ -46,7 +48,7 @@ class Loader:
             if self.remote_url.startswith("https://"):
                 response = requests.get(self.remote_url, timeout=5)
                 response.raise_for_status()
-                self.remote_data = response.json()
+                self.remote_data: Dict[str, Any] = response.json()
             else:
                 with open(self.remote_url, "r", encoding="utf-8") as file:
                     self.remote_data = json.load(file)
@@ -101,7 +103,7 @@ class Loader:
             {"type": "direct", "tag": "direct"}
         ]
         outbound_names = ["direct"]
-        for i in self.local_data:
+        for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
                 # i["server_port"] uses pre-defined, common password (unmanaged)
                 i["server_port"] = i["server_port"] + 1
@@ -110,8 +112,7 @@ class Loader:
                 outbounds.append(i)
                 outbound_names.append(i.get("tag", "unknown"))
             elif i.get("tag") == "ssm-api":
-                self.ssm_server_host = i.get("server")
-                self.ssm_server_port = i.get("server_port")
+                self.ssm_listen_port = i.get("listen_port")
             # All other outbounds are added as-is.
             # outbounds.append(i)
             # outbound_names.append(i.get("tag", "unknown"))
@@ -138,8 +139,8 @@ class Loader:
 
         self.remote_data["outbounds"] = outbounds
 
-    def unwarp(self, disabled) -> dict:
-        self.disabled = disabled
+    def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
+        self.disabled: bool = disabled
         self.__inject_dns__()
         self.__inject_routes__()
         self.__inject_outbounds__()
@@ -147,11 +148,13 @@ class Loader:
 
 
 class Checker(Loader):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
 
     def verify_key(self) -> bool:
-        SSM_API = f"http://{self.ssm_server_host}:{self.ssm_server_port}/server/v1/users/{self.user_name}"
+        SSM_API = (
+            f"http://localhost:{self.ssm_listen_port}/server/v1/users/{self.user_name}"
+        )
         try:
             response = requests.get(SSM_API, timeout=5)
             response.raise_for_status()
@@ -166,5 +169,10 @@ class Checker(Loader):
     def is_quota_limited(self):
         return False if self.please else self.data.get("downlinkBytes") > 1
 
-    def unwarp(self) -> dict:
+    def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         return super().unwarp(disabled=self.is_quota_limited())
+
+
+class APIBridge:
+    # TODO: Implement APIBridge to SSM API interactions
+    pass
