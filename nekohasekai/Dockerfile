@@ -4,6 +4,8 @@ ENV ARCH=$TARGETARCH
 
 WORKDIR /sing-box
 
+COPY init.sh generator.py ./
+
 RUN apk update && apk add --no-cache bash jq curl python3 py3-pip
 
 RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .name) && \
@@ -12,8 +14,6 @@ RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/rele
   tar xz -C /sing-box -f /sing-box.tar.gz --strip-components=1 && \
   rm -rf /sing-box.tar.gz /var/cache/apk/* && \
   chmod +x /sing-box/init.sh
-
-COPY init.sh generator.py ./
 
 # Generate configs at container runtime
 CMD ["./init.sh"]
