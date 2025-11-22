@@ -1,13 +1,15 @@
-name: "Build and push singbox image v2"
+name: "Build and push singbox image"
 
 on:
   workflow_dispatch:
-  push: 
+  push:
     branches:
       - main
     paths:
-      - 'singbox/v2/config_server.py'
-      - 'singbox/v2/init.sh'
+      - "nekohasekai/generator.py"
+      - "nekohasekai/init.sh"
+      - "api/app/*.py"
+      - "api/templates/*.html"
 
 env:
   REGISTRY: ghcr.io
@@ -15,13 +17,13 @@ env:
 
 jobs:
   Build:
-      runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        packages: write
-        id-token: write
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
 
-      steps:
+    steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-qemu-action@v3.0.0
       - uses: docker/setup-buildx-action@v3.0.0
@@ -42,18 +44,18 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64
-          context: ./singbox/v2
-          file: ./singbox/v2/Dockerfile.sing-box-v2
+          context: ./nekohasekai
+          file: ./nekohasekai/Dockerfile
           tags: |
-            ${{ env.IMAGE_NAME }}:sing-box-v2
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sing-box-v2
+            ${{ env.IMAGE_NAME }}:nekohasekai
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nekohasekai
 
       - uses: docker/build-push-action@v6
         with:
           push: true
           platforms: linux/amd64, linux/arm64
-          context: ./singbox/v2
-          file: ./singbox/v2/Dockerfile.config-server
+          context: ./api
+          file: ./api/Dockerfile
           tags: |
-            ${{ env.IMAGE_NAME }}:config-server
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:config-server
+            ${{ env.IMAGE_NAME }}:nekohasekai-api
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nekohasekai-api
