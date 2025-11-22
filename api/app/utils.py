@@ -3,11 +3,8 @@ import json
 import requests
 
 LOCAL_JSON_PATH: str = os.getenv("LOCAL_JSON_PATH", "outs.json")
-REMOTE_JSON_URL: str = os.getenv(
-    "REMOTE_JSON_URL",
-    "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template",
-)
-CONFIG_DOMAIN: str = os.getenv("CONFIG_DOMAIN", "www.gstatic.com")
+REMOTE_JSON_URL: str = os.getenv("REMOTE_JSON_URL", "sing-box-template")
+CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
 
 
 class Loader:
@@ -21,12 +18,13 @@ class Loader:
         dns_resolver,
         log_level,
         route_detour,
-        user_name,
-        user_psk,
+        username,
+        psk,
+        please,
     ) -> None:
         self.local_path = LOCAL_JSON_PATH
         self.remote_url = REMOTE_JSON_URL
-        self.config_domain = CONFIG_DOMAIN
+        self.config_server = CONFIG_SERVER
         self.platform = platform
         self.version = version
         self.dns_path = dns_path
@@ -35,8 +33,9 @@ class Loader:
         self.dns_resolver = dns_resolver
         self.log_level = log_level
         self.route_detour = route_detour
-        self.user_name = user_name
-        self.user_psk = user_psk
+        self.user_name = username
+        self.user_psk = psk
+        self.please = please
         try:
             with open(self.local_path, "r", encoding="utf-8") as file:
                 self.local_data = json.load(file)
@@ -58,51 +57,43 @@ class Loader:
         self.remote_data["dns"]["final"] = self.dns_final
         if self.platform == "i" and self.version == 11:
             # fmt: off
-            self.remote_data["dns"]["servers"] = [
-                {
-                    "tag": "dns-remote",
-                    "address": f"https://dns.nextdns.io{self.dns_path}",
-                    "address_resolver": "dns-resolver",
-                    "address_strategy": "ipv4_only",
-                    "detour": self.dns_detour
-                },
-                {
-                    "tag": "dns-resolver",
-                    "address": self.dns_resolver,
-                    "detour": self.dns_detour
-                },
-                {
-                    "tag": "dns-local",
-                    "address": "local"
-                }
-            ]
+            for i in self.remote_data["dns"]["servers"]:
+                match i.get("tag"):
+                    case "dns-remote":
+                        # Version 11 does not support these fields
+                        i.pop("type", None)
+                        i.pop("server", None)
+                        i.pop("path", None)
+                        i["address"] = f"https://dns.nextdns.io{self.dns_path}"
+                        i["address_resolver"] = "dns-resolver"
+                        i["address_strategy"] = "ipv4_only"
+                    case "dns-resolver":
+                        # Version 11 does not support these fields
+                        i.pop("type", None)
+                        i.pop("server", None)
+                        i["address"] = self.dns_resolver
+                    case "dns-local":
+                        i["address"] = "local"
+                        # Version 11 does not support these fields
+                        i.pop("type", None)
+                    case _:
+                        # Skip others
+                        pass
         else:
-            # fmt: off
-            self.remote_data["dns"]["servers"] = [
-                {
-                    "tag": "dns-remote",
-                    "type": "https",
-                    "server": "dns.nextdns.io",
-                    "path": self.dns_path,
-                    "domain_resolver": "dns-resolver",
-                    "detour": self.dns_detour
-                },
-                {
-                    "tag": "dns-resolver",
-                    "type": "udp",
-                    "server": self.dns_resolver,
-                    "detour": self.dns_detour
-                },
-                {
-                    "tag": "dns-local",
-                    "type": "local"
-                }
-            ]
-            self.remote_data["route"]["default_domain_resolver"] = {
-                "server": "dns-resolver",
-                "rewrite_ttl": 60,
-                "client_subnet": "1.1.1.1"
-            }
+            # Other combinations but custom `dns_path` is provided
+            dns_path = self.remote_data["dns"]["servers"][0]["path"]
+            if self.dns_path != dns_path:
+                self.remote_data["dns"]["servers"][0]["path"] = self.dns_path
+            # Skip others
+            pass
+
+    def __inject_routes__(self) -> None:
+        if self.platform == "i" and self.version == 11:
+            # Version 11 does not support these fields
+            self.remote_data["route"].pop("default_domain_resolver", None)
+        else:
+            # Skip others
+            pass
 
     def __inject_outbounds__(self) -> None:
         # fmt: off
@@ -112,47 +103,68 @@ class Loader:
         outbound_names = ["direct"]
         for i in self.local_data:
             if i.get("tag") == "shadowsocks":
+                # i["server_port"] uses pre-defined, common password (unmanaged)
                 i["server_port"] = i["server_port"] + 1
-                i["password"] = self.user_psk
-            outbounds.append(i)
-            outbound_names.append(i.get("tag", "unknown"))
-            outbounds.append({
-                "type": "urltest",
-                "tag": "Pullup",
-                "outbounds": outbound_names,
-                "url": "https://www.gstatic.com/generate_204",
-                "interval": "30s",
-                "tolerance": 100
-            })
-            outbounds.append({
-                "type": "urltest",
-                "tag": "Ruled",
-                "outbounds": outbound_names[1:],  # exclude `direct`
-                "url": f"https://{CONFIG_DOMAIN}/generate_204?j={self.user_name}&k={self.user_psk}",
-                "interval": "30s",
-                "tolerance": 100
-            })
+                i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
+                # Only shadowsocks outbound is added.
+                outbounds.append(i)
+                outbound_names.append(i.get("tag", "unknown"))
+            elif i.get("tag") == "ssm-api":
+                self.ssm_server_host = i.get("server")
+                self.ssm_server_port = i.get("server_port")
+            # All other outbounds are added as-is.
+            # outbounds.append(i)
+            # outbound_names.append(i.get("tag", "unknown"))
+
+        # Pullup outbounds
+        outbounds.append({
+            "type": "urltest",
+            "tag": "Pullup",
+            "outbounds": outbound_names,
+            "url": "https://www.gstatic.com/generate_204",
+            "interval": "30s",
+            "tolerance": 100
+        })
+
+        # Ruled outbounds
+        outbounds.append({
+            "type": "urltest",
+            "tag": "Ruled",
+            "outbounds": outbound_names[1:],  # exclude `direct`
+            "url": f"https://{self.config_server}/generate_204?j={self.user_name}&k={self.user_psk}",
+            "interval": "30s",
+            "tolerance": 100
+        })
+
         self.remote_data["outbounds"] = outbounds
 
-    def unwarp(self) -> dict[str, str]:
+    def unwarp(self, disabled) -> dict:
+        self.disabled = disabled
         self.__inject_dns__()
+        self.__inject_routes__()
         self.__inject_outbounds__()
         return self.remote_data
 
 
-class Checker:
-    def __init__(self) -> None:
-        pass
+class Checker(Loader):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
-    def verify_key(self, k: str) -> bool:
-        SSM_API = f"https://{CONFIG_DOMAIN}/api/verify?k={k}"
+    def verify_key(self) -> bool:
+        SSM_API = f"http://{self.ssm_server_host}:{self.ssm_server_port}/server/v1/users/{self.user_name}"
         try:
             response = requests.get(SSM_API, timeout=5)
             response.raise_for_status()
-            data = response.json()
-            if data.get("psk") == k:
+            self.data = response.json()
+            if self.data.get("uPSK") == self.user_psk:
                 return True
             else:
-                return False
-        except (requests.RequestException, json.JSONDecodeError):
+                raise Exception
+        except (requests.RequestException, json.JSONDecodeError, Exception):
             return False
+
+    def is_quota_limited(self):
+        return False if self.please else self.data.get("downlinkBytes") > 1
+
+    def unwarp(self) -> dict:
+        return super().unwarp(disabled=self.is_quota_limited())

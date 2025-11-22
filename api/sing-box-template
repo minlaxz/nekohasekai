@@ -1,7 +1,35 @@
 {
   "dns": {
-    "servers": [],
-    "final": "dns-remote",
+    "servers": [
+      {
+        "tag": "dns-remote",
+        "type": "https",
+        "server": "dns.nextdns.io",
+        "path": "/",
+        "domain_resolver": "dns-resolver",
+        "detour": "shadowsocks"
+      },
+      {
+        "tag": "dns-resolver",
+        "type": "udp",
+        "server": "1.1.1.1",
+        "detour": "shadowsocks"
+      },
+      {
+        "tag": "dns-local",
+        "type": "local"
+      }
+    ],
+    "rules": [
+      {
+        "clash_mode": "Novice",
+        "server": "dns-remote"
+      },
+      {
+        "clash_mode": "Aggressive",
+        "server": "dns-local"
+      }
+    ],
     "independent_cache": false,
     "strategy": "ipv4_only",
     "disable_cache": false,
@@ -155,6 +183,11 @@
         "outbound": "direct"
       }
     ],
+    "default_domain_resolver": {
+      "server": "dns-resolver",
+      "rewrite_ttl": 60,
+      "client_subnet": "1.1.1.1"
+    },
     "final": "direct",
     "auto_detect_interface": true
   },
@@ -164,13 +197,14 @@
   },
   "experimental": {
     "clash_api": {
-      "external_controller": "0.0.0.0:6969",
+      "external_controller": "127.0.0.1:6969",
       "access_control_allow_origin": [
         "http://127.0.0.1",
         "https://yacd.haishan.me",
         "https://d.metacubex.one"
       ],
-      "access_control_allow_private_network": true
+      "access_control_allow_private_network": true,
+      "default_mode": "Novice"
     },
     "cache_file": {
       "enabled": true,

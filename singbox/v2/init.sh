@@ -339,6 +339,7 @@ EOF
     "services": [
       {
         "type": "ssm-api",
+        "tag": "ssm-api",
         "listen": "0.0.0.0",
         "listen_port": ${SSM_PORT},
         "cache_path": "$WORK_DIR/conf/s1.cache.json",

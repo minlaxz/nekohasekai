@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
 
-from .utils import Loader
+from .utils import Loader, Checker
 
 
 async def not_found(request: Request, exc: Any) -> Response:
@@ -67,7 +67,7 @@ def health_check(j: Union[str, None] = None, k: Union[str, None] = None) -> Resp
     return Response(status_code=204)
 
 
-@app.get("/c")
+@app.get("/c", response_class=JSONResponse)
 def read_config(
     p: Union[str, None] = "a",
     v: Union[int, None] = 12,
@@ -79,6 +79,7 @@ def read_config(
     ll: Union[str, None] = "warn",
     j: Union[str, None] = None,
     k: Union[str, None] = None,
+    please: bool = False,
 ) -> dict[str, Any]:
     if j is None or k is None:
         raise RequestValidationError([
@@ -88,7 +89,7 @@ def read_config(
                 "type": "value_error.missing",
             }
         ])
-    loader = Loader(
+    checker = Checker(
         platform=p,
         version=v,
         dns_path=dp,
@@ -97,10 +98,15 @@ def read_config(
         dns_resolver=dr,
         log_level=ll,
         route_detour=rd,
-        user_name=j,
-        user_psk=k,
+        username=j,
+        psk=k,
+        please=please,
     )
-    return loader.unwarp()
+
+    if not checker.verify_key():
+        raise RequestValidationError([{"error": "Your key is disabled or invalid!"}])
+
+    return checker.unwarp()
 
 
 @app.get("/users/{name}")
