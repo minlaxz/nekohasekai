@@ -1,0 +1,45 @@
+services:
+  nekohasekai:
+    image: ghcr.io/minlaxz/nekohasekai:nekohasekai
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "8840-8850:8840-8850/tcp"
+      - "8840-8850:8840-8850/udp"
+    environment:
+      - TZ=${TZ}
+      - START_PORT=8040
+    volumes:
+      - public:/sing-box/public
+    networks:
+      - nekohasekai-net
+
+  nekohasekai-api:
+    image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
+    pull_policy: always
+    restart: unless-stopped
+    depends_on:
+      - nekohasekai
+    expose:
+      - "8000"
+    environment:
+      - LOCAL_JSON_PATH=/public/outbounds.json
+      - REMOTE_JSON_URL=https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template
+    volumes:
+      - public:/public:ro
+    labels:
+      caddy: config.example.com
+      caddy.reverse_proxy: "{{upstreams 8000}}"
+    networks:
+      - caddy-net
+      - nekohasekai-net
+
+volumes:
+  public:
+  data:
+
+networks:
+  nekohasekai-net:
+    driver: bridge
+  caddy-net:
+    external: true

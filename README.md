@@ -29,9 +29,8 @@ sudo sysctl -p
 ```
 
 ### 4. What are these directories?
-- [rules](/rules/) - my rules for adblocking and routing, you can use as reference
+- [rules](/rules/) - my [rules](https://github.com/minlaxz/nekohasekai/tree/route-rules) for adblocking and proxy routing rules
 - [scripts](/scripts/) - useful scripts for misc tasks
-- [singbox](/singbox/) - sing-box configuration files and separated README
 - [xray](/xray/) - xray configuration files (for vless proxy), _deprecated_
 
 
