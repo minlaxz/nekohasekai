@@ -29,17 +29,17 @@ services:
       caddy: nekohasekai-api.example.com
       caddy.reverse_proxy: "{{upstreams 8000}}"
       # -------- BOT RATE LIMITING --------
-      caddy.@bots.header: "User-Agent *bot*"
-      caddy.route.0.rate_limit: "@bots"
-      caddy.route.0.rate_limit.window: 1m
-      caddy.route.0.rate_limit.burst: 5
+      # caddy.@bots.header: "User-Agent *bot*"
+      # caddy.route.0.rate_limit: "@bots"
+      # caddy.route.0.rate_limit.window: 1m
+      # caddy.route.0.rate_limit.burst: 5
       # (Optional) Block sensitive scanner paths (.env, .git)
-      caddy.@blocked.path: "/.env* /.*.git*"
-      caddy.route.1.respond: "@blocked 403"
+      # caddy.@blocked.path: "/.env* /.*.git*"
+      # caddy.route.1.respond: "@blocked 403"
       # (Optional) Rate limit everyone globally
-      caddy.route.2.rate_limit: "*"
-      caddy.route.2.rate_limit.window: 1m
-      caddy.route.2.rate_limit.burst: 120
+      # caddy.route.2.rate_limit: "*"
+      # caddy.route.2.rate_limit.window: 1m
+      # caddy.route.2.rate_limit.burst: 120
     networks:
       - caddy-net
       - nekohasekai-net

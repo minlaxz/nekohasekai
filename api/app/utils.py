@@ -68,6 +68,7 @@ class Loader:
                         i.pop("type", None)
                         i.pop("server", None)
                         i.pop("path", None)
+                        i.pop("domain_resolver", None)
                         i["address"] = f"https://dns.nextdns.io{self.dns_path}"
                         i["address_resolver"] = "dns-resolver"
                         i["address_strategy"] = "ipv4_only"
