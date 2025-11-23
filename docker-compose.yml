@@ -25,6 +25,9 @@ services:
     environment:
       - LOCAL_JSON_PATH=/public/outbounds.json
       - REMOTE_JSON_URL=https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template
+      - CONFIG_SERVER=config.example.com
+      - SSM_SERVER=nekohasekai
+      - SSM_PORT=8050
     volumes:
       - public:/public:ro
     labels:

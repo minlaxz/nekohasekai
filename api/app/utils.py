@@ -7,6 +7,8 @@ import requests
 LOCAL_JSON_PATH: str = os.getenv("LOCAL_JSON_PATH", "outs.json")
 REMOTE_JSON_URL: str = os.getenv("REMOTE_JSON_URL", "sing-box-template")
 CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
+SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
+SSM_PORT: int = int(os.getenv("SSM_PORT", "1090"))
 
 
 class Loader:
@@ -111,8 +113,8 @@ class Loader:
                 # Only shadowsocks outbound is added.
                 outbounds.append(i)
                 outbound_names.append(i.get("tag", "unknown"))
-            elif i.get("tag") == "ssm-api":
-                self.ssm_listen_port = i.get("listen_port")
+            # elif i.get("tag") == "ssm-api":
+            #     self.ssm_listen_port = i.get("listen_port")
             # All other outbounds are added as-is.
             # outbounds.append(i)
             # outbound_names.append(i.get("tag", "unknown"))
@@ -153,7 +155,7 @@ class Checker(Loader):
 
     def verify_key(self) -> bool:
         SSM_API = (
-            f"http://localhost:{self.ssm_listen_port}/server/v1/users/{self.user_name}"
+            f"http://{SSM_SERVER}:{SSM_PORT}/server/v1/users/{self.user_name}"
         )
         try:
             response = requests.get(SSM_API, timeout=5)
