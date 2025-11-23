@@ -171,7 +171,8 @@
             "domain_suffix": [
               "engineerforce.io",
               "dify.io",
-              "lightsail.aws.amazon.com"
+              "lightsail.aws.amazon.com",
+              "my.nextdns.io"
             ]
           }
         ],
