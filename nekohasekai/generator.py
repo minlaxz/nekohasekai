@@ -24,15 +24,10 @@ class DomainResolver:
 
 
 @dataclass
-class Outbound:
-    type: str
+class OutboundDirect:
+    type: Literal["direct"]
     tag: str
     domain_resolver: DomainResolver
-
-
-@dataclass
-class OutboundsConfig(ConfigWriter):
-    outbounds: List[Outbound]
 
 
 @dataclass
@@ -98,49 +93,64 @@ class ShadowsocksUser:
 @dataclass
 class Brutal:
     enabled: bool
-    up_mps: int
-    down_mps: int
+    up_mbps: int
+    down_mbps: int
 
 
 @dataclass
-class Multiplex:
+class InboundMultiplex:
     enabled: bool
     padding: bool
     brutal: Brutal
 
 
 @dataclass
-class ShadowsocksInbound:
-    type: Literal["shadowsocks", "xtls-reality"]
-    tag: str
+class OutboundMultiplex(InboundMultiplex):
+    protocol: Literal["smux", "yamux", "mux"] = "smux"
+    max_connections: int = 4
+    min_streams: int = 4
+    max_streams: int = 0
+
+
+@dataclass
+class ListenFields:
     listen: Literal["0.0.0.0", "::"]
     listen_port: int
+
+
+@dataclass
+class InboundShadowsocks(ConfigWriter, ListenFields):
+    type: Literal["shadowsocks", "xtls-reality"]
+    tag: str
     method: Literal["xchacha20-ietf-poly1305", "chacha20-ietf-poly1305"]
     password: str
     users: List[ShadowsocksUser]
     managed: bool
-    multiplex: Multiplex | None = None
+    # Listen fields ...
+    # Multiplex
+    multiplex: InboundMultiplex | Dict[str, Any]
 
 
 @dataclass
-class InboundsConfig(ConfigWriter):
-    inbounds: List[ShadowsocksInbound]
-
-
-@dataclass
-class ShadowsocksClientOutbound(ConfigWriter):
-    type: Literal["shadowsocks"]
-    tag: Literal["shadowsocks"]
+class DailFields:
     server: str
     server_port: int
     domain_strategy: Literal["ipv4_only", "prefer_ipv4"]
-    method: Literal["xchacha20-ietf-poly1305", "chacha20-ietf-poly1305"]
-    password: str
-    multiplex: Multiplex | Dict[str, Any]
 
 
 @dataclass
-class SSM:
+class OutboundShadowsocks(DailFields):
+    type: Literal["shadowsocks", "xtls-reality"]
+    tag: Literal["shadowsocks", "xtls-reality"]
+    method: Literal["xchacha20-ietf-poly1305", "chacha20-ietf-poly1305"]
+    password: str
+    # Dail fields ...
+    # Multiplex
+    multiplex: OutboundMultiplex | Dict[str, Any]
+
+
+@dataclass
+class SSMService:
     type: Literal["ssm-api"]
     tag: Literal["ssm-api"]
     listen: Literal["0.0.0.0", "::"]
@@ -150,13 +160,18 @@ class SSM:
 
 
 @dataclass
-class ClientOutboundsConfig(ConfigWriter):
-    oudbounds: List[ShadowsocksClientOutbound | SSM]
+class ServicesConfig(ConfigWriter):
+    services: List[SSMService]
 
 
 @dataclass
-class ServicesConfig(ConfigWriter):
-    services: List[SSM]
+class InboundsConfig(ConfigWriter):
+    inbounds: List[InboundShadowsocks]
+
+
+@dataclass
+class OutboundsConfig(ConfigWriter):
+    outbounds: List[OutboundShadowsocks | OutboundDirect | SSMService]
 
 
 logging.basicConfig(
@@ -195,11 +210,12 @@ def main():
 
     outbounds_config = OutboundsConfig(
         outbounds=[
-            Outbound(
+            OutboundDirect(
                 type="direct",
                 tag="direct-out",
                 domain_resolver=DomainResolver(
-                    server="local", strategy=domain_strategy
+                    server="local",
+                    strategy=domain_strategy,
                 ),
             )
         ]
@@ -233,7 +249,7 @@ def main():
     shadowsocks_listen_port = start_port + 1
     inbounds_config = InboundsConfig(
         inbounds=[
-            ShadowsocksInbound(
+            InboundShadowsocks(
                 type="shadowsocks",
                 tag="shadowsocks",
                 listen="0.0.0.0",
@@ -242,10 +258,10 @@ def main():
                 password=secrets.token_urlsafe(12) + "==",
                 users=[],
                 managed=True,
-                multiplex=Multiplex(
+                multiplex=InboundMultiplex(
                     enabled=True,
                     padding=False,
-                    brutal=Brutal(enabled=True, up_mps=10, down_mps=50),
+                    brutal=Brutal(enabled=True, up_mbps=10, down_mbps=50),
                 ),
             )
         ]
@@ -257,7 +273,7 @@ def main():
     ssm_listen_port = end_port
     services_config = ServicesConfig(
         services=[
-            SSM(
+            SSMService(
                 type="ssm-api",
                 tag="ssm-api",
                 listen="0.0.0.0",
@@ -269,26 +285,28 @@ def main():
     )
     services_config.to_json(path="conf/06_services.json")
 
-    client_outbounds_config = ClientOutboundsConfig([
-        ShadowsocksClientOutbound(
-            type="shadowsocks",
-            tag="shadowsocks",
-            server=server_ip,
-            server_port=shadowsocks_listen_port,
-            domain_strategy=domain_strategy,
-            method="xchacha20-ietf-poly1305",
-            password="",
-            multiplex={"enabled": False},
-        ),
-        SSM(
-            type="ssm-api",
-            tag="ssm-api",
-            listen="0.0.0.0",
-            listen_port=ssm_listen_port,
-            cache_path="cache/ssm-cache.db",
-            servers={"/": "shadowsocks"},
-        ),
-    ])
+    client_outbounds_config = OutboundsConfig(
+        outbounds=[
+            OutboundShadowsocks(
+                type="shadowsocks",
+                tag="shadowsocks",
+                server=server_ip,
+                server_port=shadowsocks_listen_port,
+                domain_strategy=domain_strategy,
+                method="xchacha20-ietf-poly1305",
+                password="",
+                multiplex={"enabled": False},
+            ),
+            SSMService(
+                type="ssm-api",
+                tag="ssm-api",
+                listen="0.0.0.0",
+                listen_port=ssm_listen_port,
+                cache_path="cache/ssm-cache.db",
+                servers={"/": "shadowsocks"},
+            ),
+        ]
+    )
     client_outbounds_config.to_json(path="public/outbounds.json")
     logging.info("Sing-Box configuration generation completed.")
 
