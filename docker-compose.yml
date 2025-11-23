@@ -6,9 +6,8 @@ services:
     ports:
       - "8840-8850:8840-8850/tcp"
       - "8840-8850:8840-8850/udp"
-    environment:
-      - TZ=${TZ}
-      - START_PORT=8040
+    env_file:
+      - .env
     volumes:
       - public:/sing-box/public
     networks:
@@ -22,17 +21,25 @@ services:
       - nekohasekai
     expose:
       - "8000"
-    environment:
-      - LOCAL_JSON_PATH=/public/outbounds.json
-      - REMOTE_JSON_URL=https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template
-      - CONFIG_SERVER=config.example.com
-      - SSM_SERVER=nekohasekai
-      - SSM_PORT=8050
+    env_file:
+      - .env
     volumes:
       - public:/public:ro
     labels:
-      caddy: config.example.com
+      caddy: nekohasekai-api.example.com
       caddy.reverse_proxy: "{{upstreams 8000}}"
+      # -------- BOT RATE LIMITING --------
+      caddy.@bots.header: "User-Agent *bot*"
+      caddy.route.0.rate_limit: "@bots"
+      caddy.route.0.rate_limit.window: 1m
+      caddy.route.0.rate_limit.burst: 5
+      # (Optional) Block sensitive scanner paths (.env, .git)
+      caddy.@blocked.path: "/.env* /.*.git*"
+      caddy.route.1.respond: "@blocked 403"
+      # (Optional) Rate limit everyone globally
+      caddy.route.2.rate_limit: "*"
+      caddy.route.2.rate_limit.window: 1m
+      caddy.route.2.rate_limit.burst: 120
     networks:
       - caddy-net
       - nekohasekai-net
