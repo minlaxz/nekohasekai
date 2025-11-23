@@ -1,6 +1,8 @@
 from typing import Union, Callable, Type, Any, Dict
 
+import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, Response
@@ -23,6 +25,20 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
 }
 
 app = FastAPI(exception_handlers=exceptions)
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+]
+origins.append(os.getenv("CONFIG_SERVER", "www.gstatic.com"))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class User(BaseModel):
