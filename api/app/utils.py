@@ -109,7 +109,7 @@ class Loader:
         for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
                 # i["server_port"] uses pre-defined, common password (unmanaged)
-                i["server_port"] = i["server_port"] + 1
+                i["server_port"] = i["server_port"]
                 i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
                 # Only shadowsocks outbound is added.
                 outbounds.append(i)
