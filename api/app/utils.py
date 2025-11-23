@@ -9,7 +9,7 @@ REMOTE_JSON_URL: str = os.getenv("REMOTE_JSON_URL", "sing-box-template")
 CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
 SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
-
+DNS_PATH: str = os.getenv("NEKO_DNS_PATH")
 
 class Loader:
     def __init__(
@@ -31,7 +31,7 @@ class Loader:
         self.config_server = CONFIG_SERVER
         self.platform = platform
         self.version = version
-        self.dns_path = dns_path
+        self.dns_path = DNS_PATH or dns_path
         self.dns_detour = dns_detour
         self.dns_final = dns_final
         self.dns_resolver = dns_resolver
