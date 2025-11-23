@@ -207,6 +207,7 @@ def main():
     logging.info("Generating Sing-Box configuration...")
     os.makedirs("conf", exist_ok=True)
     os.makedirs("public", exist_ok=True)
+    os.makedirs("cache", exist_ok=True)
 
     outbounds_config = OutboundsConfig(
         outbounds=[
