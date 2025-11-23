@@ -7,9 +7,10 @@ import requests
 LOCAL_JSON_PATH: str = os.getenv("LOCAL_JSON_PATH", "outs.json")
 REMOTE_JSON_URL: str = os.getenv("REMOTE_JSON_URL", "sing-box-template")
 CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
-SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
-DNS_PATH: str = os.getenv("NEKO_DNS_PATH")
+SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
+SSM_PORT: int = START_PORT + 10
+DNS_PATH: str = os.getenv("NEKO_DNS_PATH", "")
 
 class Loader:
     def __init__(
@@ -156,7 +157,7 @@ class Checker(Loader):
 
     def verify_key(self) -> bool:
         SSM_API = (
-            f"http://{SSM_SERVER}:{START_PORT + 10}/server/v1/users/{self.user_name}"
+            f"http://{SSM_SERVER}:{SSM_PORT}/server/v1/users/{self.user_name}"
         )
         try:
             response = requests.get(SSM_API, timeout=5)
@@ -174,8 +175,3 @@ class Checker(Loader):
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         return super().unwarp(disabled=self.is_quota_limited())
-
-
-class APIBridge:
-    # TODO: Implement APIBridge to SSM API interactions
-    pass
