@@ -1,0 +1,99 @@
+import httpx
+import os
+from typing import Any, Dict, List, cast
+from fastapi import APIRouter, HTTPException
+
+router = APIRouter()
+
+START_PORT: int = int(os.getenv("START_PORT", "1080"))
+SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
+SSM_PORT: int = START_PORT + 10
+UPSTREAM = f"http://{SSM_SERVER}:{SSM_PORT}"
+
+
+@router.get("/server/v1")
+async def proxy_server_info():
+    async with httpx.AsyncClient(timeout=5) as client:
+        upstream = f"{UPSTREAM}/server/v1"
+        try:
+            r = await client.get(upstream)
+            r.raise_for_status()
+            return r.json()  # forward upstream JSON to client
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+
+
+@router.get("/server/v1/stats")
+async def proxy_server_stats():
+    async with httpx.AsyncClient(timeout=5) as client:
+        stats_upstream = f"{UPSTREAM}/server/v1/stats"
+        try:
+            r = await client.get(stats_upstream)
+            r.raise_for_status()
+            data = r.json()
+            del data["users"]
+            for k, v in data.items():
+                if k.endswith("Bytes"):
+                    if v >= 1 << 30:
+                        data[k] = f"{v / (1 << 30):.2f} GB"
+                    elif v >= 1 << 20:
+                        data[k] = f"{v / (1 << 20):.2f} MB"
+                    elif v >= 1 << 10:
+                        data[k] = f"{v / (1 << 10):.2f} KB"
+                    else:
+                        data[k] = f"{v} B"
+                elif k.endswith("Packets"):
+                    if v >= 1_000_000:
+                        data[k] = f"{v / 1_000_000:.2f} M"
+                    elif v >= 1_000:
+                        data[k] = f"{v / 1_000:.2f} K"
+                    else:
+                        data[k] = f"{v}"
+            return data
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+
+
+@router.get("/server/v1/users")
+async def proxy_server_users():
+    async with httpx.AsyncClient(timeout=5) as client:
+        stats_upstream = f"{UPSTREAM}/server/v1/stats"
+        users_upstream = f"{UPSTREAM}/server/v1/users"
+        try:
+            stats_r = await client.get(stats_upstream)
+            users_r = await client.get(users_upstream)
+            users_r.raise_for_status()
+            stats_r.raise_for_status()
+            stats_data_raw = stats_r.json()["users"]
+            stats_data: List[Dict[str, Any]] = cast(List[Dict[str, Any]], stats_data_raw)
+            users_data_raw = users_r.json()["users"]
+            users_data: List[Dict[str, int]] = cast(List[Dict[str, Any]], users_data_raw)
+            # inject uPSK from users_data into stats_data based on matching username
+            users_dict = {user["username"]: user for user in users_data}
+            for stat in stats_data:
+                username = stat["username"]
+                if username in users_dict:
+                    stat["uPSK"] = users_dict[username].get("uPSK", None)
+            # sort by most downlinkBytes used
+            stats_data.sort(key=lambda x: int(x.get("downlinkBytes", 0)), reverse=True)
+            for i in stats_data:
+                for k, v in i.items():
+                    if k.endswith("Bytes"):
+                        if v >= 1 << 30:
+                            i[k] = f"{v / (1 << 30):.2f} GB"
+                        elif v >= 1 << 20:
+                            i[k] = f"{v / (1 << 20):.2f} MB"
+                        elif v >= 1 << 10:
+                            i[k] = f"{v / (1 << 10):.2f} KB"
+                        else:
+                            i[k] = f"{v} B"
+                    elif k.endswith("Packets"):
+                        if v >= 1_000_000:
+                            i[k] = f"{v / 1_000_000:.2f} M"
+                        elif v >= 1_000:
+                            i[k] = f"{v / 1_000:.2f} K"
+                        else:
+                            i[k] = f"{v}"
+            return {"users": stats_data}
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
