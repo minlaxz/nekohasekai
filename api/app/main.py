@@ -10,6 +10,8 @@ from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
 
 from .utils import Checker
+from .routes.ssm import router as ssm_router
+from .routes.ssm_transparent import router as ssm_transparent_router
 
 
 async def not_found(request: Request, exc: Any) -> Response:
@@ -25,6 +27,9 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
 }
 
 app = FastAPI(exception_handlers=exceptions)
+app.include_router(ssm_router, prefix="/ssm")
+app.include_router(ssm_transparent_router, prefix="/ssm-transparent")
+
 
 origins = [
     "http://localhost",
