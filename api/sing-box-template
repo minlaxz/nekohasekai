@@ -83,6 +83,22 @@
         "update_interval": "1d"
       },
       {
+        "tag": "geosite-oonimm",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-oonimm.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-oonimm",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-ip-oonimm.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
         "tag": "geoip-private",
         "type": "remote",
         "format": "binary",
@@ -141,7 +157,9 @@
             "rule_set": [
               "geosite-meta",
               "geosite-twitter",
-              "geosite-github"
+              "geosite-github",
+              "geosite-oonimm",
+              "geoip-oonimm"
             ]
           },
           {
