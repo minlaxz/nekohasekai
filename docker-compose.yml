@@ -10,7 +10,7 @@ services:
       - .env
     volumes:
       - public:/sing-box/public
-      - ./cache:/sing-box/cache/ssm-cache.db
+      - ./cache:/sing-box/cache
     networks:
       - nekohasekai-net
 

@@ -303,7 +303,7 @@ def main():
                 tag="ssm-api",
                 listen="0.0.0.0",
                 listen_port=ssm_listen_port,
-                cache_path="cache/ssm-cache.db",
+                cache_path="cache/ssm-cache.json",
                 servers={"/": "shadowsocks"},
             ),
         ]
