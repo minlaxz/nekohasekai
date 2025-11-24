@@ -10,7 +10,7 @@ CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
 SSM_PORT: int = START_PORT + 10
-DNS_PATH: str = os.getenv("NEKO_DNS_PATH", "")
+DNS_PATH: str = os.getenv("DNS_PATH", "")
 
 class Loader:
     def __init__(
