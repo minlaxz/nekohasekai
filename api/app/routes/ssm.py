@@ -130,14 +130,14 @@ async def create_user(
 ):
     uPSK = create_upsk()
     # Call upstream to create user
-    # async with httpx.AsyncClient(timeout=5) as client:
-    #     create_upstream = f"{SSM_UPSTREAM}/server/v1/users"
-    #     payload = {"username": username, "uPSK": uPSK}
-    #     try:
-    #         r = await client.post(create_upstream, json=payload)
-    #         r.raise_for_status()
-    #     except httpx.HTTPError as e:
-    #         raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+    async with httpx.AsyncClient(timeout=5) as client:
+        create_upstream = f"{SSM_UPSTREAM}/server/v1/users"
+        payload = {"username": username, "uPSK": uPSK}
+        try:
+            r = await client.post(create_upstream, json=payload)
+            r.raise_for_status()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
     url = f"https://{CONFIG_SERVER}?p={platform}&v={version}&j={username}&k={uPSK}"
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse("form.html", {"request": request, "result": url})
