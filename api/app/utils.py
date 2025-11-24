@@ -10,6 +10,7 @@ CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
 SSM_PORT: int = START_PORT + 10
+SSM_UPSTREAM = f"http://{SSM_SERVER}:{SSM_PORT}"
 DNS_PATH: str = os.getenv("DNS_PATH", "")
 
 class Loader:
@@ -157,7 +158,7 @@ class Checker(Loader):
 
     def verify_key(self) -> bool:
         SSM_API = (
-            f"http://{SSM_SERVER}:{SSM_PORT}/server/v1/users/{self.user_name}"
+            f"{SSM_UPSTREAM}/server/v1/users/{self.user_name}"
         )
         try:
             response = requests.get(SSM_API, timeout=5)

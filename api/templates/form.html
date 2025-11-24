@@ -1,0 +1,42 @@
+<!-- Form page -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create SSM User</title>
+  </head>
+  <body>
+    {% if not result %}
+    <h2>Create SSM User</h2>
+
+    <form method="POST" action="/ssm/create">
+      <label>Username:</label><br />
+      <input type="text" name="username" /><br /><br />
+
+      <label>Platform:</label><br />
+      <select name="platform">
+        <option value="a">Android</option>
+        <option value="i">iOS</option>
+        <option value="m">Mac</option>
+        <option value="w">Windows</option>
+        <option value="l">Linux</option>
+      </select>
+      <label>Version:</label><br />
+      <select name="version">
+        <option value="12">12</option>
+        <option value="11">11</option>
+      </select>
+      <br /><br />
+
+      <button type="submit">Submit</button>
+    </form>
+    {% else %}
+    <h2>SSM User Created Successfully!</h2>
+    <hr />
+    <h3>Generated Link:</h3>
+    <pre>{{ result }}</pre>
+    {% endif %}
+  </body>
+</html>

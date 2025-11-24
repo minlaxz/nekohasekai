@@ -27,6 +27,7 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
 }
 
 app = FastAPI(exception_handlers=exceptions)
+# Both ssm and ssm-transparent routes should be protected by some authentication
 app.include_router(ssm_router, prefix="/ssm")
 app.include_router(ssm_transparent_router, prefix="/ssm-transparent")
 

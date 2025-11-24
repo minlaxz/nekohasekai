@@ -1,20 +1,27 @@
-import httpx
-import os
 from typing import Any, Dict, List, cast
-from fastapi import APIRouter, HTTPException
+
+import httpx
+import secrets
+import string
+import os
+
+from fastapi import APIRouter, HTTPException, Form
+from fastapi.requests import Request
+from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
 
+CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
 SSM_PORT: int = START_PORT + 10
-UPSTREAM = f"http://{SSM_SERVER}:{SSM_PORT}"
+SSM_UPSTREAM = f"http://{SSM_SERVER}:{SSM_PORT}"
 
 
 @router.get("/server/v1")
 async def proxy_server_info():
     async with httpx.AsyncClient(timeout=5) as client:
-        upstream = f"{UPSTREAM}/server/v1"
+        upstream = f"{SSM_UPSTREAM}/server/v1"
         try:
             r = await client.get(upstream)
             r.raise_for_status()
@@ -26,7 +33,7 @@ async def proxy_server_info():
 @router.get("/server/v1/stats")
 async def proxy_server_stats():
     async with httpx.AsyncClient(timeout=5) as client:
-        stats_upstream = f"{UPSTREAM}/server/v1/stats"
+        stats_upstream = f"{SSM_UPSTREAM}/server/v1/stats"
         try:
             r = await client.get(stats_upstream)
             r.raise_for_status()
@@ -57,17 +64,21 @@ async def proxy_server_stats():
 @router.get("/server/v1/users")
 async def proxy_server_users():
     async with httpx.AsyncClient(timeout=5) as client:
-        stats_upstream = f"{UPSTREAM}/server/v1/stats"
-        users_upstream = f"{UPSTREAM}/server/v1/users"
+        stats_upstream = f"{SSM_UPSTREAM}/server/v1/stats"
+        users_upstream = f"{SSM_UPSTREAM}/server/v1/users"
         try:
             stats_r = await client.get(stats_upstream)
             users_r = await client.get(users_upstream)
             users_r.raise_for_status()
             stats_r.raise_for_status()
             stats_data_raw = stats_r.json()["users"]
-            stats_data: List[Dict[str, Any]] = cast(List[Dict[str, Any]], stats_data_raw)
+            stats_data: List[Dict[str, Any]] = cast(
+                List[Dict[str, Any]], stats_data_raw
+            )
             users_data_raw = users_r.json()["users"]
-            users_data: List[Dict[str, int]] = cast(List[Dict[str, Any]], users_data_raw)
+            users_data: List[Dict[str, int]] = cast(
+                List[Dict[str, Any]], users_data_raw
+            )
             # inject uPSK from users_data into stats_data based on matching username
             users_dict = {user["username"]: user for user in users_data}
             for stat in stats_data:
@@ -97,3 +108,36 @@ async def proxy_server_users():
             return {"users": stats_data}
         except httpx.HTTPError as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+
+
+def create_upsk():
+    alphabet = string.ascii_lowercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(20)) + "=="
+
+
+@router.get("/form")
+async def get_form(request: Request):
+    templates = Jinja2Templates(directory="templates")
+    return templates.TemplateResponse("form.html", {"request": request})
+
+
+@router.post("/create")
+async def create_user(
+    request: Request,
+    username: str = Form(...),
+    platform: str = Form(...),
+    version: str = Form(...),
+):
+    uPSK = create_upsk()
+    # Call upstream to create user
+    # async with httpx.AsyncClient(timeout=5) as client:
+    #     create_upstream = f"{SSM_UPSTREAM}/server/v1/users"
+    #     payload = {"username": username, "uPSK": uPSK}
+    #     try:
+    #         r = await client.post(create_upstream, json=payload)
+    #         r.raise_for_status()
+    #     except httpx.HTTPError as e:
+    #         raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+    url = f"https://{CONFIG_SERVER}?p={platform}&v={version}&j={username}&k={uPSK}"
+    templates = Jinja2Templates(directory="templates")
+    return templates.TemplateResponse("form.html", {"request": request, "result": url})
