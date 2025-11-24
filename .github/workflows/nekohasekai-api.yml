@@ -1,4 +1,4 @@
-name: "Build Sing-box Image"
+name: "Build API Image"
 
 on:
   workflow_dispatch:
@@ -6,8 +6,8 @@ on:
     branches:
       - main
     paths:
-      - "nekohasekai/generator.py"
-      - "nekohasekai/init.sh"
+      - "api/app/*.py"
+      - "api/templates/*.html"
 
 env:
   REGISTRY: ghcr.io
@@ -42,8 +42,8 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64
-          context: ./nekohasekai
-          file: ./nekohasekai/Dockerfile
+          context: ./api
+          file: ./api/Dockerfile
           tags: |
-            ${{ env.IMAGE_NAME }}:nekohasekai
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nekohasekai
+            ${{ env.IMAGE_NAME }}:nekohasekai-api
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nekohasekai-api
