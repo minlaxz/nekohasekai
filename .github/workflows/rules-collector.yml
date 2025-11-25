@@ -1,10 +1,10 @@
-name: Build sing-box rules (optional OONI)
+name: "Build Sing-box rules from OONI"
 
 on:
   workflow_dispatch:
   schedule:
-  # Run every day at 6 past 9 UTC
-    - cron: "6 9 * * *"
+  # Run every day at 6 past 23 UTC
+    - cron: "6 23 * * *"
 
 # env:
 #   oonimm-output: ooni/oonimm.lst
@@ -16,36 +16,18 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: ./requirements.txt
-
-      - name: Set up environment
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - run: |
+          python -m pip install --upgrade pip requests setuptools wheel
           curl -Lo generate-geoip-geosite.tar.gz https://github.com/Dunamis4tw/generate-geoip-geosite/releases/download/v1.3.1/generate-geoip-geosite-1.3.1-linux-amd64.tar.gz
           tar -xzf generate-geoip-geosite.tar.gz && chmod +x generate-geoip-geosite
-
-      - name: Collect rule lists
-        run: |
-          python scripts/probe.py -c MM -dr 14 -o rules/route-rules/include-domain-oonimm.lst
-          python scripts/resolver.py -i rules/route-rules/include-domain-oonimm.lst -o rules/route-rules/include-ip-oonimm.lst -v
-          python scripts/probe.py -i rules/include-rule-list.txt -o rules/route-rules/include-domain-minlaxz.lst
-          python scripts/resolver.py -i rules/route-rules/include-domain-minlaxz.lst -o rules/route-rules/include-ip-minlaxz.lst
+          python rules/probe.py --country MM --day-range 14 --output rules/route-rules/include-domain-oonimm.lst
+          python rules/resolver.py --input rules/route-rules/include-domain-oonimm.lst --output rules/route-rules/include-ip-oonimm.lst
           sed -i 's/^/*./' rules/route-rules/include-domain-oonimm.lst
-          sed -i 's/^/*./' rules/route-rules/include-domain-minlaxz.lst
-        # curl -sSL https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/facebook.json -o facebook.json
-        # jq -r '.[] | select(.domain != null) | .domain[]?' facebook.json > file.lst
-
-      - name: Convert and download rules
-        run: |
+      - run: |
           ./generate-geoip-geosite -i ./rules/route-rules -o ./rules/route-rules
           
 
@@ -54,8 +36,7 @@ jobs:
       #     sudo apt-get update && sudo apt-get install -y dos2unix
       #     find . -type f -name "*.lst" -exec dos2unix {} \;
 
-      - name: Deploy to GitHub Branch
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ github.token }}
           publish_branch: route-rules

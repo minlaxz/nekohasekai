@@ -1,7 +1,5 @@
-A working configurations for sing-box (with docker)
+Configuration examples for sing-box
 ===
-
-> This is not automated script or something, but for those who would like to setup by hand.
 
 We first need three things:
 1. Docker and compose extension
@@ -30,8 +28,9 @@ sudo sysctl -p
 
 ### 4. What are these directories?
 - [rules](/rules/) - my [rules](https://github.com/minlaxz/nekohasekai/tree/route-rules) for adblocking and proxy routing rules
-- [scripts](/scripts/) - useful scripts for misc tasks
-- [xray](/xray/) - xray configuration files (for vless proxy), _deprecated_
+- [api](/api/) - dynamic config generator for sing-box clients
+- [nekohasekai](/nekohasekai/) - sing-box server side configs
+- [examples](/examples/) - example configurations for other protocols
 
 
 ### 5. nekohasekai

@@ -1,4 +1,4 @@
-name: Cleanup Wokflow Runs, Artifacts and Packages
+name: Cleanup Runs, Artifacts and Packages
 
 on:
   schedule:

@@ -1,1 +1,0 @@
-docker run --rm ghcr.io/sagernet/sing-box generate rand 8 --hex

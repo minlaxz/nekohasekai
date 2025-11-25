@@ -1,4 +1,4 @@
-name: "Build Sing-box Image"
+name: "Build Sing-box Server mage"
 
 on:
   workflow_dispatch:

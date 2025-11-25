@@ -1,4 +1,4 @@
-name: "Build API Image"
+name: "Build Sing-box API Image"
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "api/app/*.py"
+      - "api/app/**/*.py"
       - "api/templates/*.html"
 
 env:

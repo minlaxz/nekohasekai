@@ -1,9 +1,0 @@
-{
-  "dns": {
-    "servers": [
-      {
-        "address": "local"
-      }
-    ]
-  }
-}
