@@ -2,7 +2,7 @@ from typing import Dict, Any
 
 import os
 import json
-import requests
+import httpx
 
 LOCAL_JSON_PATH: str = os.getenv("LOCAL_JSON_PATH", "outs.json")
 REMOTE_JSON_URL: str = os.getenv("REMOTE_JSON_URL", "sing-box-template")
@@ -51,13 +51,13 @@ class Loader:
 
         try:
             if self.remote_url.startswith("https://"):
-                response = requests.get(self.remote_url, timeout=5)
+                response = httpx.get(self.remote_url, timeout=5)
                 response.raise_for_status()
                 self.remote_data: Dict[str, Any] = response.json()
             else:
                 with open(self.remote_url, "r", encoding="utf-8") as file:
                     self.remote_data = json.load(file)
-        except (requests.RequestException, json.JSONDecodeError):
+        except (httpx.HTTPError, json.JSONDecodeError):
             self.remote_data = {}
 
     def __inject_dns__(self) -> None:
@@ -160,14 +160,14 @@ class Checker(Loader):
     def verify_key(self) -> bool:
         SSM_API = f"{SSM_UPSTREAM}/server/v1/users/{self.user_name}"
         try:
-            response = requests.get(SSM_API, timeout=5)
+            response = httpx.get(SSM_API, timeout=5)
             response.raise_for_status()
             self.data = response.json()
             if self.data.get("uPSK") == self.user_psk:
                 return True
             else:
                 raise Exception
-        except (requests.RequestException, json.JSONDecodeError, Exception):
+        except (httpx.HTTPError, json.JSONDecodeError, Exception):
             return False
 
     def is_quota_limited(self):
