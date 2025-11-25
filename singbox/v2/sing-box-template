@@ -130,7 +130,9 @@
           },
           {
             "domain_suffix": [
-              "engineerforce.io"
+              ".engineerforce.io",
+              ".dify.ai",
+              ".nextdns.io"
             ]
           }
         ],
