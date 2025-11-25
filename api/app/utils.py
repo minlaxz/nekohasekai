@@ -34,7 +34,7 @@ class Loader:
         self.config_server = CONFIG_SERVER
         self.platform = platform
         self.version = version
-        self.dns_path = DNS_PATH or dns_path
+        self.dns_path = dns_path
         self.dns_detour = dns_detour
         self.dns_final = dns_final
         self.dns_resolver = dns_resolver
@@ -61,6 +61,10 @@ class Loader:
             self.remote_data = {}
 
     def __inject_dns__(self) -> None:
+        # client defined dns_path otherwise server defined dns_path
+        dns_path = (
+            self.dns_path if self.dns_path != "/" else DNS_PATH + f"/{self.user_name}"
+        )
         self.remote_data["dns"]["final"] = self.dns_final
         if self.platform == "i" and self.version == 11:
             # fmt: off
@@ -72,7 +76,7 @@ class Loader:
                         i.pop("server", None)
                         i.pop("path", None)
                         i.pop("domain_resolver", None)
-                        i["address"] = f"https://dns.nextdns.io{self.dns_path}"
+                        i["address"] = f"https://dns.nextdns.io{dns_path}"
                         i["address_resolver"] = "dns-resolver"
                         i["address_strategy"] = "ipv4_only"
                     case "dns-resolver":
@@ -89,11 +93,7 @@ class Loader:
                         pass
         else:
             # Other combinations but custom `dns_path` is provided
-            dns_path = self.remote_data["dns"]["servers"][0]["path"]
-            if self.dns_path != dns_path:
-                self.remote_data["dns"]["servers"][0]["path"] = self.dns_path
-            # Skip others
-            pass
+            self.remote_data["dns"]["servers"][0]["path"] = dns_path
 
     def __inject_routes__(self) -> None:
         if self.platform == "i" and self.version == 11:
