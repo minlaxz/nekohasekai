@@ -117,8 +117,6 @@ class Loader:
                 # Only shadowsocks outbound is added.
                 outbounds.append(i)
                 outbound_names.append(i.get("tag", "unknown"))
-            # elif i.get("tag") == "ssm-api":
-            #     self.ssm_listen_port = i.get("listen_port")
             # All other outbounds are added as-is.
             # outbounds.append(i)
             # outbound_names.append(i.get("tag", "unknown"))
