@@ -169,10 +169,11 @@
           },
           {
             "domain_suffix": [
-              "engineerforce.io",
-              "dify.io",
-              "lightsail.aws.amazon.com",
-              "my.nextdns.io"
+              ".engineerforce.io",
+              ".dify.io",
+              ".lightsail.aws.amazon.com",
+              ".nextdns.io",
+              ".stackoverflow.com"
             ]
           }
         ],
