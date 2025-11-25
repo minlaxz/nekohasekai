@@ -76,7 +76,11 @@ def read_help():
 
 
 @app.head("/generate_204", response_class=JSONResponse, status_code=200)
-def health_check(j: Union[str, None] = None, k: Union[str, None] = None) -> Response:
+def health_check(
+    request: Request,
+    j: Union[str, None] = None,
+    k: Union[str, None] = None,
+) -> Response:
     if j is None or k is None:
         raise RequestValidationError([
             {
@@ -85,6 +89,8 @@ def health_check(j: Union[str, None] = None, k: Union[str, None] = None) -> Resp
                 "type": "value_error.missing",
             }
         ])
+    user_id, _ = j, k
+    print(f"Health check for user: {user_id}")
     return Response(status_code=204)
 
 

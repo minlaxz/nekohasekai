@@ -13,6 +13,7 @@ SSM_PORT: int = START_PORT + 10
 SSM_UPSTREAM = f"http://{SSM_SERVER}:{SSM_PORT}"
 DNS_PATH: str = os.getenv("DNS_PATH", "")
 
+
 class Loader:
     def __init__(
         self,
@@ -112,7 +113,7 @@ class Loader:
             if i.get("tag") == "shadowsocks":
                 # i["server_port"] uses pre-defined, common password (unmanaged)
                 i["server_port"] = i["server_port"]
-                i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
+                i["password"] = "invalid_psk_overwritten" if any([self.disabled, self.please]) else self.user_psk
                 # Only shadowsocks outbound is added.
                 outbounds.append(i)
                 outbound_names.append(i.get("tag", "unknown"))
@@ -157,9 +158,7 @@ class Checker(Loader):
         super().__init__(**kwargs)
 
     def verify_key(self) -> bool:
-        SSM_API = (
-            f"{SSM_UPSTREAM}/server/v1/users/{self.user_name}"
-        )
+        SSM_API = f"{SSM_UPSTREAM}/server/v1/users/{self.user_name}"
         try:
             response = requests.get(SSM_API, timeout=5)
             response.raise_for_status()
@@ -172,7 +171,10 @@ class Checker(Loader):
             return False
 
     def is_quota_limited(self):
-        return False if self.please else self.data.get("downlinkBytes") > 1
+        return (
+            self.data.get("downlinkBytes") + self.data.get("uplinkBytes")
+            > 10_000_000_000
+        )  # 10 GB Limits
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         return super().unwarp(disabled=self.is_quota_limited())
