@@ -59,6 +59,22 @@
   "route": {
     "rule_set": [
       {
+        "tag": "geosite-cloudflare",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cloudflare.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-cloudflare",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/cloudflare.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      }
+      {
         "tag": "geosite-meta",
         "type": "remote",
         "format": "binary",
@@ -159,7 +175,9 @@
               "geosite-twitter",
               "geosite-github",
               "geosite-oonimm",
-              "geoip-oonimm"
+              "geoip-oonimm",
+              "geosite-cloudflare",
+              "geoip-cloudflare"
             ]
           },
           {
