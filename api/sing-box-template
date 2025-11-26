@@ -83,6 +83,14 @@
         "update_interval": "1d"
       },
       {
+        "tag": "asn-as15169",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/asn/AS15169.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
         "tag": "geosite-meta",
         "type": "remote",
         "format": "binary",
@@ -186,7 +194,8 @@
               "geoip-oonimm",
               "geosite-cloudflare",
               "geoip-cloudflare",
-              "asn-as8075"
+              "asn-as8075",
+              "asn-as15169"
             ]
           },
           {
