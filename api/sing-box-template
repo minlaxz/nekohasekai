@@ -6,8 +6,7 @@
         "type": "https",
         "server": "dns.nextdns.io",
         "path": "/",
-        "domain_resolver": "dns-resolver",
-        "detour": "shadowsocks"
+        "domain_resolver": "dns-resolver"
       },
       {
         "tag": "dns-resolver",
@@ -17,7 +16,8 @@
       },
       {
         "tag": "dns-local",
-        "type": "local"
+        "type": "local",
+        "detour": "shadowsocks"
       }
     ],
     "rules": [
@@ -26,7 +26,11 @@
         "server": "dns-remote"
       },
       {
-        "clash_mode": "Aggressive",
+        "clash_mode": "Plain",
+        "server": "dns-resolver"
+      },
+      {
+        "clash_mode": "Local",
         "server": "dns-local"
       }
     ],
@@ -35,8 +39,7 @@
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,
-    "reverse_mapping": true,
-    "client_subnet": "1.1.1.1"
+    "reverse_mapping": true
   },
   "inbounds": [
     {
@@ -214,41 +217,17 @@
           }
         ],
         "outbound": "Ruled"
-      },
-      {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "rule_set": [
-              "geoip-private",
-              "geoip-mm"
-            ]
-          },
-          {
-            "network": "udp",
-            "port": [
-              443,
-              853
-            ]
-          },
-          {
-            "protocol": "stun"
-          }
-        ],
-        "outbound": "direct"
       }
     ],
     "default_domain_resolver": {
       "server": "dns-resolver",
-      "rewrite_ttl": 60,
-      "client_subnet": "1.1.1.1"
+      "rewrite_ttl": 60
     },
     "final": "direct",
     "auto_detect_interface": true
   },
   "log": {
-    "level": "warn",
+    "level": "info",
     "timestamp": true
   },
   "experimental": {
