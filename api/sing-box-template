@@ -75,7 +75,7 @@
         "update_interval": "1d"
       },
       {
-        "tag": "AS8075",
+        "tag": "asn-as8075",
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/asn/AS8075.srs",
@@ -185,7 +185,8 @@
               "geosite-oonimm",
               "geoip-oonimm",
               "geosite-cloudflare",
-              "geoip-cloudflare"
+              "geoip-cloudflare",
+              "asn-as8075"
             ]
           },
           {
