@@ -75,6 +75,14 @@
         "update_interval": "1d"
       },
       {
+        "tag": "AS8075",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/asn/AS8075.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
         "tag": "geosite-meta",
         "type": "remote",
         "format": "binary",
