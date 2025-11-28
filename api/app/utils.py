@@ -95,6 +95,11 @@ class Loader:
             # Other combinations but custom `dns_path` is provided
             self.remote_data["dns"]["servers"][0]["path"] = dns_path
 
+        # Client provided `dns_detour`, excluding `dns-remote` check in template
+        for i in self.remote_data["dns"]["servers"]:
+            if i.get("tag") != "dns-remote":
+                i["detour"] = self.dns_detour
+
     def __inject_routes__(self) -> None:
         if self.platform == "i" and self.version == 11:
             # Version 11 does not support these fields
@@ -102,6 +107,10 @@ class Loader:
         else:
             # Skip others
             pass
+
+        # Client provided `route_detour`
+        for i in self.remote_data["route"]["rule_set"]:
+            i["download_detour"] = self.route_detour
 
     def __inject_outbounds__(self) -> None:
         # fmt: off
@@ -117,6 +126,7 @@ class Loader:
                 # Only shadowsocks outbound is added.
                 outbounds.append(i)
                 outbound_names.append(i.get("tag", "unknown"))
+
             # All other outbounds are added as-is.
             # outbounds.append(i)
             # outbound_names.append(i.get("tag", "unknown"))
