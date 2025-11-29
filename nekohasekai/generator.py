@@ -160,6 +160,29 @@ class SSMService:
 
 
 @dataclass
+class WireguardPeer:
+    public_key: str
+    allowed_ips: List[str]
+
+
+@dataclass
+class WireguardEndpoint:
+    type: str
+    tag: str
+    system: bool
+    mtu: int
+    address: List[str]
+    private_key: str
+    listen_port: int
+    peers: List[WireguardPeer]
+
+
+@dataclass
+class EndpointConfig(ConfigWriter):
+    endpoints: List[WireguardEndpoint]
+
+
+@dataclass
 class ServicesConfig(ConfigWriter):
     services: List[SSMService]
 
@@ -189,20 +212,38 @@ def main():
     parser = argparse.ArgumentParser(description="Sing-Box Config Generator Parser")
     parser.add_argument("--start-port", default=0, help="Starting port")
     parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
+    # Not need after testing
+    parser.add_argument("--wg-priv", default="", help="Private Key")
+    parser.add_argument("--wg-pub", default="", help="Public Key")
+    # Not need after testing
+    parser.add_argument("--wg-client-priv", default="", help="Client Private Key")
+    parser.add_argument("--wg-client-pub", default="", help="Client Public Key")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     args = parser.parse_args()
 
     start_port = int(args.start_port)
-    end_port = start_port + 10
-    shadowsocks = args.shadowsocks
     verbose = args.verbose
+
+    is_ss_enabled = args.shadowsocks
+    wg_priv = args.wg_priv
+    wg_pub = args.wg_pub
+    wg_client_pub = args.wg_client_pub
+    wg_client_priv = args.wg_client_priv
+    is_wg_enabled = all([wg_priv, wg_pub, wg_client_priv, wg_client_pub])
+
+    ssm_listen_port = start_port + 10
+    ss_listen_port = start_port + 1
+    wg_listen_port = start_port + 2
 
     if verbose:
         logging.info(f"Start Port (Clash API): {start_port}")
-        logging.info(f"End Port (SSM API): {end_port}")
+        logging.info(f"End Port (SSM API): {ssm_listen_port}")
         logging.info(f"Server IP: {server_ip}")
         logging.info(f"Domain Strategy: {domain_strategy}")
-        logging.info(f"Shadowsocks Enabled: {shadowsocks}")
+        logging.info(f"Shadowsocks Enabled: {is_ss_enabled}")
+        logging.info(f"WG Enabled: {is_wg_enabled}")
+        logging.info(f"Server Pub Key: {wg_pub}")
+        logging.info(f"Client Priv Key: {wg_client_priv}")
 
     logging.info("Generating Sing-Box configuration...")
     os.makedirs("conf", exist_ok=True)
@@ -225,7 +266,10 @@ def main():
 
     route_config = RouteConfig(
         route=Route(
-            rule_set=[], rules=[], final="direct-out", auto_detect_interface=True
+            rule_set=[],
+            rules=[],
+            final="direct-out",
+            auto_detect_interface=True,
         )
     )
     route_config.to_json(path="conf/02_route.json")
@@ -247,31 +291,50 @@ def main():
     dns_config = DNSConfig(dns=DNS(servers=[DNSServer(type="local", tag="local")]))
     dns_config.to_json(path="conf/04_dns.json")
 
-    shadowsocks_listen_port = start_port + 1
-    inbounds_config = InboundsConfig(
-        inbounds=[
-            InboundShadowsocks(
-                type="shadowsocks",
-                tag="shadowsocks",
-                listen="0.0.0.0",
-                listen_port=shadowsocks_listen_port,
-                method="xchacha20-ietf-poly1305",
-                password=secrets.token_urlsafe(12) + "==",
-                users=[],
-                managed=True,
-                multiplex=InboundMultiplex(
-                    enabled=True,
-                    padding=False,
-                    brutal=Brutal(enabled=True, up_mbps=10, down_mbps=50),
-                ),
-            )
-        ]
-        if shadowsocks
-        else []
-    )
-    inbounds_config.to_json(path="conf/05_inbounds.json")
+    if is_ss_enabled:
+        inbounds_config = InboundsConfig(
+            inbounds=[
+                InboundShadowsocks(
+                    type="shadowsocks",
+                    tag="shadowsocks",
+                    listen="0.0.0.0",
+                    listen_port=ss_listen_port,
+                    method="xchacha20-ietf-poly1305",
+                    password=secrets.token_urlsafe(12) + "==",
+                    users=[],
+                    managed=True,
+                    multiplex=InboundMultiplex(
+                        enabled=True,
+                        padding=False,
+                        brutal=Brutal(enabled=True, up_mbps=10, down_mbps=50),
+                    ),
+                )
+            ]
+        )
+        inbounds_config.to_json(path="conf/05_inbounds.json")
 
-    ssm_listen_port = end_port
+    if is_wg_enabled:
+        wg_endpoint_config = EndpointConfig(
+            endpoints=[
+                WireguardEndpoint(
+                    type="wireguard",
+                    tag="wg-ep",
+                    system=True,
+                    mtu=1280,
+                    address=["10.10.10.0/24"],
+                    private_key=wg_priv,
+                    listen_port=wg_listen_port,
+                    peers=[
+                        WireguardPeer(
+                            public_key=wg_client_pub,
+                            allowed_ips=["10.10.10.2/32"],
+                        )
+                    ],
+                )
+            ]
+        )
+        wg_endpoint_config.to_json(path="conf/06_endpoints.json")
+
     services_config = ServicesConfig(
         services=[
             SSMService(
@@ -284,7 +347,7 @@ def main():
             )
         ]
     )
-    services_config.to_json(path="conf/06_services.json")
+    services_config.to_json(path="conf/07_services.json")
 
     client_outbounds_config = OutboundsConfig(
         outbounds=[
@@ -292,7 +355,7 @@ def main():
                 type="shadowsocks",
                 tag="shadowsocks",
                 server=server_ip,
-                server_port=shadowsocks_listen_port,
+                server_port=ss_listen_port,
                 domain_strategy=domain_strategy,
                 method="xchacha20-ietf-poly1305",
                 password="",
