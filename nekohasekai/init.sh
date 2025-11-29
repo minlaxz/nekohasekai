@@ -8,9 +8,9 @@ python3 ./generator.py \
     --start-port "$PORT" \
     --shadowsocks \
     --verbose \
-    --wg-priv ${CUSTOM_SERVER_WG_PRIVATE:-$SERVER_WG_PRIVATE} \
-    --wg-pub ${CUSTOM_SERVER_WG_PUBLIC:-$SERVER_WG_PUBLIC} \
-    --wg-client-pub ${CUSTOM_CLIENT_WG_PUBLIC:-$CLIENT_WG_PUBLIC} \
-    --wg-client-priv ${CUSTOM_CLIENT_WG_PRIVATE:-$CLIENT_WG_PRIVATE}
+    --wg-priv ${CUSTOM_SERVER_WG_PRIVATE:-SERVER_WG_PRIVATE} \
+    --wg-pub ${CUSTOM_SERVER_WG_PUBLIC:-SERVER_WG_PUBLIC} \
+    --wg-client-pub ${CUSTOM_CLIENT_WG_PUBLIC:-CLIENT_WG_PUBLIC} \
+    --wg-client-priv ${CUSTOM_CLIENT_WG_PRIVATE:-CLIENT_WG_PRIVATE}
 
 /sing-box/sing-box run -C /sing-box/conf
