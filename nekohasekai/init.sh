@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 PORT=${START_PORT:-1080}
-SERVER_WG_KEYPAIR=$(/sing-box generate wg-keypair) && SERVER_WG_PRIVATE=$(awk 'PrivateKey/{print $NF}' <<< "$SERVER_WG_KEYPAIR") && SERVER_WG_PUBLIC=$(awk 'PublicKey/{print $NF}' <<< "$SERVER_WG_KEYPAIR")
-CLIENT_WG_KEYPAIR=$(/sing-box generate wg-keypair) && CLIENT_WG_PRIVATE=$(awk 'PrivateKey/{print $NF}' <<< "$CLIENT_WG_KEYPAIR") && CLIENT_WG_PUBLIC=$(awk 'PublicKey/{print $NF}' <<< "$CLIENT_WG_KEYPAIR")
+SERVER_WG_KEYPAIR=$(/sing-box/sing-box generate wg-keypair) && SERVER_WG_PRIVATE=$(awk 'PrivateKey/{print $NF}' <<< "$SERVER_WG_KEYPAIR") && SERVER_WG_PUBLIC=$(awk 'PublicKey/{print $NF}' <<< "$SERVER_WG_KEYPAIR")
+CLIENT_WG_KEYPAIR=$(/sing-box/sing-box generate wg-keypair) && CLIENT_WG_PRIVATE=$(awk 'PrivateKey/{print $NF}' <<< "$CLIENT_WG_KEYPAIR") && CLIENT_WG_PUBLIC=$(awk 'PublicKey/{print $NF}' <<< "$CLIENT_WG_KEYPAIR")
 
 python3 ./generator.py \
     --start-port "$PORT" \
