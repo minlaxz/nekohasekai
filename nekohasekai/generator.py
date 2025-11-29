@@ -319,7 +319,7 @@ def main():
                 WireguardEndpoint(
                     type="wireguard",
                     tag="wg-ep",
-                    system=True,
+                    system=False,
                     mtu=1280,
                     address=["10.10.10.0/24"],
                     private_key=wg_priv,

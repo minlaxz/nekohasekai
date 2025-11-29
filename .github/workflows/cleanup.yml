@@ -5,6 +5,10 @@ on:
   # Run every day at 6 past 9 UTC
     - cron: "6 9 * * *"
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Sing-box API Image", "Build Sing-box Server Image"]
+    types:
+      - completed
 
 jobs:
   run:
