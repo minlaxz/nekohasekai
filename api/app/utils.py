@@ -153,11 +153,15 @@ class Loader:
 
         self.remote_data["outbounds"] = outbounds
 
+    def __inject_log__(self) -> None:
+        self.remote_data["log"]["level"] = self.log_level
+
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         self.disabled: bool = disabled
         self.__inject_dns__()
         self.__inject_routes__()
         self.__inject_outbounds__()
+        self.__inject_log__()
         return self.remote_data
 
 
