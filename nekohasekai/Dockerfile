@@ -7,7 +7,7 @@ WORKDIR /sing-box
 
 COPY init.sh generator.py ./
 
-RUN apt update && apt install --no-install-recommends -y curl jq bash
+RUN apt-get update && apt-get install --no-install-recommends -y curl jq
 
 RUN pip3 install --upgrade pip wheel setuptools cryptography
 
