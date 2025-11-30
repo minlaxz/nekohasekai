@@ -209,9 +209,14 @@ class OutboundsConfig(ConfigWriter):
 
 
 @dataclass
-class LogConfig(ConfigWriter):
+class Log:
     level: Literal["trce", "debug", "info", "warn", "error"]
     timestamp: bool
+
+
+@dataclass
+class LogConfig(ConfigWriter):
+    log: Log
 
 
 logging.basicConfig(
@@ -276,7 +281,7 @@ def main() -> None:
     os.makedirs("public", exist_ok=True)
     os.makedirs("cache", exist_ok=True)
 
-    log_config = LogConfig(level="info", timestamp=True)
+    log_config = LogConfig(log=Log(level="info", timestamp=True))
     log_config.to_json(path="conf/00_log.json")
 
     outbounds_config = OutboundsConfig(

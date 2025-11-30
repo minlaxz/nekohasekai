@@ -18,8 +18,8 @@ RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/rele
   rm -rf /sing-box.tar.gz /var/cache/apk/* && \
   chmod +x /sing-box/init.sh
 
-# HEALTHCHECK --interval=10s --timeout=1s --start-period=5s --retries=3 \
-# CMD curl -f http://localhost:${START_PORT}/ui/ || exit 1
+HEALTHCHECK --interval=10s --timeout=1s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${START_PORT}/ui/ || exit 1
 
 # Generate configs at container runtime
 ENTRYPOINT ["./init.sh"]
