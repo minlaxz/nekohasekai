@@ -7,7 +7,7 @@ WORKDIR /sing-box
 
 COPY init.sh generator.py ./
 
-RUN apk update && apk add --no-cache bash jq curl
+RUN apt update && apt install --no-install-recommends -y curl jq bash
 
 RUN pip3 install --upgrade pip wheel setuptools cryptography
 
