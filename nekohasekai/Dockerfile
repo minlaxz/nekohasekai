@@ -7,7 +7,9 @@ WORKDIR /sing-box
 
 COPY init.sh generator.py ./
 
-RUN apk update && apk add --no-cache bash jq curl python3 py3-pip cryptography
+RUN apk update && apk add --no-cache bash jq curl python3 py3-pip
+
+RUN pip3 install cryptography
 
 RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .name) && \
   curl -LJ "https://github.com/SagerNet/sing-box/releases/download/v${ONLINE_VERSION}/sing-box-${ONLINE_VERSION}-linux-${ARCH}.tar.gz" \
