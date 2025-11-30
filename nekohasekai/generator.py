@@ -361,10 +361,10 @@ def main() -> None:
             wg_keys = keys()
             keys_dict[f"wg_priv_{i}"] = wg_keys["private"]
             keys_dict[f"wg_pub_{i}"] = wg_keys["public"]
-            # 10.10.10.1 is static ip for server, look at docker-compose.yml wg subnet
+            # 10.10.10.2 is static ip for server, look at docker-compose.yml wg subnet
             # .0 is network address, identify the subnet itself not a host
             # .255 is broadcast address (for a /24 subnet)
-            keys_dict[f"wg_address_{i}"] = f"10.10.10.{i + 1}/32"
+            keys_dict[f"wg_address_{i}"] = f"10.10.10.{i + 2}/32"
 
         peers: List[WireguardPeer] = [
             WireguardPeer(
