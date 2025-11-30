@@ -231,17 +231,13 @@
             ]
           },
           {
-            "domain_keyword": [
-              "minlaxz"
-            ]
-          },
-          {
-            "domain_suffix": [
-              ".engineerforce.io",
-              ".dify.io",
-              ".lightsail.aws.amazon.com",
-              ".nextdns.io",
-              ".stackoverflow.com"
+            "domain": [
+              "engineerforce.io",
+              "dify.io",
+              "lightsail.aws.amazon.com",
+              "my.nextdns.io",
+              "api.nextdns.io",
+              "stackoverflow.com"
             ]
           }
         ],

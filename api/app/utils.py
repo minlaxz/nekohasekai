@@ -110,6 +110,18 @@ class Loader:
             # Skip others
             pass
 
+        if self.wg:
+            # fmt: off
+            self.remote_data["route"]["rules"].append(
+                {
+                    "type": "logical",
+                    "mode": "or",
+                    "rules": [{"ip_cidr": ["10.10.10.0/24"]}],
+                    "action": "route",
+                    "outbound": "wg-ep-sb"
+                }
+            )
+
         # Client provided `route_detour`
         for i in self.remote_data["route"]["rule_set"]:
             i["download_detour"] = self.route_detour
@@ -170,7 +182,9 @@ class Loader:
             endpoint["private_key"] = wg_keys[f"wg_priv_{self.wg}"]
             for peer in peers:
                 peer["address"] = wg_keys["wg_address_0"]
-                peer["port"] = START_PORT + 2 #TODO: make it insync with generator config.
+                peer["port"] = (
+                    START_PORT + 2
+                )  # TODO: make it insync with generator config.
                 peer["public_key"] = wg_keys["wg_pub_0"]
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
