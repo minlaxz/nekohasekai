@@ -162,7 +162,7 @@ class Loader:
         if not self.wg:
             del self.remote_data["endpoints"]
         else:
-            wg_keys = self.local_data.get("outbounds", {}).get("keys", {})
+            wg_keys = self.local_data["outbounds"][2]["keys"]
             endpoint = self.remote_data["endpoints"][0]
             peers = endpoint.get("peers", [])
 
