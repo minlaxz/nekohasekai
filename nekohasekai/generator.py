@@ -264,7 +264,7 @@ def main() -> None:
 
     is_ss_enabled = args.shadowsocks
     wg_pc = int(args.wg_pc)
-    is_wg_enabled = wg_pc > 0 <= 254
+    is_wg_enabled = 0 < wg_pc < 254
     ss_listen_port = start_port + 1
     wg_listen_port = start_port + 2
 
@@ -355,11 +355,16 @@ def main() -> None:
         keys_dict["wg_pub_0"] = wg_keys["public"]
         keys_dict["wg_address_0"] = server_ip
 
+        # peers start from 1 to wg peer count
+        # for example, wg_pc = 3 => peers: wg1, wg2, wg3
         for i in range(1, wg_pc + 1):
             wg_keys = keys()
             keys_dict[f"wg_priv_{i}"] = wg_keys["private"]
             keys_dict[f"wg_pub_{i}"] = wg_keys["public"]
-            keys_dict[f"wg_address_{i}"] = f"10.10.10.{i}/32"
+            # 10.10.10.1 is static ip for server, look at docker-compose.yml wg subnet
+            # .0 is network address, identify the subnet itself not a host
+            # .255 is broadcast address (for a /24 subnet)
+            keys_dict[f"wg_address_{i}"] = f"10.10.10.{i + 1}/32"
 
         peers: List[WireguardPeer] = [
             WireguardPeer(

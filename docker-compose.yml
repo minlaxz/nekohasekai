@@ -13,7 +13,18 @@ services:
       - public:/sing-box/public
       - ./cache:/sing-box/cache
     networks:
-      - nekohasekai-net
+      nekohasekai-net:
+      wg:
+        ipv4_address: 10.10.10.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv6.conf.default.forwarding=1
 
   nekohasekai-api:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
@@ -55,3 +66,10 @@ networks:
     driver: bridge
   caddy-net:
     external: true
+  wg:
+    driver: bridge
+    enable_ipv6: false
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.10.0/24
