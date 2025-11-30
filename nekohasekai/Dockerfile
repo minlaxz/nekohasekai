@@ -1,4 +1,4 @@
-FROM alpine:latest AS singbox
+FROM python:3.12-slim AS singbox
 ARG TARGETARCH
 ARG START_PORT
 ENV ARCH=$TARGETARCH
@@ -7,9 +7,9 @@ WORKDIR /sing-box
 
 COPY init.sh generator.py ./
 
-RUN apk update && apk add --no-cache bash jq curl python3 py3-pip
+RUN apk update && apk add --no-cache bash jq curl
 
-RUN pip3 install cryptography
+RUN pip3 install --upgrade pip wheel setuptools cryptography
 
 RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .name) && \
   curl -LJ "https://github.com/SagerNet/sing-box/releases/download/v${ONLINE_VERSION}/sing-box-${ONLINE_VERSION}-linux-${ARCH}.tar.gz" \
