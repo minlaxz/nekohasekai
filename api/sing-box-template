@@ -1,4 +1,33 @@
 {
+  "endpoints": [
+    {
+      "type": "wireguard",
+      "tag": "wg-ep-sb",
+      "system": false,
+      "name": "",
+      "mtu": 1280,
+      "address": [],
+      "private_key": "",
+      "detour": "shadowsocks",
+      "peers": [
+        {
+          "address": "",
+          "port": 0,
+          "public_key": "",
+          "pre_shared_key": "",
+          "allowed_ips": [
+            "0.0.0.0/0"
+          ],
+          "persistent_keepalive_interval": 25,
+          "reserved": [
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ],
   "dns": {
     "servers": [
       {

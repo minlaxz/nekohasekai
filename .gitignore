@@ -186,3 +186,6 @@ git-ignored
 **/data
 data.json
 outs.json
+cache
+conf
+public

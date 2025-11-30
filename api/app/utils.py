@@ -27,6 +27,7 @@ class Loader:
         route_detour: str,
         username: str,
         psk: str,
+        wg: int,
         please: bool = False,
     ) -> None:
         self.local_path = LOCAL_JSON_PATH
@@ -42,6 +43,7 @@ class Loader:
         self.route_detour = route_detour
         self.user_name = username
         self.user_psk = psk
+        self.wg = wg
         self.please = please
         try:
             with open(self.local_path, "r", encoding="utf-8") as file:
@@ -156,12 +158,28 @@ class Loader:
     def __inject_log__(self) -> None:
         self.remote_data["log"]["level"] = self.log_level
 
+    def __inject_wg__(self) -> None:
+        if not self.wg:
+            del self.remote_data["endpoints"]
+        else:
+            wg_keys = self.local_data.get("wg_keys", {})
+            endpoint = self.remote_data["endpoints"][0]
+            peers = endpoint.get("peers", [])
+
+            endpoint["address"] = [wg_keys[f"wg_address_{self.wg}"]]
+            endpoint["private_key"] = wg_keys[f"wg_priv_{self.wg}"]
+            for peer in peers:
+                peer["address"] = wg_keys["wg_address_0"]
+                peer["port"] = START_PORT + 2 #TODO: make it insync with generator config.
+                peer["public_key"] = wg_keys["wg_pub_0"]
+
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         self.disabled: bool = disabled
         self.__inject_dns__()
         self.__inject_routes__()
         self.__inject_outbounds__()
         self.__inject_log__()
+        self.__inject_wg__()
         return self.remote_data
 
 

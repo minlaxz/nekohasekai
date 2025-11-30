@@ -3,6 +3,7 @@ services:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai
     pull_policy: always
     restart: unless-stopped
+    command: ["./sing-box", "run", "-C", "/sing-box/conf"]
     ports:
       - "8840-8850:8840-8850/tcp"
       - "8840-8850:8840-8850/udp"

@@ -1,12 +1,17 @@
 from typing import Any, List, Literal, Dict
-from dataclasses import dataclass, asdict, is_dataclass
+from dataclasses import dataclass, asdict, is_dataclass, field
+
 
 import argparse
+import base64
 import logging
 import json
 import os
 import secrets
 import urllib.request
+
+from cryptography.hazmat.primitives.asymmetric import x25519
+from cryptography.hazmat.primitives import serialization
 
 
 class ConfigWriter:
@@ -193,8 +198,20 @@ class InboundsConfig(ConfigWriter):
 
 
 @dataclass
+class WireguardKeys:
+    tag: str = ""
+    keys: Dict[str, str] = field(default_factory=dict[str, str])
+
+
+@dataclass
 class OutboundsConfig(ConfigWriter):
-    outbounds: List[OutboundShadowsocks | OutboundDirect | SSMService]
+    outbounds: List[OutboundShadowsocks | OutboundDirect | SSMService | WireguardKeys]
+
+
+@dataclass
+class LogConfig(ConfigWriter):
+    level: Literal["trce", "debug", "info", "warn", "error"]
+    timestamp: bool
 
 
 logging.basicConfig(
@@ -204,7 +221,27 @@ logging.basicConfig(
 )
 
 
-def main():
+def keys() -> Dict[str, str]:
+    private_key = x25519.X25519PrivateKey.generate()
+    private_key_bytes = private_key.private_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PrivateFormat.Raw,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    public_key = private_key.public_key()
+    public_key_bytes = public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    private_key_b64 = base64.b64encode(private_key_bytes).decode()
+    public_key_b64 = base64.b64encode(public_key_bytes).decode()
+    return {
+        "private": private_key_b64,
+        "public": public_key_b64,
+    }
+
+
+def main() -> None:
     resp = json.load(urllib.request.urlopen("https://myip.wtf/json"))
     server_ip = resp.get("YourFuckingIPAddress")
     domain_strategy = "ipv4_only" if "." in server_ip else "prefer_ipv4"
@@ -212,26 +249,17 @@ def main():
     parser = argparse.ArgumentParser(description="Sing-Box Config Generator Parser")
     parser.add_argument("--start-port", default=0, help="Starting port")
     parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
-    # Not need after testing
-    parser.add_argument("--wg-priv", default="", help="Private Key")
-    parser.add_argument("--wg-pub", default="", help="Public Key")
-    # Not need after testing
-    parser.add_argument("--wg-client-priv", default="", help="Client Private Key")
-    parser.add_argument("--wg-client-pub", default="", help="Client Public Key")
+    parser.add_argument("--wg-pc", default=0, help="Wireguard Peer Count")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     args = parser.parse_args()
 
     start_port = int(args.start_port)
+    ssm_listen_port = start_port + 10
     verbose = args.verbose
 
     is_ss_enabled = args.shadowsocks
-    wg_priv = args.wg_priv
-    wg_pub = args.wg_pub
-    wg_client_pub = args.wg_client_pub
-    wg_client_priv = args.wg_client_priv
-    is_wg_enabled = all([wg_priv, wg_pub, wg_client_priv, wg_client_pub])
-
-    ssm_listen_port = start_port + 10
+    wg_pc = int(args.wg_pc)
+    is_wg_enabled = wg_pc > 0 <= 254
     ss_listen_port = start_port + 1
     wg_listen_port = start_port + 2
 
@@ -242,13 +270,14 @@ def main():
         logging.info(f"Domain Strategy: {domain_strategy}")
         logging.info(f"Shadowsocks Enabled: {is_ss_enabled}")
         logging.info(f"WG Enabled: {is_wg_enabled}")
-        logging.info(f"Server Pub Key: {wg_pub}")
-        logging.info(f"Client Priv Key: {wg_client_priv}")
 
     logging.info("Generating Sing-Box configuration...")
     os.makedirs("conf", exist_ok=True)
     os.makedirs("public", exist_ok=True)
     os.makedirs("cache", exist_ok=True)
+
+    log_config = LogConfig(level="info", timestamp=True)
+    log_config.to_json(path="conf/00_log.json")
 
     outbounds_config = OutboundsConfig(
         outbounds=[
@@ -313,7 +342,28 @@ def main():
         )
         inbounds_config.to_json(path="conf/05_inbounds.json")
 
+    keys_dict: Dict[str, Any] = {}
     if is_wg_enabled:
+        # Interface
+        wg_keys = keys()
+        keys_dict["wg_priv_0"] = wg_keys["private"]
+        keys_dict["wg_pub_0"] = wg_keys["public"]
+        keys_dict["wg_address_0"] = server_ip
+
+        for i in range(1, wg_pc + 1):
+            wg_keys = keys()
+            keys_dict[f"wg_priv_{i}"] = wg_keys["private"]
+            keys_dict[f"wg_pub_{i}"] = wg_keys["public"]
+            keys_dict[f"wg_address_{i}"] = f"10.10.10.{i}/32"
+
+        peers: List[WireguardPeer] = [
+            WireguardPeer(
+                public_key=keys_dict.get(f"wg_pub_{i}", ""),
+                allowed_ips=keys_dict.get(f"wg_address_{i}", ""),
+            )
+            for i in range(1, wg_pc + 1)
+        ]
+
         wg_endpoint_config = EndpointConfig(
             endpoints=[
                 WireguardEndpoint(
@@ -322,14 +372,9 @@ def main():
                     system=False,
                     mtu=1280,
                     address=["10.10.10.0/24"],
-                    private_key=wg_priv,
+                    private_key=keys_dict["wg_priv_0"],
                     listen_port=wg_listen_port,
-                    peers=[
-                        WireguardPeer(
-                            public_key=wg_client_pub,
-                            allowed_ips=["10.10.10.2/32"],
-                        )
-                    ],
+                    peers=peers,
                 )
             ]
         )
@@ -369,6 +414,7 @@ def main():
                 cache_path="cache/ssm-cache.json",
                 servers={"/": "shadowsocks"},
             ),
+            WireguardKeys(tag="wg-keys", keys=keys_dict),
         ]
     )
     client_outbounds_config.to_json(path="public/outbounds.json")

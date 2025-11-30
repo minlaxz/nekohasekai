@@ -36,7 +36,9 @@ origins = [
     "http://localhost",
     "http://localhost:8080",
 ]
-origins.append(os.getenv("CONFIG_SERVER", "www.gstatic.com"))
+config_server = os.getenv("CONFIG_SERVER")
+if config_server:
+    origins.append(config_server)
 
 app.add_middleware(
     CORSMiddleware,
@@ -106,6 +108,7 @@ def read_config(
     ll: Union[str, None] = "warn",
     j: Union[str, None] = None,
     k: Union[str, None] = None,
+    wg: Union[int, None] = 0,
     please: bool = False,
 ) -> dict[str, Any]:
     if j is None or k is None:
@@ -127,6 +130,7 @@ def read_config(
         route_detour=rd,
         username=j,
         psk=k,
+        wg=wg,
         please=please,
     )
 

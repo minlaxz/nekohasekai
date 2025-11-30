@@ -1,12 +1,13 @@
 FROM alpine:latest AS singbox
 ARG TARGETARCH
+ARG START_PORT
 ENV ARCH=$TARGETARCH
 
 WORKDIR /sing-box
 
 COPY init.sh generator.py ./
 
-RUN apk update && apk add --no-cache bash jq curl python3 py3-pip
+RUN apk update && apk add --no-cache bash jq curl python3 py3-pip cryptography
 
 RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .name) && \
   curl -LJ "https://github.com/SagerNet/sing-box/releases/download/v${ONLINE_VERSION}/sing-box-${ONLINE_VERSION}-linux-${ARCH}.tar.gz" \
@@ -15,5 +16,8 @@ RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/rele
   rm -rf /sing-box.tar.gz /var/cache/apk/* && \
   chmod +x /sing-box/init.sh
 
+  HEALTHCHECK --interval=10s --timeout=1s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${START_PORT}/ui/ || exit 1
+
 # Generate configs at container runtime
-CMD ["./init.sh"]
+ENTRYPOINT ["./init.sh"]
