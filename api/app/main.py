@@ -104,7 +104,7 @@ def read_config(
     dd: Union[str, None] = "shadowsocks",
     df: Union[str, None] = "dns-remote",
     dr: Union[str, None] = "1.1.1.1",
-    rd: Union[str, None] = "direct",
+    rd: Union[str, None] = "shadowsocks",
     ll: Union[str, None] = "warn",
     j: Union[str, None] = None,
     k: Union[str, None] = None,
