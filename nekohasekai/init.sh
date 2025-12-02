@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 PORT=${START_PORT:-1080}
-SKIP_INIT=${SKIP_INIT:="false"}
-WG_COUNT=${WG_COUNT:-5}
+SKIP_INIT=${SKIP_INIT:-"false"}
+WG_COUNT=${WG_COUNT:-0}
 
 if [ "$SKIP_INIT" != "true" ]; then
 python3 ./generator.py \

@@ -256,6 +256,7 @@ def main() -> None:
     parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
     parser.add_argument("--wg-pc", default=0, help="Wireguard Peer Count")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
+    parser.add_argument("--log-level", default="info", help="Log Level")
     args = parser.parse_args()
 
     start_port = int(args.start_port)
@@ -281,7 +282,7 @@ def main() -> None:
     os.makedirs("public", exist_ok=True)
     os.makedirs("cache", exist_ok=True)
 
-    log_config = LogConfig(log=Log(level="info", timestamp=True))
+    log_config = LogConfig(log=Log(level=args.log_level, timestamp=True))
     log_config.to_json(path="conf/00_log.json")
 
     outbounds_config = OutboundsConfig(
