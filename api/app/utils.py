@@ -25,6 +25,7 @@ class Loader:
         dns_resolver: str,
         log_level: str,
         route_detour: str,
+        route_final: str,
         username: str,
         psk: str,
         wg: int,
@@ -41,6 +42,7 @@ class Loader:
         self.dns_resolver = dns_resolver
         self.log_level = log_level
         self.route_detour = route_detour
+        self.route_final = route_final
         self.user_name = username
         self.user_psk = psk
         self.wg = wg
@@ -125,6 +127,9 @@ class Loader:
         # Client provided `route_detour`
         for i in self.remote_data["route"]["rule_set"]:
             i["download_detour"] = self.route_detour
+
+        # Expensive operation: Client provided `route_final` as final outbound
+        self.remote_data["route"]["final"] = self.route_final
 
     def __inject_outbounds__(self) -> None:
         # fmt: off
