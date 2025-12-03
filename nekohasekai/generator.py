@@ -174,6 +174,7 @@ class WireguardPeer:
 class WireguardEndpoint:
     type: str
     tag: str
+    name: str
     system: bool
     mtu: int
     address: List[str]
@@ -253,6 +254,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Sing-Box Config Generator Parser")
     parser.add_argument("--start-port", default=0, help="Starting port")
+    parser.add_argument("--end-port", default=0, help="Ending port")
     parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
     parser.add_argument("--wg-pc", default=0, help="Wireguard Peer Count")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
@@ -260,7 +262,8 @@ def main() -> None:
     args = parser.parse_args()
 
     start_port = int(args.start_port)
-    ssm_listen_port = start_port + 10
+    end_port = int(args.end_port)
+    ssm_listen_port = end_port or start_port + 10
     verbose = args.verbose
 
     is_ss_enabled = args.shadowsocks
@@ -354,7 +357,7 @@ def main() -> None:
         wg_keys = keys()
         keys_dict["wg_priv_0"] = wg_keys["private"]
         keys_dict["wg_pub_0"] = wg_keys["public"]
-        keys_dict["wg_address_0"] = server_ip
+        keys_dict["wg_address_0"] = "10.10.10.1/24"
 
         # peers start from 1 to wg peer count
         # for example, wg_pc = 3 => peers: wg1, wg2, wg3
@@ -365,7 +368,7 @@ def main() -> None:
             # 10.10.10.2 is static ip for server, look at docker-compose.yml wg subnet
             # .0 is network address, identify the subnet itself not a host
             # .255 is broadcast address (for a /24 subnet)
-            keys_dict[f"wg_address_{i}"] = f"10.10.10.{i + 2}/32"
+            keys_dict[f"wg_address_{i}"] = f"10.10.10.{i + 1}/32"
 
         peers: List[WireguardPeer] = [
             WireguardPeer(
@@ -380,9 +383,10 @@ def main() -> None:
                 WireguardEndpoint(
                     type="wireguard",
                     tag="wg-ep",
+                    name="wg0",
                     system=False,
                     mtu=1280,
-                    address=["10.10.10.0/24"],
+                    address=[keys_dict["wg_address_0"]],
                     private_key=keys_dict["wg_priv_0"],
                     listen_port=wg_listen_port,
                     peers=peers,

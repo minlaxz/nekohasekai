@@ -4,14 +4,17 @@ services:
     pull_policy: always
     restart: unless-stopped
     command: ["./sing-box", "run", "-C", "/sing-box/conf"]
-    env_file:
-      - .env
+    environment:
+      - START_PORT=${START_PORT}
+      - END_PORT=${END_PORT}
+      - SKIP_INIT=${SKIP_INIT}
+      - WG_COUNT=${WG_COUNT}
     volumes:
       - public:/sing-box/public
       - ./cache:/sing-box/cache
     ports:
-      - "8840-8850:8840-8850/tcp"
-      - "8840-8850:8840-8850/udp"
+      - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/tcp"
+      - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"
     networks:
       - nekohasekai-net
 
@@ -21,8 +24,16 @@ services:
     restart: unless-stopped
     depends_on:
       - nekohasekai
-    env_file:
-      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - LOCAL_JSON_PATH=/public/outbounds.json
+      - REMOTE_JSON_URL=https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template
+      - SSM_SERVER=nekohasekai
+      - DNS_PATH=/
+      - CONFIG_SERVER=${CONFIG_SERVER}
+      - START_PORT=${START_PORT}
+      - END_PORT=${END_PORT}
     volumes:
       - public:/public:ro
     expose:
@@ -31,7 +42,7 @@ services:
       - caddy-net
       - nekohasekai-net
     labels:
-      caddy: sb.example.com
+      caddy: ${CONFIG_SERVER}
       caddy.reverse_proxy: "{{upstreams 8000}}"
       # -------- BOT RATE LIMITING --------
       # caddy.@bots.header: "User-Agent *bot*"
@@ -52,13 +63,17 @@ services:
     restart: unless-stopped
     depends_on:
       - nekohasekai-api
-    env_file:
-      - .env
+    environment:
+      - WG_HOST=${WG_HOST}
+      - WG_PORT=${WG_PORT}
+      - INSECURE=false
     volumes:
       - /lib/modules:/lib/modules:ro
       - ./etc_wireguard:/etc/wireguard
     ports:
-      - "51820:51820/udp"
+      - "${WG_PORT}:${WG_PORT}/udp"
+    expose:
+      - "51821"
     networks:
       caddy-net:
       wg:
@@ -69,11 +84,11 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.disable_ipv6=0
-      - net.ipv6.conf.all.forwarding=1
-      - net.ipv6.conf.default.forwarding=1
+      - net.ipv6.conf.all.disable_ipv6=1
+      - net.ipv6.conf.all.forwarding=0
+      - net.ipv6.conf.default.forwarding=0
     labels:
-      caddy: wgeasy.example.com
+      caddy: ${WG_HOST}
       caddy.reverse_proxy: "{{upstreams 51821}}"
 
 volumes:

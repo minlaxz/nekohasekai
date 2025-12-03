@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
-PORT=${START_PORT:-1080}
+START_PORT=${START_PORT:-8040}
+END_PORT=${END_PORT:-8050}
 SKIP_INIT=${SKIP_INIT:-"false"}
 WG_COUNT=${WG_COUNT:-0}
 
 if [ "$SKIP_INIT" != "true" ]; then
 python3 ./generator.py \
-    --start-port "$PORT" \
+    --start-port "$START_PORT" \
+    --end-port "$END_PORT" \
     --shadowsocks \
     --verbose \
     --wg-pc "$WG_COUNT"
