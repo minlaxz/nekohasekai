@@ -11,7 +11,7 @@ START_PORT: int = int(os.getenv("START_PORT", "1080"))
 SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
 SSM_PORT: int = START_PORT + 10
 SSM_UPSTREAM = f"http://{SSM_SERVER}:{SSM_PORT}"
-DNS_PATH: str = os.getenv("DNS_PATH", "")
+DNS_PATH: str = os.getenv("DNS_PATH", "/")
 
 
 class Loader:
@@ -67,7 +67,7 @@ class Loader:
     def __inject_dns__(self) -> None:
         # client defined dns_path otherwise server defined dns_path
         dns_path = (
-            self.dns_path if self.dns_path != "/" else DNS_PATH + f"/{self.user_name}"
+            self.dns_path if self.dns_path != "/" else DNS_PATH + f"{self.user_name}"
         )
         self.remote_data["dns"]["final"] = self.dns_final
         if self.platform == "i" and self.version == 11:
@@ -165,7 +165,15 @@ class Loader:
             "type": "urltest",
             "tag": "Ruled",
             "outbounds": outbound_names[1:],  # exclude `direct`
-            "url": f"https://{self.config_server}/generate_204?j={self.user_name}&k={self.user_psk}",
+            "url": f"https://{self.config_server}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
+            "interval": "30s",
+            "tolerance": 100
+        })
+        outbounds.append({
+            "type": "urltest",
+            "tag": "Ruled-Expensive",
+            "outbounds": outbound_names[1:],  # exclude `direct`
+            "url": f"https://{self.config_server}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=true",
             "interval": "30s",
             "tolerance": 100
         })
@@ -187,9 +195,7 @@ class Loader:
             endpoint["private_key"] = wg_keys[f"wg_priv_{self.wg}"]
             for peer in peers:
                 peer["address"] = wg_keys["wg_address_0"]
-                peer["port"] = (
-                    START_PORT + 2
-                )  # TODO: make it insync with generator config.
+                peer["port"] = START_PORT + 2
                 peer["public_key"] = wg_keys["wg_pub_0"]
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:

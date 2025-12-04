@@ -138,6 +138,6 @@ async def create_user(
             r.raise_for_status()
         except httpx.HTTPError as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
-    url = f"https://{CONFIG_SERVER}?p={platform}&v={version}&j={username}&k={uPSK}"
+    url = f"https://{CONFIG_SERVER}/c?p={platform}&v={version}&j={username}&k={uPSK}"
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse("form.html", {"request": request, "result": url})

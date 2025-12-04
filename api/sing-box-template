@@ -55,12 +55,8 @@
         "server": "dns-remote"
       },
       {
-        "clash_mode": "Plain",
+        "clash_mode": "Expensive",
         "server": "dns-resolver"
-      },
-      {
-        "clash_mode": "Local",
-        "server": "dns-local"
       }
     ],
     "independent_cache": false,
@@ -213,35 +209,48 @@
         "action": "reject",
         "method": "drop"
       },
-      {
+            {
         "type": "logical",
-        "mode": "or",
+        "mode": "and",
         "rules": [
           {
-            "rule_set": [
-              "geosite-meta",
-              "geosite-twitter",
-              "geosite-github",
-              "geosite-oonimm",
-              "geoip-oonimm",
-              "geosite-cloudflare",
-              "geoip-cloudflare",
-              "asn-as8075",
-              "asn-as15169"
-            ]
+            "clash_mode": "Novice"
           },
           {
-            "domain": [
-              "engineerforce.io",
-              "dify.io",
-              "lightsail.aws.amazon.com",
-              "my.nextdns.io",
-              "api.nextdns.io",
-              "stackoverflow.com"
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "rule_set": [
+                  "geosite-meta",
+                  "geosite-twitter",
+                  "geosite-github",
+                  "geosite-oonimm",
+                  "geoip-oonimm",
+                  "geosite-cloudflare",
+                  "geoip-cloudflare",
+                  "asn-as8075",
+                  "asn-as15169"
+                ]
+              },
+              {
+                "domain_suffix": [
+                  "engineerforce.io",
+                  "dify.io",
+                  "lightsail.aws.amazon.com",
+                  "my.nextdns.io",
+                  "api.nextdns.io",
+                  "stackoverflow.com"
+                ]
+              }
             ]
           }
         ],
         "outbound": "Ruled"
+      },
+      {
+        "clash_mode": "Expensive",
+        "outbound": "Ruled-Expensive"
       }
     ],
     "default_domain_resolver": {

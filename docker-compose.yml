@@ -10,8 +10,9 @@ services:
       - SKIP_INIT=${SKIP_INIT}
       - WG_COUNT=${WG_COUNT}
     volumes:
-      - public:/sing-box/public
       - ./cache:/sing-box/cache
+      - ./public:/sing-box/public
+      - ./conf:/sing-box/conf
     ports:
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/tcp"
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"
@@ -30,12 +31,12 @@ services:
       - LOCAL_JSON_PATH=/public/outbounds.json
       - REMOTE_JSON_URL=https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template
       - SSM_SERVER=nekohasekai
-      - DNS_PATH=/
+      - DNS_PATH=/ # or /your-nexrdns-profile/
       - CONFIG_SERVER=${CONFIG_SERVER}
       - START_PORT=${START_PORT}
       - END_PORT=${END_PORT}
     volumes:
-      - public:/public:ro
+      - ./public:/public:ro
     expose:
       - "8000"
     networks:
@@ -90,10 +91,6 @@ services:
     labels:
       caddy: ${WG_HOST}
       caddy.reverse_proxy: "{{upstreams 51821}}"
-
-volumes:
-  public:
-  data:
 
 networks:
   nekohasekai-net:
