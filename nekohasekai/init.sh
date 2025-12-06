@@ -6,11 +6,14 @@ AUTO_REALITY_PUBLIC=$(awk '/PublicKey/{print $NF}' <<< "$REALITY_KEYPAIR")
 REALITY_PRIVATE=${CUSTOM_REALITY_PRIVATE:-$AUTO_REALITY_PRIVATE}
 REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-$AUTO_REALITY_PUBLIC}
 
-HANDSHAKE_DOMAIN=${HANDSHAKE_DOMAIN:-"addons.mozilla.org"}
+HANDSHAKE_DOMAIN=${HANDSHAKE_DOMAIN:-"mozilla.org"}
 START_PORT=${START_PORT:-8040}
 END_PORT=${END_PORT:-8050}
 SKIP_INIT=${SKIP_INIT:-"false"}
 WG_COUNT=${WG_COUNT:-0}
+
+openssl ecparam -genkey -name prime256v1 -out /sing-box/certs/private.key && \
+  openssl req -new -x509 -days 36500 -key /sing-box/certs/private.key -out /sing-box/certs/cert.pem -subj "/CN=${HANDSHAKE_DOMAIN}"
 
 if [ "$SKIP_INIT" != "true" ]; then
 python3 ./generator.py \

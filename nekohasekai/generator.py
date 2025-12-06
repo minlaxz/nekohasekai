@@ -164,8 +164,13 @@ class Tls(TypedDict):
     server_name: str
 
 
-class ServerTLS(Tls):
+class ServerRealityTLS(Tls):
     reality: ServerReality
+
+
+class ServerCertificateTLS(Tls):
+    key_path: str
+    certificate_path: str
 
 
 class Utls(TypedDict):
@@ -179,9 +184,14 @@ class ClientReality(TypedDict):
     short_id: str
 
 
-class ClientTLS(Tls):
+class ClientTLSReality(Tls):
     utls: Utls
     reality: ClientReality
+
+
+class ClientTLSInsecure(Tls):
+    utls: Utls
+    insecure: bool
 
 
 class Shadowsocks(TypedDict):
@@ -207,7 +217,7 @@ class InboundShadowsocks(CommonFields, ListenFields, Shadowsocks):
 
 class InboundTrojan(CommonFields, ListenFields):
     users: List[TrojanUser]
-    tls: ServerTLS
+    tls: ServerCertificateTLS | ServerRealityTLS
     multiplex: InboundMultiplex | Dict[str, Any]
 
 
@@ -223,7 +233,7 @@ class OutboundShadowsocks(CommonFields, DailFields, Shadowsocks):
 
 class OutboundTrojan(CommonFields, DailFields):
     password: str
-    tls: ClientTLS
+    tls: ClientTLSInsecure
 
 
 # --- Shadowsocks Config End ---
@@ -453,19 +463,11 @@ def main() -> None:
                     password=secrets.token_urlsafe(12) + "==",
                 ),
             ],
-            tls=ServerTLS(
+            tls=ServerCertificateTLS(
                 enabled=True,
                 server_name=args.handshake_domain,
-                reality=ServerReality(
-                    enabled=False,
-                    private_key=args.reality_privatekey,
-                    # TODO: make this random or configurable
-                    short_id=[],
-                    handshake=Handshake(
-                        server=args.handshake_domain,
-                        server_port=443,
-                    ),
-                ),
+                key_path="/sing-box/certs/private.key",
+                certificate_path="/sing-box/certs/cert.pem",
             ),
             multiplex=InboundMultiplex(
                 enabled=True,
@@ -539,18 +541,14 @@ def main() -> None:
                 server_port=trojan_listen_port,
                 domain_strategy=domain_strategy,
                 password="",
-                tls=ClientTLS(
+                tls=ClientTLSInsecure(
                     enabled=True,
                     server_name=args.handshake_domain,
                     utls=Utls(
                         enabled=True,
                         fingerprint="chrome",
                     ),
-                    reality=ClientReality(
-                        enabled=False,
-                        public_key=args.reality_publickey,
-                        short_id="",
-                    ),
+                    insecure=True,
                 ),
             ),
             SSMService(
