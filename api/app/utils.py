@@ -139,16 +139,11 @@ class Loader:
         outbound_names = ["direct"]
         for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
-                # i["server_port"] uses pre-defined, common password (unmanaged)
-                i["server_port"] = i["server_port"]
-                i["password"] = "invalid_psk_overwritten" if any([self.disabled, self.please]) else self.user_psk
-                # Only shadowsocks outbound is added.
-                outbounds.append(i)
-                outbound_names.append(i.get("tag", "unknown"))
+                i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
 
             # All other outbounds are added as-is.
-            # outbounds.append(i)
-            # outbound_names.append(i.get("tag", "unknown"))
+            outbounds.append(i)
+            outbound_names.append(i.get("tag", "unknown"))
 
         # Pullup outbounds
         outbounds.append({
@@ -183,13 +178,14 @@ class Loader:
     def __inject_log__(self) -> None:
         self.remote_data["log"]["level"] = self.log_level
 
-    def __inject_wg__(self) -> None:
+    def __inject_endpoints__(self) -> None:
         if not self.wg:
             del self.remote_data["endpoints"]
         else:
-            wg_keys = self.local_data["outbounds"][2]["keys"]
             endpoint = self.remote_data["endpoints"][0]
             peers = endpoint.get("peers", [])
+            # Keys are always stored in the last outbound
+            wg_keys = self.local_data["outbounds"][-1]["keys"]
 
             endpoint["address"] = [wg_keys[f"wg_address_{self.wg}"]]
             endpoint["private_key"] = wg_keys[f"wg_priv_{self.wg}"]
@@ -201,10 +197,10 @@ class Loader:
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         self.disabled: bool = disabled
         self.__inject_dns__()
+        self.__inject_log__()
         self.__inject_routes__()
         self.__inject_outbounds__()
-        self.__inject_log__()
-        self.__inject_wg__()
+        self.__inject_endpoints__()
         return self.remote_data
 
 
@@ -226,10 +222,10 @@ class Checker(Loader):
             return False
 
     def is_quota_limited(self):
-        return (
+        return self.please or (
             self.data.get("downlinkBytes") + self.data.get("uplinkBytes")
             > 10_000_000_000
-        )  # 10 GB Limits
+        )  # 10 GB Limits or not pleasing :3
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         return super().unwarp(disabled=self.is_quota_limited())

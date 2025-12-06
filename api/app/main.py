@@ -82,6 +82,7 @@ def health_check(
     request: Request,
     j: Union[str, None] = None,
     k: Union[str, None] = None,
+    expensive: Union[bool, None] = False,
 ) -> Response:
     if j is None or k is None:
         raise RequestValidationError([
@@ -92,7 +93,11 @@ def health_check(
             }
         ])
     user_id, _ = j, k
-    print(f"Health check for user: {user_id}")
+    print(f"""
+        Health check for user: {user_id}
+        Mode: {'expensive' if expensive else 'normal'}
+    """
+    )
     return Response(status_code=204)
 
 
@@ -129,7 +134,7 @@ def read_config(
         dns_resolver=dr,
         log_level=ll,
         route_detour=rd,
-        route_final=rf, # expensive operation
+        route_final=rf,  # expensive operation
         username=j,
         psk=k,
         wg=wg,

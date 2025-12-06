@@ -12,8 +12,8 @@ END_PORT=${END_PORT:-8050}
 SKIP_INIT=${SKIP_INIT:-"false"}
 WG_COUNT=${WG_COUNT:-0}
 
-openssl ecparam -genkey -name prime256v1 -out /sing-box/certs/private.key && \
-  openssl req -new -x509 -days 36500 -key /sing-box/certs/private.key -out /sing-box/certs/cert.pem -subj "/CN=${HANDSHAKE_DOMAIN}"
+openssl ecparam -genkey -name prime256v1 -out certs/private.key && \
+  openssl req -new -x509 -days 36500 -key certs/private.key -out certs/cert.pem -subj "/CN=${HANDSHAKE_DOMAIN}"
 
 if [ "$SKIP_INIT" != "true" ]; then
 python3 ./generator.py \

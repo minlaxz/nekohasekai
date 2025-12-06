@@ -385,9 +385,8 @@ def main() -> None:
     is_trojan_enabled = all([
         args.trojan,
         args.handshake_domain,
-        args.reality_privatekey,
-        args.reality_publickey,
     ])
+    trojan_password = secrets.token_urlsafe(12) + "=="
     wg_pc = int(args.wg_pc)
     is_wg_enabled = 0 < wg_pc < 254
     ss_listen_port = start_port + 1
@@ -443,6 +442,7 @@ def main() -> None:
         services_config.services[0]["listen_port"] = ssm_listen_port
         services_config.services[0]["servers"] = {"/": inbound_shadowsocks["tag"]}
         services_config.to_json(path="conf/06_services.json")
+
     if is_trojan_enabled:
         inbound_trojan = InboundTrojan(
             type="trojan",
@@ -451,23 +451,15 @@ def main() -> None:
             listen_port=trojan_listen_port,
             users=[
                 TrojanUser(
-                    name="trojan-user-1",
-                    password=secrets.token_urlsafe(12) + "==",
-                ),
-                TrojanUser(
-                    name="trojan-user-2",
-                    password=secrets.token_urlsafe(12) + "==",
-                ),
-                TrojanUser(
-                    name="trojan-user-3",
-                    password=secrets.token_urlsafe(12) + "==",
+                    name="user",
+                    password=trojan_password,
                 ),
             ],
             tls=ServerCertificateTLS(
                 enabled=True,
                 server_name=args.handshake_domain,
-                key_path="/sing-box/certs/private.key",
-                certificate_path="/sing-box/certs/cert.pem",
+                key_path="certs/private.key",
+                certificate_path="certs/cert.pem",
             ),
             multiplex=InboundMultiplex(
                 enabled=True,
@@ -522,8 +514,9 @@ def main() -> None:
         )
         wg_endpoint_config.to_json(path="conf/07_endpoints.json")
 
-    client_outbounds_config = ClientOutboundsConfig(
-        outbounds=[
+    client_outbounds_config = ClientOutboundsConfig(outbounds=[])
+    if is_ss_enabled:
+        client_outbounds_config.outbounds.append(
             OutboundShadowsocks(
                 type="shadowsocks",
                 tag="shadowsocks",
@@ -533,14 +526,27 @@ def main() -> None:
                 method="xchacha20-ietf-poly1305",
                 password="",
                 multiplex={"enabled": False},
-            ),
+            )
+        )
+        client_outbounds_config.outbounds.append(
+            SSMService(
+                type="ssm-api",
+                tag="ssm-api",
+                listen="0.0.0.0",
+                listen_port=ssm_listen_port,
+                cache_path="cache/ssm-cache.json",
+                servers={"/": "shadowsocks"},
+            )
+        )
+    if is_trojan_enabled:
+        client_outbounds_config.outbounds.append(
             OutboundTrojan(
                 type="trojan",
                 tag="trojan",
                 server=server_ip,
                 server_port=trojan_listen_port,
                 domain_strategy=domain_strategy,
-                password="",
+                password=trojan_password,
                 tls=ClientTLSInsecure(
                     enabled=True,
                     server_name=args.handshake_domain,
@@ -550,18 +556,13 @@ def main() -> None:
                     ),
                     insecure=True,
                 ),
-            ),
-            SSMService(
-                type="ssm-api",
-                tag="ssm-api",
-                listen="0.0.0.0",
-                listen_port=ssm_listen_port,
-                cache_path="cache/ssm-cache.json",
-                servers={"/": "shadowsocks"},
-            ),
-            WireguardKeys(tag="wg-keys", keys=keys_dict),
-        ]
-    )
+            )
+        )
+    if is_wg_enabled:
+        client_outbounds_config.outbounds.append(
+            WireguardKeys(tag="wg-keys", keys=keys_dict)
+        )
+
     client_outbounds_config.to_json(path="public/outbounds.json")
     logging.info("Sing-Box configuration generation completed.")
 
