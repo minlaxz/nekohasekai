@@ -137,13 +137,16 @@ class Loader:
             {"type": "direct", "tag": "direct"}
         ]
         outbound_names = ["direct"]
+
+        # TODO: Refactor this mess from generator side.
         for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
                 i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
 
             # All other outbounds are added as-is.
-            outbounds.append(i)
-            outbound_names.append(i.get("tag", "unknown"))
+            if i.get("tag") != "ssm-api":
+                outbounds.append(i)
+                outbound_names.append(i.get("tag", "unknown"))
 
         # Pullup outbounds
         outbounds.append({

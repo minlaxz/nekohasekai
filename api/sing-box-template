@@ -2,7 +2,7 @@
   "endpoints": [
     {
       "type": "wireguard",
-      "tag": "wg-ep-sb",
+      "tag": "wg-ep",
       "system": false,
       "name": "",
       "mtu": 1280,
@@ -209,7 +209,7 @@
         "action": "reject",
         "method": "drop"
       },
-            {
+      {
         "type": "logical",
         "mode": "and",
         "rules": [
@@ -266,7 +266,10 @@
   },
   "experimental": {
     "clash_api": {
-      "external_controller": "127.0.0.1:6969",
+      "external_controller": "127.0.0.1:9090",
+      "external_ui": "ui",
+      "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
+      "external_ui_download_detour": "shadowsocks",
       "access_control_allow_origin": [
         "http://127.0.0.1",
         "https://yacd.haishan.me",
