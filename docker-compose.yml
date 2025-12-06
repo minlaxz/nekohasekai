@@ -9,6 +9,7 @@ services:
       - END_PORT=${END_PORT}
       - SKIP_INIT=${SKIP_INIT}
       - WG_COUNT=${WG_COUNT}
+      - HANDSHAKE_DOMAIN=${CONFIG_SERVER}
     volumes:
       - ./cache:/sing-box/cache
       - ./public:/sing-box/public

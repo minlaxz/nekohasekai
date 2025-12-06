@@ -147,6 +147,43 @@ class ListenFields(TypedDict):
     listen_port: int
 
 
+class Handshake(TypedDict):
+    server: str
+    server_port: int
+
+
+class ServerReality(TypedDict):
+    enabled: bool
+    private_key: str
+    short_id: List[str | None]
+    handshake: Handshake
+
+
+class Tls(TypedDict):
+    enabled: bool
+    server_name: str
+
+
+class ServerTLS(Tls):
+    reality: ServerReality
+
+
+class Utls(TypedDict):
+    enabled: bool
+    fingerprint: Literal["chrome", "firefox", "safari", "edge"]
+
+
+class ClientReality(TypedDict):
+    enabled: bool
+    public_key: str
+    short_id: str
+
+
+class ClientTLS(Tls):
+    utls: Utls
+    reality: ClientReality
+
+
 class Shadowsocks(TypedDict):
     method: Literal["xchacha20-ietf-poly1305", "chacha20-ietf-poly1305"]
     password: str
@@ -157,9 +194,20 @@ class ShadowsocksUser(TypedDict):
     method: str
 
 
+class TrojanUser(TypedDict):
+    name: str
+    password: str
+
+
 class InboundShadowsocks(CommonFields, ListenFields, Shadowsocks):
     users: List[ShadowsocksUser]
     managed: bool
+    multiplex: InboundMultiplex | Dict[str, Any]
+
+
+class InboundTrojan(CommonFields, ListenFields):
+    users: List[TrojanUser]
+    tls: ServerTLS
     multiplex: InboundMultiplex | Dict[str, Any]
 
 
@@ -171,6 +219,11 @@ class DailFields(TypedDict):
 
 class OutboundShadowsocks(CommonFields, DailFields, Shadowsocks):
     multiplex: OutboundMultiplex | Dict[str, Any]
+
+
+class OutboundTrojan(CommonFields, DailFields):
+    password: str
+    tls: ClientTLS
 
 
 # --- Shadowsocks Config End ---
@@ -225,7 +278,7 @@ class EndpointConfig(ConfigWriter):
 
 @dataclass
 class InboundsConfig(ConfigWriter):
-    inbounds: List[InboundShadowsocks]
+    inbounds: List[InboundShadowsocks | InboundTrojan]
 
 
 class WireguardKeys(TypedDict):
@@ -262,7 +315,7 @@ class ServerOutboundsConfig(ConfigWriter):
 
 @dataclass
 class ClientOutboundsConfig(ConfigWriter):
-    outbounds: List[OutboundShadowsocks | SSMService | WireguardKeys]
+    outbounds: List[OutboundShadowsocks | OutboundTrojan | SSMService | WireguardKeys]
 
 
 logging.basicConfig(
@@ -300,7 +353,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Sing-Box Config Generator Parser")
     parser.add_argument("--start-port", default=0, help="Starting port")
     parser.add_argument("--end-port", default=0, help="Ending port")
+
     parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
+
+    parser.add_argument("--trojan", action="store_true", help="Trojan")
+    parser.add_argument("--handshake-domain", default="", help="Handshake Domain")
+    parser.add_argument("--reality-privatekey", default="", help="Reality Private Key")
+    parser.add_argument("--reality-publickey", default="", help="Reality Public Key")
+
     parser.add_argument("--wg-pc", default=0, help="Wireguard Peer Count")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     parser.add_argument("--log-level", default="info", help="Log Level")
@@ -312,10 +372,17 @@ def main() -> None:
     verbose = args.verbose
 
     is_ss_enabled = args.shadowsocks
+    is_trojan_enabled = all([
+        args.trojan,
+        args.handshake_domain,
+        args.reality_privatekey,
+        args.reality_publickey,
+    ])
     wg_pc = int(args.wg_pc)
     is_wg_enabled = 0 < wg_pc < 254
     ss_listen_port = start_port + 1
-    wg_listen_port = start_port + 2
+    trojan_listen_port = start_port + 2
+    wg_listen_port = start_port + 3
 
     if verbose:
         logging.info(f"Start Port (Clash API): {start_port}")
@@ -323,6 +390,7 @@ def main() -> None:
         logging.info(f"Server IP: {server_ip}")
         logging.info(f"Domain Strategy: {domain_strategy}")
         logging.info(f"Shadowsocks Enabled: {is_ss_enabled}")
+        logging.info(f"Trojan Enabled: {is_trojan_enabled}")
         logging.info(f"WG Enabled: {is_wg_enabled}")
 
     logging.info("Generating Sing-Box configuration...")
@@ -365,6 +433,47 @@ def main() -> None:
         services_config.services[0]["listen_port"] = ssm_listen_port
         services_config.services[0]["servers"] = {"/": inbound_shadowsocks["tag"]}
         services_config.to_json(path="conf/06_services.json")
+    if is_trojan_enabled:
+        inbound_trojan = InboundTrojan(
+            type="trojan",
+            tag="trojan",
+            listen="0.0.0.0",
+            listen_port=trojan_listen_port,
+            users=[
+                TrojanUser(
+                    name="trojan-user-1",
+                    password=secrets.token_urlsafe(12) + "==",
+                ),
+                TrojanUser(
+                    name="trojan-user-2",
+                    password=secrets.token_urlsafe(12) + "==",
+                ),
+                TrojanUser(
+                    name="trojan-user-3",
+                    password=secrets.token_urlsafe(12) + "==",
+                ),
+            ],
+            tls=ServerTLS(
+                enabled=True,
+                server_name=args.handshake_domain,
+                reality=ServerReality(
+                    enabled=False,
+                    private_key=args.reality_privatekey,
+                    # TODO: make this random or configurable
+                    short_id=[],
+                    handshake=Handshake(
+                        server=args.handshake_domain,
+                        server_port=443,
+                    ),
+                ),
+            ),
+            multiplex=InboundMultiplex(
+                enabled=True,
+                padding=False,
+                brutal=Brutal(enabled=True, up_mbps=10, down_mbps=50),
+            ),
+        )
+        inbound_config.inbounds.append(inbound_trojan)
     inbound_config.to_json(path="conf/05_inbounds.json")
 
     keys_dict: Dict[str, Any] = {}
@@ -422,6 +531,27 @@ def main() -> None:
                 method="xchacha20-ietf-poly1305",
                 password="",
                 multiplex={"enabled": False},
+            ),
+            OutboundTrojan(
+                type="trojan",
+                tag="trojan",
+                server=server_ip,
+                server_port=trojan_listen_port,
+                domain_strategy=domain_strategy,
+                password="",
+                tls=ClientTLS(
+                    enabled=True,
+                    server_name=args.handshake_domain,
+                    utls=Utls(
+                        enabled=True,
+                        fingerprint="chrome",
+                    ),
+                    reality=ClientReality(
+                        enabled=False,
+                        public_key=args.reality_publickey,
+                        short_id="",
+                    ),
+                ),
             ),
             SSMService(
                 type="ssm-api",
