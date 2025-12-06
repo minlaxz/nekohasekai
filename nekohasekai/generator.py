@@ -1,4 +1,4 @@
-from typing import Any, List, Literal, Dict
+from typing import Any, List, Literal, Dict, TypedDict
 from dataclasses import dataclass, asdict, is_dataclass, field
 
 
@@ -22,21 +22,20 @@ class ConfigWriter:
             json.dump(asdict(self), f, indent=4, ensure_ascii=False)
 
 
-@dataclass
-class DomainResolver:
-    server: str
-    strategy: Literal["ipv4_only", "prefer_ipv4"]
+class Log(TypedDict):
+    level: Literal["trce", "debug", "info", "warn", "error"]
+    timestamp: bool
 
 
 @dataclass
-class OutboundDirect:
-    type: Literal["direct"]
-    tag: str
-    domain_resolver: DomainResolver
+class LogConfig(ConfigWriter):
+    log: Log = field(default_factory=lambda: Log(level="info", timestamp=True))
 
 
-@dataclass
-class Route:
+# --- Log Config End ---
+
+
+class Route(TypedDict):
     rule_set: List[dict[str, Any]]
     rules: List[dict[str, Any]]
     final: str
@@ -45,135 +44,168 @@ class Route:
 
 @dataclass
 class RouteConfig(ConfigWriter):
-    route: Route
+    route: Route = field(
+        default_factory=lambda: Route(
+            rule_set=[],
+            rules=[],
+            final="direct-out",
+            auto_detect_interface=True,
+        )
+    )
 
 
-@dataclass
-class ClashAPI:
+# --- Route Config End ---
+
+
+class ClashAPI(TypedDict):
     external_controller: str
     external_ui: str
     external_ui_download_url: str
     external_ui_download_detour: str
 
 
-@dataclass
-class CacheFile:
+class CacheFile(TypedDict):
     enabled: bool
     path: str
 
 
-@dataclass
-class Experimental:
+class Experimental(TypedDict):
     clash_api: ClashAPI
     cache_file: CacheFile
 
 
 @dataclass
 class ExperimentalConfig(ConfigWriter):
-    experimental: Experimental
+    experimental: Experimental = field(
+        default_factory=lambda: Experimental(
+            clash_api=ClashAPI(
+                external_controller=f"0.0.0.0:{0}",
+                external_ui="web-ui",
+                external_ui_download_url="https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
+                external_ui_download_detour="direct-out",
+            ),
+            cache_file=CacheFile(enabled=True, path="cache/sing-box-cache.db"),
+        )
+    )
 
 
-@dataclass
-class DNSServer:
+# -- Experimental Config End ---
+
+
+class DNSServer(TypedDict):
     type: str
     tag: str
 
 
-@dataclass
-class DNS:
+class DNS(TypedDict):
     servers: List[DNSServer]
 
 
 @dataclass
 class DNSConfig(ConfigWriter):
-    dns: DNS
+    dns: DNS = field(
+        default_factory=lambda: DNS(servers=[DNSServer(type="local", tag="local")])
+    )
 
 
-@dataclass
-class ShadowsocksUser:
-    password: str
-    method: str
+# --- DNS Config End ---
 
 
-@dataclass
-class Brutal:
+class Brutal(TypedDict):
     enabled: bool
     up_mbps: int
     down_mbps: int
 
 
-@dataclass
-class InboundMultiplex:
+class Multiplex(TypedDict):
     enabled: bool
     padding: bool
     brutal: Brutal
 
 
-@dataclass
-class OutboundMultiplex(InboundMultiplex):
-    protocol: Literal["smux", "yamux", "mux"] = "smux"
-    max_connections: int = 4
-    min_streams: int = 4
-    max_streams: int = 0
+class InboundMultiplex(Multiplex):
+    pass
 
 
-@dataclass
-class ListenFields:
+class OutboundMultiplex(Multiplex):
+    protocol: Literal["smux", "yamux", "mux"]
+    max_connections: int
+    min_streams: int
+    max_streams: int
+
+
+# --- Multiplex Config End ---
+
+
+class CommonFields(TypedDict):
+    tag: str
+    type: Literal["shadowsocks", "vless", "ssm-api", "wireguard", "trojan"]
+
+
+class ListenFields(TypedDict):
     listen: Literal["0.0.0.0", "::"]
     listen_port: int
 
 
-@dataclass
-class InboundShadowsocks(ConfigWriter, ListenFields):
-    type: Literal["shadowsocks", "xtls-reality"]
-    tag: str
+class Shadowsocks(TypedDict):
     method: Literal["xchacha20-ietf-poly1305", "chacha20-ietf-poly1305"]
     password: str
+
+
+class ShadowsocksUser(TypedDict):
+    password: str
+    method: str
+
+
+class InboundShadowsocks(CommonFields, ListenFields, Shadowsocks):
     users: List[ShadowsocksUser]
     managed: bool
-    # Listen fields ...
-    # Multiplex
     multiplex: InboundMultiplex | Dict[str, Any]
 
 
-@dataclass
-class DailFields:
+class DailFields(TypedDict):
     server: str
     server_port: int
     domain_strategy: Literal["ipv4_only", "prefer_ipv4"]
 
 
-@dataclass
-class OutboundShadowsocks(DailFields):
-    type: Literal["shadowsocks", "xtls-reality"]
-    tag: Literal["shadowsocks", "xtls-reality"]
-    method: Literal["xchacha20-ietf-poly1305", "chacha20-ietf-poly1305"]
-    password: str
-    # Dail fields ...
-    # Multiplex
+class OutboundShadowsocks(CommonFields, DailFields, Shadowsocks):
     multiplex: OutboundMultiplex | Dict[str, Any]
 
 
-@dataclass
-class SSMService:
-    type: Literal["ssm-api"]
-    tag: Literal["ssm-api"]
-    listen: Literal["0.0.0.0", "::"]
-    listen_port: int
+# --- Shadowsocks Config End ---
+
+
+class SSMService(CommonFields, ListenFields):
     cache_path: str
     servers: Dict[str, str]
 
 
 @dataclass
-class WireguardPeer:
+class ServicesConfig(ConfigWriter):
+    services: List[SSMService] = field(
+        default_factory=lambda: [
+            SSMService(
+                type="ssm-api",
+                tag="ssm-api",
+                listen="0.0.0.0",
+                listen_port=0,
+                cache_path="cache/ssm-cache.json",
+                servers={"/": "shadowsocks"},
+            )
+        ]
+    )
+
+
+# --- Services Config End ---
+
+
+class WireguardPeer(TypedDict):
     public_key: str
     allowed_ips: List[str]
 
 
-@dataclass
-class WireguardEndpoint:
-    type: str
-    tag: str
+class WireguardEndpoint(CommonFields):
     name: str
     system: bool
     mtu: int
@@ -188,9 +220,7 @@ class EndpointConfig(ConfigWriter):
     endpoints: List[WireguardEndpoint]
 
 
-@dataclass
-class ServicesConfig(ConfigWriter):
-    services: List[SSMService]
+# --- Endpoint Config End ---
 
 
 @dataclass
@@ -198,26 +228,41 @@ class InboundsConfig(ConfigWriter):
     inbounds: List[InboundShadowsocks]
 
 
-@dataclass
-class WireguardKeys:
-    tag: str = ""
-    keys: Dict[str, str] = field(default_factory=dict[str, str])
+class WireguardKeys(TypedDict):
+    tag: str
+    keys: Dict[str, str]  # = field(default_factory=dict[str, str])
+
+
+class DomainResolver(TypedDict):
+    server: str
+    strategy: Literal["ipv4_only", "prefer_ipv4"]
+
+
+class OutboundDirect(TypedDict):
+    type: Literal["direct"]
+    tag: str
+    domain_resolver: DomainResolver
 
 
 @dataclass
-class OutboundsConfig(ConfigWriter):
-    outbounds: List[OutboundShadowsocks | OutboundDirect | SSMService | WireguardKeys]
+class ServerOutboundsConfig(ConfigWriter):
+    outbounds: List[OutboundDirect] = field(
+        default_factory=lambda: [
+            OutboundDirect(
+                type="direct",
+                tag="direct-out",
+                domain_resolver=DomainResolver(
+                    server="local",
+                    strategy="ipv4_only",
+                ),
+            )
+        ]
+    )
 
 
 @dataclass
-class Log:
-    level: Literal["trce", "debug", "info", "warn", "error"]
-    timestamp: bool
-
-
-@dataclass
-class LogConfig(ConfigWriter):
-    log: Log
+class ClientOutboundsConfig(ConfigWriter):
+    outbounds: List[OutboundShadowsocks | SSMService | WireguardKeys]
 
 
 logging.basicConfig(
@@ -285,71 +330,42 @@ def main() -> None:
     os.makedirs("public", exist_ok=True)
     os.makedirs("cache", exist_ok=True)
 
-    log_config = LogConfig(log=Log(level=args.log_level, timestamp=True))
-    log_config.to_json(path="conf/00_log.json")
+    LogConfig().to_json(path="conf/00_log.json")
 
-    outbounds_config = OutboundsConfig(
-        outbounds=[
-            OutboundDirect(
-                type="direct",
-                tag="direct-out",
-                domain_resolver=DomainResolver(
-                    server="local",
-                    strategy=domain_strategy,
-                ),
-            )
-        ]
+    ServerOutboundsConfig().to_json(path="conf/01_outbounds.json")
+
+    RouteConfig().to_json(path="conf/02_route.json")
+    exp_config = ExperimentalConfig()
+    exp_config.experimental["clash_api"]["external_controller"] = (
+        f"0.0.0.0:{start_port}"
     )
-    outbounds_config.to_json(path="conf/01_outbounds.json")
+    exp_config.to_json(path="conf/03_experimental.json")
 
-    route_config = RouteConfig(
-        route=Route(
-            rule_set=[],
-            rules=[],
-            final="direct-out",
-            auto_detect_interface=True,
-        )
-    )
-    route_config.to_json(path="conf/02_route.json")
+    DNSConfig().to_json(path="conf/04_dns.json")
 
-    external_controller_port = start_port
-    experimental_config = ExperimentalConfig(
-        experimental=Experimental(
-            clash_api=ClashAPI(
-                external_controller=f"0.0.0.0:{external_controller_port}",
-                external_ui="web-ui",
-                external_ui_download_url="https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
-                external_ui_download_detour="direct-out",
-            ),
-            cache_file=CacheFile(enabled=True, path="cache/sing-box-cache.db"),
-        )
-    )
-    experimental_config.to_json(path="conf/03_experimental.json")
-
-    dns_config = DNSConfig(dns=DNS(servers=[DNSServer(type="local", tag="local")]))
-    dns_config.to_json(path="conf/04_dns.json")
-
+    inbound_config = InboundsConfig(inbounds=[])
     if is_ss_enabled:
-        inbounds_config = InboundsConfig(
-            inbounds=[
-                InboundShadowsocks(
-                    type="shadowsocks",
-                    tag="shadowsocks",
-                    listen="0.0.0.0",
-                    listen_port=ss_listen_port,
-                    method="xchacha20-ietf-poly1305",
-                    password=secrets.token_urlsafe(12) + "==",
-                    users=[],
-                    managed=True,
-                    multiplex=InboundMultiplex(
-                        enabled=True,
-                        padding=False,
-                        brutal=Brutal(enabled=True, up_mbps=10, down_mbps=50),
-                    ),
-                )
-            ]
+        inbound_shadowsocks = InboundShadowsocks(
+            type="shadowsocks",
+            tag="shadowsocks",
+            listen="0.0.0.0",
+            listen_port=ss_listen_port,
+            method="xchacha20-ietf-poly1305",
+            password=secrets.token_urlsafe(12) + "==",
+            users=[],
+            managed=True,
+            multiplex=InboundMultiplex(
+                enabled=True,
+                padding=False,
+                brutal=Brutal(enabled=True, up_mbps=10, down_mbps=50),
+            ),
         )
-        inbounds_config.to_json(path="conf/05_inbounds.json")
+        inbound_config.inbounds.append(inbound_shadowsocks)
+        services_config = ServicesConfig()
+        services_config.services[0]["listen_port"] = ssm_listen_port
+        services_config.services[0]["servers"] = {"/": inbound_shadowsocks["tag"]}
+        services_config.to_json(path="conf/06_services.json")
+    inbound_config.to_json(path="conf/05_inbounds.json")
 
     keys_dict: Dict[str, Any] = {}
     if is_wg_enabled:
@@ -393,23 +409,9 @@ def main() -> None:
                 )
             ]
         )
-        wg_endpoint_config.to_json(path="conf/06_endpoints.json")
+        wg_endpoint_config.to_json(path="conf/07_endpoints.json")
 
-    services_config = ServicesConfig(
-        services=[
-            SSMService(
-                type="ssm-api",
-                tag="ssm-api",
-                listen="0.0.0.0",
-                listen_port=ssm_listen_port,
-                cache_path="cache/ssm-cache.json",
-                servers={"/": "shadowsocks"},
-            )
-        ]
-    )
-    services_config.to_json(path="conf/07_services.json")
-
-    client_outbounds_config = OutboundsConfig(
+    client_outbounds_config = ClientOutboundsConfig(
         outbounds=[
             OutboundShadowsocks(
                 type="shadowsocks",
