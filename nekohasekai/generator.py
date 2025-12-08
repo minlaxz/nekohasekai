@@ -1,4 +1,4 @@
-from typing import Any, List, Literal, Dict, TypedDict
+from typing import Any, List, Literal, Dict, Optional, TypedDict
 from dataclasses import dataclass, asdict, is_dataclass, field
 
 
@@ -113,8 +113,8 @@ class DNSConfig(ConfigWriter):
 
 class Brutal(TypedDict):
     enabled: bool
-    up_mbps: int
-    down_mbps: int
+    up_mbps: Optional[int]
+    down_mbps: Optional[int]
 
 
 class Multiplex(TypedDict):
@@ -128,7 +128,7 @@ class InboundMultiplex(Multiplex):
 
 
 class OutboundMultiplex(Multiplex):
-    protocol: Literal["smux", "yamux", "mux"]
+    protocol: Literal["smux", "yamux", "h2mux"]
     max_connections: int
     min_streams: int
     max_streams: int
@@ -162,6 +162,9 @@ class ServerReality(TypedDict):
 class Tls(TypedDict):
     enabled: bool
     server_name: str
+    alpn: Optional[List[str]]
+    min_version: Literal["1.3", "1.2", "1.1", "1.0"]
+    max_version: Literal["1.3", "1.2", "1.1", "1.0"]
 
 
 class ServerRealityTLS(Tls):
@@ -234,6 +237,7 @@ class OutboundShadowsocks(CommonFields, DailFields, Shadowsocks):
 class OutboundTrojan(CommonFields, DailFields):
     password: str
     tls: ClientTLSInsecure
+    multiplex: OutboundMultiplex | Dict[str, Any]
 
 
 # --- Shadowsocks Config End ---
@@ -279,7 +283,7 @@ class WireguardEndpoint(CommonFields):
 
 
 @dataclass
-class EndpointConfig(ConfigWriter):
+class EndpointsConfig(ConfigWriter):
     endpoints: List[WireguardEndpoint]
 
 
@@ -363,17 +367,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Sing-Box Config Generator Parser")
     parser.add_argument("--start-port", default=0, help="Starting port")
     parser.add_argument("--end-port", default=0, help="Ending port")
+    parser.add_argument("--wg-pc", default=0, help="Wireguard Peer Count")
+    parser.add_argument("--log-level", default="info", help="Log Level")
 
     parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
-
     parser.add_argument("--trojan", action="store_true", help="Trojan")
-    parser.add_argument("--handshake-domain", default="", help="Handshake Domain")
-    parser.add_argument("--reality-privatekey", default="", help="Reality Private Key")
-    parser.add_argument("--reality-publickey", default="", help="Reality Public Key")
-
-    parser.add_argument("--wg-pc", default=0, help="Wireguard Peer Count")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
-    parser.add_argument("--log-level", default="info", help="Log Level")
     args = parser.parse_args()
 
     start_port = int(args.start_port)
@@ -382,10 +381,12 @@ def main() -> None:
     verbose = args.verbose
 
     is_ss_enabled = args.shadowsocks
-    is_trojan_enabled = all([
-        args.trojan,
-        args.handshake_domain,
-    ])
+    is_trojan_enabled = args.trojan
+
+    handshake_domain = os.environ.get("HANDSHAKE_DOMAIN", "")
+    # reality_privatekey = os.environ.get("REALITY_PRIVATEKEY", "")
+    # reality_publickey = os.environ.get("REALITY_PUBLICKEY", "")
+
     trojan_password = secrets.token_urlsafe(12) + "=="
     wg_pc = int(args.wg_pc)
     is_wg_enabled = 0 < wg_pc < 254
@@ -407,7 +408,9 @@ def main() -> None:
     os.makedirs("public", exist_ok=True)
     os.makedirs("cache", exist_ok=True)
 
-    LogConfig().to_json(path="conf/00_log.json")
+    log_config = LogConfig()
+    log_config.log["level"] = args.log_level
+    log_config.to_json(path="conf/00_log.json")
 
     ServerOutboundsConfig().to_json(path="conf/01_outbounds.json")
 
@@ -420,7 +423,11 @@ def main() -> None:
 
     DNSConfig().to_json(path="conf/04_dns.json")
 
-    inbound_config = InboundsConfig(inbounds=[])
+    inbounds_config = InboundsConfig(inbounds=[])
+    services_config = ServicesConfig()
+    endpoints_config = EndpointsConfig(endpoints=[])
+    client_outbounds_config = ClientOutboundsConfig(outbounds=[])
+
     if is_ss_enabled:
         inbound_shadowsocks = InboundShadowsocks(
             type="shadowsocks",
@@ -428,20 +435,37 @@ def main() -> None:
             listen="0.0.0.0",
             listen_port=ss_listen_port,
             method="xchacha20-ietf-poly1305",
-            password=secrets.token_urlsafe(12) + "==",
+            password="",
             users=[],
             managed=True,
             multiplex=InboundMultiplex(
                 enabled=True,
                 padding=False,
-                brutal=Brutal(enabled=True, up_mbps=10, down_mbps=50),
+                brutal=Brutal(enabled=False, up_mbps=None, down_mbps=None),
             ),
         )
-        inbound_config.inbounds.append(inbound_shadowsocks)
-        services_config = ServicesConfig()
+        outbound_shadowsocks = OutboundShadowsocks(
+            type="shadowsocks",
+            tag="shadowsocks",
+            server=server_ip,
+            server_port=ss_listen_port,
+            domain_strategy=domain_strategy,
+            method="xchacha20-ietf-poly1305",
+            password="",
+            multiplex=OutboundMultiplex(
+                protocol="h2mux",
+                enabled=True,
+                padding=False,
+                max_connections=4,
+                min_streams=16,
+                max_streams=256,
+                brutal=Brutal(enabled=False, up_mbps=None, down_mbps=None),
+            ),
+        )
+        inbounds_config.inbounds.append(inbound_shadowsocks)
+        client_outbounds_config.outbounds.append(outbound_shadowsocks)
         services_config.services[0]["listen_port"] = ssm_listen_port
         services_config.services[0]["servers"] = {"/": inbound_shadowsocks["tag"]}
-        services_config.to_json(path="conf/06_services.json")
 
     if is_trojan_enabled:
         inbound_trojan = InboundTrojan(
@@ -457,18 +481,50 @@ def main() -> None:
             ],
             tls=ServerCertificateTLS(
                 enabled=True,
-                server_name=args.handshake_domain,
+                server_name=handshake_domain,
+                alpn=["h2", "http/1.1"],
+                min_version="1.2",
+                max_version="1.3",
                 key_path="certs/private.key",
                 certificate_path="certs/cert.pem",
             ),
             multiplex=InboundMultiplex(
                 enabled=True,
                 padding=False,
-                brutal=Brutal(enabled=True, up_mbps=10, down_mbps=50),
+                brutal=Brutal(enabled=False, up_mbps=None, down_mbps=None),
             ),
         )
-        inbound_config.inbounds.append(inbound_trojan)
-    inbound_config.to_json(path="conf/05_inbounds.json")
+        outbound_trojan = OutboundTrojan(
+            type="trojan",
+            tag="trojan",
+            server=server_ip,
+            server_port=trojan_listen_port,
+            domain_strategy=domain_strategy,
+            password=trojan_password,
+            tls=ClientTLSInsecure(
+                enabled=True,
+                server_name=handshake_domain,
+                alpn=["h2", "http/1.1"],
+                min_version="1.2",
+                max_version="1.3",
+                insecure=True,
+                utls=Utls(
+                    enabled=True,
+                    fingerprint="chrome",
+                ),
+            ),
+            multiplex=OutboundMultiplex(
+                protocol="h2mux",
+                enabled=True,
+                padding=False,
+                max_connections=4,
+                min_streams=16,
+                max_streams=256,
+                brutal=Brutal(enabled=False, up_mbps=None, down_mbps=None),
+            ),
+        )
+        inbounds_config.inbounds.append(inbound_trojan)
+        client_outbounds_config.outbounds.append(outbound_trojan)
 
     keys_dict: Dict[str, Any] = {}
     if is_wg_enabled:
@@ -497,73 +553,27 @@ def main() -> None:
             for i in range(1, wg_pc + 1)
         ]
 
-        wg_endpoint_config = EndpointConfig(
-            endpoints=[
-                WireguardEndpoint(
-                    type="wireguard",
-                    tag="wg-ep",
-                    name="wg0",
-                    system=False,
-                    mtu=1280,
-                    address=[keys_dict["wg_address_0"]],
-                    private_key=keys_dict["wg_priv_0"],
-                    listen_port=wg_listen_port,
-                    peers=peers,
-                )
-            ]
+        wg_endpoint = WireguardEndpoint(
+            type="wireguard",
+            tag="wg-ep",
+            name="wg0",
+            system=False,
+            mtu=1280,
+            address=[keys_dict["wg_address_0"]],
+            private_key=keys_dict["wg_priv_0"],
+            listen_port=wg_listen_port,
+            peers=peers,
         )
-        wg_endpoint_config.to_json(path="conf/07_endpoints.json")
-
-    client_outbounds_config = ClientOutboundsConfig(outbounds=[])
-    if is_ss_enabled:
-        client_outbounds_config.outbounds.append(
-            OutboundShadowsocks(
-                type="shadowsocks",
-                tag="shadowsocks",
-                server=server_ip,
-                server_port=ss_listen_port,
-                domain_strategy=domain_strategy,
-                method="xchacha20-ietf-poly1305",
-                password="",
-                multiplex={"enabled": False},
-            )
-        )
-        client_outbounds_config.outbounds.append(
-            SSMService(
-                type="ssm-api",
-                tag="ssm-api",
-                listen="0.0.0.0",
-                listen_port=ssm_listen_port,
-                cache_path="cache/ssm-cache.json",
-                servers={"/": "shadowsocks"},
-            )
-        )
-    if is_trojan_enabled:
-        client_outbounds_config.outbounds.append(
-            OutboundTrojan(
-                type="trojan",
-                tag="trojan",
-                server=server_ip,
-                server_port=trojan_listen_port,
-                domain_strategy=domain_strategy,
-                password=trojan_password,
-                tls=ClientTLSInsecure(
-                    enabled=True,
-                    server_name=args.handshake_domain,
-                    utls=Utls(
-                        enabled=True,
-                        fingerprint="chrome",
-                    ),
-                    insecure=True,
-                ),
-            )
-        )
-    if is_wg_enabled:
+        endpoints_config.endpoints.append(wg_endpoint)
         client_outbounds_config.outbounds.append(
             WireguardKeys(tag="wg-keys", keys=keys_dict)
         )
 
+    inbounds_config.to_json(path="conf/05_inbounds.json")
+    services_config.to_json(path="conf/06_services.json")
+    endpoints_config.to_json(path="conf/07_endpoints.json")
     client_outbounds_config.to_json(path="public/outbounds.json")
+
     logging.info("Sing-Box configuration generation completed.")
 
 
