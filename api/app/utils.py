@@ -27,6 +27,7 @@ class Loader:
         route_detour: str,
         route_final: str,
         multiplex: bool,
+        experimental: bool,
         username: str,
         psk: str,
         wg: int,
@@ -45,6 +46,7 @@ class Loader:
         self.route_detour = route_detour
         self.route_final = route_final
         self.multiplex = multiplex
+        self.experimental = experimental
         self.user_name = username
         self.user_psk = psk
         self.wg = wg
@@ -140,7 +142,6 @@ class Loader:
         ]
         outbound_names = ["direct"]
 
-        # TODO: Refactor this mess from generator side.
         for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
                 i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
@@ -148,6 +149,9 @@ class Loader:
                 del i["multiplex"]
             outbounds.append(i)
             outbound_names.append(i.get("tag"))
+            
+            # TODO: add all other outbounds only when requested
+            # if self.experimental: ...
 
         # Pullup outbounds
         outbounds.append({
