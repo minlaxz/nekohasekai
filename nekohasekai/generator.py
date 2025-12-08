@@ -227,7 +227,7 @@ class InboundTrojan(CommonFields, ListenFields):
 class DailFields(TypedDict):
     server: str
     server_port: int
-    domain_strategy: Literal["ipv4_only", "prefer_ipv4"]
+    domain_strategy: Literal["ipv4_only", "prefer_ipv4", "ipv6_only", "ipv6_prefer"]
 
 
 class OutboundShadowsocks(CommonFields, DailFields, Shadowsocks):
@@ -362,7 +362,7 @@ def keys() -> Dict[str, str]:
 def main() -> None:
     resp = json.load(urllib.request.urlopen("https://myip.wtf/json"))
     server_ip = resp.get("YourFuckingIPAddress")
-    domain_strategy = "ipv4_only" if "." in server_ip else "prefer_ipv4"
+    domain_strategy = "ipv4_only" if "." in server_ip else "ipv6_only"
 
     parser = argparse.ArgumentParser(description="Sing-Box Config Generator Parser")
     parser.add_argument("--start-port", default=0, help="Starting port")

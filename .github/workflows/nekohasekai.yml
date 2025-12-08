@@ -44,6 +44,8 @@ jobs:
           platforms: linux/amd64, linux/arm64
           context: ./nekohasekai
           file: ./nekohasekai/Dockerfile
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             ${{ env.IMAGE_NAME }}:nekohasekai
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nekohasekai

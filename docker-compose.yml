@@ -1,6 +1,7 @@
 services:
   nekohasekai:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai
+    # image: docker.io/minlaxz/nekohasekai:nekohasekai
     pull_policy: always
     restart: unless-stopped
     command: ["./sing-box", "run", "-C", "/sing-box/conf"]
@@ -22,6 +23,7 @@ services:
 
   nekohasekai-api:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
+    # image: docker.io/minlaxz/nekohasekai:nekohasekai-api
     pull_policy: always
     restart: unless-stopped
     depends_on:
