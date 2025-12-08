@@ -26,6 +26,7 @@ class Loader:
         log_level: str,
         route_detour: str,
         route_final: str,
+        multiplex: bool,
         username: str,
         psk: str,
         wg: int,
@@ -43,6 +44,7 @@ class Loader:
         self.log_level = log_level
         self.route_detour = route_detour
         self.route_final = route_final
+        self.multiplex = multiplex
         self.user_name = username
         self.user_psk = psk
         self.wg = wg
@@ -142,11 +144,10 @@ class Loader:
         for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
                 i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
-
-            # All other outbounds are added as-is.
-            if i.get("tag") != "ssm-api":
-                outbounds.append(i)
-                outbound_names.append(i.get("tag", "unknown"))
+            if not self.multiplex:
+                del i["multiplex"]
+            outbounds.append(i)
+            outbound_names.append(i.get("tag"))
 
         # Pullup outbounds
         outbounds.append({

@@ -111,6 +111,7 @@ def read_config(
     dr: Union[str, None] = "1.1.1.1",
     rd: Union[str, None] = "shadowsocks",
     rf: Union[str, None] = "direct",
+    mx: Union[bool, None] = False,
     ll: Union[str, None] = "warn",
     j: Union[str, None] = None,
     k: Union[str, None] = None,
@@ -135,6 +136,7 @@ def read_config(
         log_level=ll,
         route_detour=rd,
         route_final=rf,  # expensive operation
+        multiplex=mx,
         username=j,
         psk=k,
         wg=wg,
