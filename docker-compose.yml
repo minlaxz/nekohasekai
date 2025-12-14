@@ -10,11 +10,6 @@ services:
       - SKIP_INIT=${SKIP_INIT}
       - WG_COUNT=${WG_COUNT}
       - HANDSHAKE_DOMAIN=${CONFIG_SERVER}
-      - WARP_ENABLED=${WARP_ENABLED}
-      - INTERFACE_ADDRESS4=${INTERFACE_ADDRESS4}
-      - INTERFACE_ADDRESS6=${INTERFACE_ADDRESS6}
-      - INTERFACE_PRIVATE_KEY=${INTERFACE_PRIVATE_KEY}
-      - PEER_ADDRESS=${PEER_ADDRESS}
     volumes:
       - ./cache:/sing-box/cache
       - ./public:/sing-box/public
@@ -41,6 +36,11 @@ services:
       - CONFIG_SERVER=${CONFIG_SERVER}
       - START_PORT=${START_PORT}
       - END_PORT=${END_PORT}
+      - WARP_ENABLED=${WARP_ENABLED}
+      - INTERFACE_ADDRESS4=${INTERFACE_ADDRESS4}
+      - INTERFACE_ADDRESS6=${INTERFACE_ADDRESS6}
+      - INTERFACE_PRIVATE_KEY=${INTERFACE_PRIVATE_KEY}
+      - PEER_ADDRESS=${PEER_ADDRESS}
     volumes:
       - ./public:/public:ro
     expose:

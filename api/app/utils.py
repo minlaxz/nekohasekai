@@ -228,7 +228,7 @@ class Loader:
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
         # fmt: off
-        if os.getenv("WARP_ENABLED", "false").lower() != "true":
+        if os.getenv("WARP_ENABLED", "false").lower() == "true":
             endpoints.append(
                 {
                     "type": "wireguard",
