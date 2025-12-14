@@ -25,7 +25,6 @@ class Loader:
         dns_resolver: str,
         log_level: str,
         route_detour: str,
-        route_final: str,
         multiplex: bool,
         experimental: bool,
         username: str,
@@ -38,19 +37,18 @@ class Loader:
         self.config_server = CONFIG_SERVER
         self.platform = platform
         self.version = version
+        self.log_level = log_level
         self.dns_path = dns_path
         self.dns_detour = dns_detour
         self.dns_final = dns_final
         self.dns_resolver = dns_resolver
-        self.log_level = log_level
         self.route_detour = route_detour
-        self.route_final = route_final
-        self.multiplex = multiplex
-        self.experimental = experimental
         self.user_name = username
         self.user_psk = psk
-        self.wg = wg
         self.please = please
+        self.multiplex = multiplex
+        self.experimental = experimental
+        self.wg = wg
         try:
             with open(self.local_path, "r", encoding="utf-8") as file:
                 self.local_data: Dict[str, Any] = json.load(file)
@@ -59,99 +57,139 @@ class Loader:
 
         try:
             if self.remote_url.startswith("https://"):
-                response = httpx.get(self.remote_url, timeout=5)
+                response = httpx.get(
+                    self.remote_url + f"-v{self.version}"
+                    if self.version == 11
+                    else self.remote_url,
+                    timeout=5,
+                )
                 response.raise_for_status()
                 self.remote_data: Dict[str, Any] = response.json()
             else:
-                with open(self.remote_url, "r", encoding="utf-8") as file:
+                with open(
+                    self.remote_url + f"-v{self.version}"
+                    if self.version == 1
+                    else self.remote_url,
+                    "r",
+                    encoding="utf-8",
+                ) as file:
                     self.remote_data = json.load(file)
         except (httpx.HTTPError, json.JSONDecodeError):
             self.remote_data = {}
 
     def __inject_dns__(self) -> None:
-        # client defined dns_path otherwise server defined dns_path
-        dns_path = (
-            self.dns_path if self.dns_path != "/" else DNS_PATH + f"{self.user_name}"
-        )
-        self.remote_data["dns"]["final"] = self.dns_final
-        if self.platform == "i" and self.version == 11:
-            # fmt: off
+        # Default: `dns-final` otherwise client provided
+        # Values: dns-remote, dns-resolver, [dns-final]
+        dns_final = self.dns_final or self.remote_data["dns"]["final"]
+        self.remote_data["dns"]["final"] = dns_final
+
+        # Assuming DNS_PATH ends with a trailing slash
+        # e.g., /user_name
+        # e.g., /custom_path/user_name
+        dns_path = self.dns_path + self.user_name
+        if self.version == 11:
+            # Version 11
             for i in self.remote_data["dns"]["servers"]:
                 match i.get("tag"):
                     case "dns-remote":
-                        # Version 11 does not support these fields
-                        i.pop("type", None)
-                        i.pop("server", None)
-                        i.pop("path", None)
-                        i.pop("domain_resolver", None)
                         i["address"] = f"https://dns.nextdns.io{dns_path}"
-                        i["address_resolver"] = "dns-resolver"
-                        i["address_strategy"] = "ipv4_only"
                     case "dns-resolver":
-                        # Version 11 does not support these fields
-                        i.pop("type", None)
-                        i.pop("server", None)
                         i["address"] = self.dns_resolver
-                    case "dns-local":
-                        i["address"] = "local"
-                        # Version 11 does not support these fields
-                        i.pop("type", None)
+                        # Client provided `dns_detour` i.e: `dd` for dns-resolver
+                        i["detour"] = self.dns_detour or i.get("detour")
+                    case "dns-final":
+                        i["address"] = self.dns_resolver
                     case _:
                         # Skip others
                         pass
         else:
-            # Other combinations but custom `dns_path` is provided
-            self.remote_data["dns"]["servers"][0]["path"] = dns_path
-
-        # Client provided `dns_detour`, excluding `dns-remote` check in template
-        for i in self.remote_data["dns"]["servers"]:
-            if i.get("tag") != "dns-remote":
-                i["detour"] = self.dns_detour
+            # Version 12+
+            for i in self.remote_data["dns"]["servers"]:
+                match i.get("tag"):
+                    case "dns-remote":
+                        i["server"] = "dns.nextdns.io"
+                        i["path"] = dns_path
+                    case "dns-resolver":
+                        i["server"] = self.dns_resolver
+                        # Client provided `dns_detour` i.e: `dd` for dns-resolver
+                        i["detour"] = self.dns_detour or i.get("detour")
+                    case "dns-final":
+                        i["server"] = self.dns_resolver
+                    case _:
+                        # Skip others
+                        pass
 
     def __inject_routes__(self) -> None:
-        if self.platform == "i" and self.version == 11:
+        # Client provided `route_detour`
+        for i in self.remote_data["route"]["rule_set"]:
+            i["download_detour"] = self.route_detour or i.get("download_detour")
+
+        if self.version == 11:
             # Version 11 does not support these fields
             self.remote_data["route"].pop("default_domain_resolver", None)
-        else:
-            # Skip others
-            pass
 
-        if self.wg:
+        # Experimental WireGuard routing rule injection, wg can be 2-253
+        # * #0 subnet, #1 server, #255 broadcast, #254 is reserved
+        if self.wg > 1 and self.wg < 254:
             # fmt: off
             self.remote_data["route"]["rules"].append(
                 {
                     "type": "logical",
                     "mode": "or",
-                    "rules": [{"ip_cidr": ["10.10.10.0/24"]}],
+                    "rules": [{"ip_cidr": [f"10.10.10.{self.wg}/24"]}],
                     "action": "route",
                     "outbound": "wg-ep-sb"
                 }
             )
-
-        # Client provided `route_detour`
-        for i in self.remote_data["route"]["rule_set"]:
-            i["download_detour"] = self.route_detour
-
-        # Expensive operation: Client provided `route_final` as final outbound
-        self.remote_data["route"]["final"] = self.route_final
+        # fmt: on
+        if os.environ.get("WARP_ENABLED", "false").lower() == "true":
+            # Inject WARP routing rule
+            # fmt: off
+            self.remote_data["route"]["rules"].append(
+                {
+                    "type": "logical",
+                    "mode": "or",
+                    "rules": [
+                        {
+                            "rule_set": [
+                                "geosite-cloudflare",
+                                "geoip-cloudflare"
+                            ]
+                        },
+                        {
+                            "ip_cidr": [
+                                os.environ.get("INTERFACE_ADDRESS4", "").split("/")[0] + "/24",
+                                os.environ.get("INTERFACE_ADDRESS6", "").split("/")[0] + "/124"
+                            ]
+                        },
+                        {
+                            "ip_version": 6
+                        }
+                    ],
+                    "action": "route",
+                    "outbound": "wgep-cloud"
+                }
+            )
 
     def __inject_outbounds__(self) -> None:
         # fmt: off
         outbounds: list[dict[str, str | int | list[str]]] = [
             {"type": "direct", "tag": "direct"}
         ]
-        outbound_names = ["direct"]
+        outbound_names: list["str"] = ["direct"]
 
         for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
+                # ! Overwrite psk for shadowsocks outbound if quota exceeded
                 i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
+
+            # ! Remove multiplex from all outbounds if not requested
             if not self.multiplex:
                 del i["multiplex"]
+
+            # * Append other outbounds, e.g., trojan, vless, etc.
             outbounds.append(i)
             outbound_names.append(i.get("tag"))
-            
-            # TODO: add all other outbounds only when requested
-            # if self.experimental: ...
 
         # Pullup outbounds
         outbounds.append({
@@ -166,7 +204,7 @@ class Loader:
         # Ruled outbounds
         outbounds.append({
             "type": "urltest",
-            "tag": "Ruled",
+            "tag": "Novice-Out",
             "outbounds": outbound_names[1:],  # exclude `direct`
             "url": f"https://{self.config_server}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
@@ -174,7 +212,7 @@ class Loader:
         })
         outbounds.append({
             "type": "urltest",
-            "tag": "Ruled-Expensive",
+            "tag": "Expensive-Out",
             "outbounds": outbound_names[1:],  # exclude `direct`
             "url": f"https://{self.config_server}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=true",
             "interval": "30s",
@@ -184,31 +222,72 @@ class Loader:
         self.remote_data["outbounds"] = outbounds
 
     def __inject_log__(self) -> None:
-        self.remote_data["log"]["level"] = self.log_level
+        log_level = self.log_level or self.remote_data["log"]["level"]
+        self.remote_data["log"]["level"] = log_level
 
     def __inject_endpoints__(self) -> None:
-        if not self.wg:
-            del self.remote_data["endpoints"]
-        else:
-            endpoint = self.remote_data["endpoints"][0]
-            peers = endpoint.get("peers", [])
-            # Keys are always stored in the last outbound
-            wg_keys = self.local_data["outbounds"][-1]["keys"]
+        endpoints: list[dict[str, Any]] = []
+        # fmt: off
+        if os.environ.get("WARP_ENABLED", "false").lower() != "true":
+            endpoints.append(
+                {
+                    "type": "wireguard",
+                    "tag": "wgep-cloud",
+                    "system": False,
+                    "name": "",
+                    "mtu": 1280,
+                    "address": [
+                        os.environ.get("INTERFACE_ADDRESS4"),
+                        os.environ.get("INTERFACE_ADDRESS6"),
+                    ],
+                    "private_key": os.environ.get("INTERFACE_PRIVATE_KEY"),
+                    "detour": "shadowsocks",
+                    "peers": [
+                        {
+                            "address": os.environ.get("PEER_ADDRESS"),
+                            "port": 2408,
+                            "public_key": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+                            "pre_shared_key": "",
+                            "allowed_ips": [
+                                "0.0.0.0/0",
+                                "::/0"
+                            ],
+                            "persistent_keepalive_interval": 25,
+                            "reserved": [
+                                0,
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                }
+            )
+        self.remote_data["endpoints"] = endpoints
+        # fmt: on
 
-            endpoint["address"] = [wg_keys[f"wg_address_{self.wg}"]]
-            endpoint["private_key"] = wg_keys[f"wg_priv_{self.wg}"]
-            for peer in peers:
-                peer["address"] = wg_keys["wg_address_0"]
-                peer["port"] = START_PORT + 2
-                peer["public_key"] = wg_keys["wg_pub_0"]
+        # ! Remove WireGuard endpoint if wg=0 (default)
+        # if not self.wg:
+        #     del self.remote_data["endpoints"]
+        # else:
+        #     endpoint = self.remote_data["endpoints"][0]
+        #     peers = endpoint.get("peers", [])
+        #     # * Keys are always stored in the last outbound
+        #     wg_keys = self.local_data["outbounds"][-1]["keys"]
+
+        #     endpoint["address"] = [wg_keys[f"wg_address_{self.wg}"]]
+        #     endpoint["private_key"] = wg_keys[f"wg_priv_{self.wg}"]
+        #     for peer in peers:
+        #         peer["address"] = wg_keys["wg_address_0"]
+        #         peer["port"] = START_PORT + 2
+        #         peer["public_key"] = wg_keys["wg_pub_0"]
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         self.disabled: bool = disabled
         self.__inject_dns__()
         self.__inject_log__()
-        self.__inject_routes__()
         self.__inject_outbounds__()
         self.__inject_endpoints__()
+        self.__inject_routes__()
         return self.remote_data
 
 
@@ -232,8 +311,8 @@ class Checker(Loader):
     def is_quota_limited(self):
         return self.please or (
             self.data.get("downlinkBytes") + self.data.get("uplinkBytes")
-            > 10_000_000_000
-        )  # 10 GB Limits or not pleasing :3
+            > 30_000_000_000
+        )  # 30 GB Limits or not pleasing :3
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         return super().unwarp(disabled=self.is_quota_limited())

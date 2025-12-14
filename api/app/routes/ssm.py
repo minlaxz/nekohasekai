@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, cast, Optional
 
 import httpx
 import secrets
@@ -8,6 +8,7 @@ import os
 from fastapi import APIRouter, HTTPException, Form
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
@@ -18,7 +19,11 @@ SSM_PORT: int = START_PORT + 10
 SSM_UPSTREAM = f"http://{SSM_SERVER}:{SSM_PORT}"
 
 
-@router.get("/server/v1")
+@router.get(
+    "/server/v1",
+    response_model=Dict[str, List[Dict[str, Any]]],
+    response_class=JSONResponse,
+)
 async def proxy_server_info():
     async with httpx.AsyncClient(timeout=5) as client:
         upstream = f"{SSM_UPSTREAM}/server/v1"
@@ -30,7 +35,11 @@ async def proxy_server_info():
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
 
 
-@router.get("/server/v1/stats")
+@router.get(
+    "/server/v1/stats",
+    response_model=Dict[str, List[Dict[str, Any]]],
+    response_class=JSONResponse,
+)
 async def proxy_server_stats():
     async with httpx.AsyncClient(timeout=5) as client:
         stats_upstream = f"{SSM_UPSTREAM}/server/v1/stats"
@@ -61,7 +70,11 @@ async def proxy_server_stats():
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
 
 
-@router.get("/server/v1/users")
+@router.get(
+    "/server/v1/users",
+    response_model=Dict[str, List[Dict[str, Any]]],
+    response_class=JSONResponse,
+)
 async def proxy_server_users():
     async with httpx.AsyncClient(timeout=5) as client:
         stats_upstream = f"{SSM_UPSTREAM}/server/v1/stats"
@@ -110,7 +123,10 @@ async def proxy_server_users():
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
 
 
-def create_upsk():
+def create_upsk(custom_upsk: str | None):
+    if custom_upsk:
+        if len(custom_upsk) == 22 and custom_upsk.endswith("=="):
+            return custom_upsk
     alphabet = string.ascii_lowercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(20)) + "=="
 
@@ -125,10 +141,11 @@ async def get_form(request: Request):
 async def create_user(
     request: Request,
     username: str = Form(...),
+    custom_upsk: Optional[str] = Form(None),
     platform: str = Form(...),
     version: str = Form(...),
 ):
-    uPSK = create_upsk()
+    uPSK = create_upsk(custom_upsk)
     # Call upstream to create user
     async with httpx.AsyncClient(timeout=5) as client:
         create_upstream = f"{SSM_UPSTREAM}/server/v1/users"

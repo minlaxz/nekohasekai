@@ -4,21 +4,19 @@
     "servers": [
       {
         "tag": "dns-remote",
-        "type": "https",
-        "server": "",
-        "path": "",
-        "domain_resolver": "dns-resolver"
+        "address": "",
+        "address_resolver": "dns-resolver",
+        "address_strategy": "prefer_ipv4"
       },
       {
         "tag": "dns-resolver",
-        "type": "udp",
-        "server": "",
+        "address": "",
         "detour": "shadowsocks"
       },
       {
         "tag": "dns-final",
-        "type": "udp",
-        "server": ""
+        "address": "",
+        "detour": "direct"
       }
     ],
     "rules": [
@@ -28,7 +26,7 @@
       },
       {
         "clash_mode": "Expensive",
-        "server": "dns-final"
+        "server": "dns-resolver"
       }
     ],
     "independent_cache": false,

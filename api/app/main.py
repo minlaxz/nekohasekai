@@ -95,29 +95,35 @@ def health_check(
     user_id, _ = j, k
     print(f"""
         Health check for user: {user_id}
-        Mode: {'expensive' if expensive else 'normal'}
-    """
-    )
+        Mode: {"expensive" if expensive else "normal"}
+    """)
     return Response(status_code=204)
 
 
 @app.get("/c", response_class=JSONResponse)
 def read_config(
+    # Common options
     p: Union[str, None] = "a",
     v: Union[int, None] = 12,
-    dp: Union[str, None] = "/",
-    dd: Union[str, None] = "shadowsocks",
-    df: Union[str, None] = "dns-remote",
+    ll: Union[str, None] = None,
+    # DNS options
+    # client defined dns_path otherwise server defined dns_path
+    dp: Union[str, None] = os.getenv("DNS_PATH", "/"),
+    dd: Union[str, None] = None,
+    df: Union[str, None] = None,
     dr: Union[str, None] = "1.1.1.1",
-    rd: Union[str, None] = "shadowsocks",
-    rf: Union[str, None] = "direct",
-    ex: Union[bool, None] = False,
-    mx: Union[bool, None] = False,
-    ll: Union[str, None] = "warn",
+    # Route options
+    rd: Union[str, None] = None,
+    # User authentication
     j: Union[str, None] = None,
     k: Union[str, None] = None,
-    wg: Union[int, None] = 0,
-    please: bool = False,
+    # Misc options
+    please: bool = False,  # Humorous parameter to appease the server
+    mx: Union[bool, None] = True,
+    # Experimentals and Wireguard options (not stable yet)
+    # Experimental features without touching users
+    ex: Union[bool, None] = False,
+    wg: Union[int, None] = 0,  # WireGuard peer index
 ) -> dict[str, Any]:
     if j is None or k is None:
         raise RequestValidationError([
@@ -130,19 +136,18 @@ def read_config(
     checker = Checker(
         platform=p,
         version=v,
+        log_level=ll,
         dns_path=dp,
         dns_detour=dd,
         dns_final=df,
         dns_resolver=dr,
-        log_level=ll,
         route_detour=rd,
-        route_final=rf,  # expensive operation
-        experimental=ex,
-        multiplex=mx,
         username=j,
         psk=k,
-        wg=wg,
         please=please,
+        multiplex=mx,
+        experimental=ex,
+        wg=wg,
     )
 
     if not checker.verify_key():
