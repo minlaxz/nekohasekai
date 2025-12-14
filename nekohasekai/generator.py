@@ -441,7 +441,8 @@ def main() -> None:
             multiplex=InboundMultiplex(
                 enabled=True,
                 padding=False,
-                brutal=Brutal(enabled=False, up_mbps=None, down_mbps=None),
+                # Brual is too flat
+                brutal=Brutal(enabled=False, up_mbps=0, down_mbps=0),
             ),
         )
         outbound_shadowsocks = OutboundShadowsocks(
@@ -459,7 +460,8 @@ def main() -> None:
                 max_connections=4,
                 min_streams=16,
                 max_streams=256,
-                brutal=Brutal(enabled=False, up_mbps=None, down_mbps=None),
+                # Brual is too flat
+                brutal=Brutal(enabled=False, up_mbps=0, down_mbps=0),
             ),
         )
         inbounds_config.inbounds.append(inbound_shadowsocks)
