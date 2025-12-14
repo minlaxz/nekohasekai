@@ -144,8 +144,9 @@ class Loader:
         # fmt: on
         if os.getenv("WARP_ENABLED", "false").lower() == "true":
             # Inject WARP routing rule
+            # 0 to 3 is reserved by inbounds rules, 4 is reserved by dns rules
             # fmt: off
-            self.remote_data["route"]["rules"].append(
+            self.remote_data["route"]["rules"].insert(5,
                 {
                     "type": "logical",
                     "mode": "or",
