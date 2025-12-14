@@ -3,7 +3,6 @@ services:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai
     # image: docker.io/minlaxz/nekohasekai:nekohasekai
     pull_policy: always
-    restart: unless-stopped
     command: ["./sing-box", "run", "-C", "/sing-box/conf"]
     environment:
       - START_PORT=${START_PORT}
@@ -11,6 +10,11 @@ services:
       - SKIP_INIT=${SKIP_INIT}
       - WG_COUNT=${WG_COUNT}
       - HANDSHAKE_DOMAIN=${CONFIG_SERVER}
+      - WARP_ENABLED=${WARP_ENABLED}
+      - INTERFACE_ADDRESS4=${INTERFACE_ADDRESS4}
+      - INTERFACE_ADDRESS6=${INTERFACE_ADDRESS6}
+      - INTERFACE_PRIVATE_KEY=${INTERFACE_PRIVATE_KEY}
+      - PEER_ADDRESS=${PEER_ADDRESS}
     volumes:
       - ./cache:/sing-box/cache
       - ./public:/sing-box/public
@@ -25,7 +29,6 @@ services:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
     # image: docker.io/minlaxz/nekohasekai:nekohasekai-api
     pull_policy: always
-    restart: unless-stopped
     depends_on:
       - nekohasekai
     environment:
@@ -34,7 +37,7 @@ services:
       - LOCAL_JSON_PATH=/public/outbounds.json
       - REMOTE_JSON_URL=https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template
       - SSM_SERVER=nekohasekai
-      - DNS_PATH=/ # or /your-nexrdns-profile/
+      - DNS_PATH=/ # or /your-nextdns-profile-id/
       - CONFIG_SERVER=${CONFIG_SERVER}
       - START_PORT=${START_PORT}
       - END_PORT=${END_PORT}
@@ -48,23 +51,11 @@ services:
     labels:
       caddy: ${CONFIG_SERVER}
       caddy.reverse_proxy: "{{upstreams 8000}}"
-      # -------- BOT RATE LIMITING --------
-      # caddy.@bots.header: "User-Agent *bot*"
-      # caddy.route.0.rate_limit: "@bots"
-      # caddy.route.0.rate_limit.window: 1m
-      # caddy.route.0.rate_limit.burst: 5
-      # (Optional) Block sensitive scanner paths (.env, .git)
-      # caddy.@blocked.path: "/.env* /.*.git*"
-      # caddy.route.1.respond: "@blocked 403"
-      # (Optional) Rate limit everyone globally
-      # caddy.route.2.rate_limit: "*"
-      # caddy.route.2.rate_limit.window: 1m
-      # caddy.route.2.rate_limit.burst: 120
 
   wg-easy:
     image: ghcr.io/wg-easy/wg-easy:15
+    # image: docker.io/wg-easy/wg-easy:15
     pull_policy: always
-    restart: unless-stopped
     depends_on:
       - nekohasekai-api
     environment:

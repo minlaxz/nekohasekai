@@ -305,24 +305,53 @@ class DomainResolver(TypedDict):
     strategy: Literal["ipv4_only", "prefer_ipv4"]
 
 
-class OutboundDirect(TypedDict):
-    type: Literal["direct"]
+class ServerOutbound(TypedDict):
+    type: Literal["direct", "shadowsocks", "socks"]
     tag: str
     domain_resolver: DomainResolver
+
+# {
+#             "type": "shadowsocks",
+#             "tag": "ss-out",
+#             "server": "warp",
+#             "server_port": 1090,
+#             "method": "chacha20-ietf-poly1305",
+#             "password": "pass",
+#             "domain_resolver": {
+#                 "server": "local",
+#                 "strategy": "ipv4_only"
+#             }
+#         }
 
 
 @dataclass
 class ServerOutboundsConfig(ConfigWriter):
-    outbounds: List[OutboundDirect] = field(
+    outbounds: List[ServerOutbound] = field(
         default_factory=lambda: [
-            OutboundDirect(
+            ServerOutbound(
                 type="direct",
                 tag="direct-out",
                 domain_resolver=DomainResolver(
                     server="local",
                     strategy="ipv4_only",
                 ),
-            )
+            ),
+            ServerOutbound(
+                type="socks",
+                tag="socks5-out",
+                domain_resolver=DomainResolver(
+                    server="local",
+                    strategy="ipv4_only",
+                ),
+            ),
+            ServerOutbound(
+                type="shadowsocks",
+                tag="ss-out",
+                domain_resolver=DomainResolver(
+                    server="local",
+                    strategy="ipv4_only",
+                ),
+            ),
         ]
     )
 
