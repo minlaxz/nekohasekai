@@ -32,7 +32,7 @@
       }
     ],
     "independent_cache": false,
-    "strategy": "prefer_ipv4",
+    "strategy": "ipv4_only",
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,
@@ -171,7 +171,7 @@
       {
         "inbound": "tun-in",
         "action": "resolve",
-        "strategy": "prefer_ipv4"
+        "strategy": "ipv4_only"
       },
       {
         "inbound": "http-in",
@@ -181,7 +181,7 @@
       {
         "inbound": "http-in",
         "action": "resolve",
-        "strategy": "prefer_ipv4"
+        "strategy": "ipv4_only"
       },
       {
         "type": "logical",
