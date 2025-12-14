@@ -310,19 +310,6 @@ class ServerOutbound(TypedDict):
     tag: str
     domain_resolver: DomainResolver
 
-# {
-#             "type": "shadowsocks",
-#             "tag": "ss-out",
-#             "server": "warp",
-#             "server_port": 1090,
-#             "method": "chacha20-ietf-poly1305",
-#             "password": "pass",
-#             "domain_resolver": {
-#                 "server": "local",
-#                 "strategy": "ipv4_only"
-#             }
-#         }
-
 
 @dataclass
 class ServerOutboundsConfig(ConfigWriter):
@@ -335,23 +322,7 @@ class ServerOutboundsConfig(ConfigWriter):
                     server="local",
                     strategy="ipv4_only",
                 ),
-            ),
-            ServerOutbound(
-                type="socks",
-                tag="socks5-out",
-                domain_resolver=DomainResolver(
-                    server="local",
-                    strategy="ipv4_only",
-                ),
-            ),
-            ServerOutbound(
-                type="shadowsocks",
-                tag="ss-out",
-                domain_resolver=DomainResolver(
-                    server="local",
-                    strategy="ipv4_only",
-                ),
-            ),
+            )
         ]
     )
 
