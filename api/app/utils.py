@@ -177,13 +177,17 @@ class Loader:
             {"type": "direct", "tag": "direct"}
         ]
         outbound_names: list["str"] = ["direct"]
+        if os.getenv("WARP_ENABLED", "false").lower() == "true":
+            outbound_names.append("wgep-cloud")
+        # fmt: on
 
         for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
                 # ! Overwrite psk for shadowsocks outbound if quota exceeded
-                i["password"] = "invalid_psk_overwritten" if self.disabled else self.user_psk
+                upsk = "invalid_psk_overwritten" if self.disabled else self.user_psk
+                i["password"] = upsk
 
-            # ! Remove multiplex from all outbounds if not requested
+            # ! Remove multiplex from all outbounds if requested i.e. ?mx=false
             if not self.multiplex:
                 del i["multiplex"]
 
@@ -191,6 +195,7 @@ class Loader:
             outbounds.append(i)
             outbound_names.append(i.get("tag"))
 
+        # fmt: off
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
@@ -211,12 +216,10 @@ class Loader:
             "tolerance": 100
         })
         outbounds.append({
-            "type": "urltest",
+            "type": "selector",
             "tag": "Expensive-Out",
             "outbounds": outbound_names[1:],  # exclude `direct`
-            "url": f"https://{self.config_server}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=true",
-            "interval": "30s",
-            "tolerance": 100
+            "default": outbound_names[1] # Assuming there're two outbounds at least
         })
 
         self.remote_data["outbounds"] = outbounds
