@@ -52,9 +52,9 @@
       "stack": "gvisor",
       "platform": {
         "http_proxy": {
-          "enabled": true,
-          "server": "127.0.0.1",
-          "server_port": 8080,
+          "enabled": false,
+          "server": "0.0.0.0",
+          "server_port": 2081,
           "bypass_domain": [],
           "match_domain": []
         }
