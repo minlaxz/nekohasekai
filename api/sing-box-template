@@ -45,7 +45,7 @@
       },
       {
         "tag": "dns-final",
-        "type": "udp"
+        "type": "udp",
         "server": "1.1.1.1"
       }
     ],
