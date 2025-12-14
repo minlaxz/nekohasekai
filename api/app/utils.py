@@ -142,7 +142,7 @@ class Loader:
                 }
             )
         # fmt: on
-        if os.environ.get("WARP_ENABLED", "false").lower() == "true":
+        if os.getenv("WARP_ENABLED", "false").lower() == "true":
             # Inject WARP routing rule
             # fmt: off
             self.remote_data["route"]["rules"].append(
@@ -158,8 +158,8 @@ class Loader:
                         },
                         {
                             "ip_cidr": [
-                                os.environ.get("INTERFACE_ADDRESS4", "").split("/")[0] + "/24",
-                                os.environ.get("INTERFACE_ADDRESS6", "").split("/")[0] + "/124"
+                                os.getenv("INTERFACE_ADDRESS4", "").split("/")[0] + "/24",
+                                os.getenv("INTERFACE_ADDRESS6", "").split("/")[0] + "/124"
                             ]
                         },
                         {
@@ -228,7 +228,7 @@ class Loader:
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
         # fmt: off
-        if os.environ.get("WARP_ENABLED", "false").lower() != "true":
+        if os.getenv("WARP_ENABLED", "false").lower() != "true":
             endpoints.append(
                 {
                     "type": "wireguard",
@@ -237,14 +237,14 @@ class Loader:
                     "name": "",
                     "mtu": 1280,
                     "address": [
-                        os.environ.get("INTERFACE_ADDRESS4"),
-                        os.environ.get("INTERFACE_ADDRESS6"),
+                        os.getenv("INTERFACE_ADDRESS4"),
+                        os.getenv("INTERFACE_ADDRESS6"),
                     ],
-                    "private_key": os.environ.get("INTERFACE_PRIVATE_KEY"),
+                    "private_key": os.getenv("INTERFACE_PRIVATE_KEY"),
                     "detour": "shadowsocks",
                     "peers": [
                         {
-                            "address": os.environ.get("PEER_ADDRESS"),
+                            "address": os.getenv("PEER_ADDRESS"),
                             "port": 2408,
                             "public_key": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
                             "pre_shared_key": "",
