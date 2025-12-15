@@ -266,6 +266,10 @@
         "outbound": "direct"
       },
       {
+        "clash_mode": "Expensive",
+        "outbound": "Expensive-Out"
+      },
+      {
         "type": "logical",
         "mode": "and",
         "rules": [
@@ -305,10 +309,6 @@
         ],
         "action": "route",
         "outbound": "Novice-Out"
-      },
-      {
-        "clash_mode": "Expensive",
-        "outbound": "Expensive-Out"
       }
     ],
     "default_domain_resolver": {
