@@ -97,8 +97,6 @@ class Loader:
                         i["address"] = self.dns_resolver
                         # Client provided `dns_detour` i.e: `dd` for dns-resolver
                         i["detour"] = self.dns_detour or i.get("detour")
-                    case "dns-final":
-                        i["address"] = self.dns_resolver
                     case _:
                         # Skip others
                         pass
@@ -113,20 +111,14 @@ class Loader:
                         i["server"] = self.dns_resolver
                         # Client provided `dns_detour` i.e: `dd` for dns-resolver
                         i["detour"] = self.dns_detour or i.get("detour")
-                    case "dns-final":
-                        i["server"] = self.dns_resolver
                     case _:
                         # Skip others
                         pass
 
     def __inject_routes__(self) -> None:
-        # Client provided `route_detour`
+        # Client provided `route_detour` i.e: `rd` for route download detour
         for i in self.remote_data["route"]["rule_set"]:
             i["download_detour"] = self.route_detour or i.get("download_detour")
-
-        if self.version == 11:
-            # Version 11 does not support these fields
-            self.remote_data["route"].pop("default_domain_resolver", None)
 
         # Experimental WireGuard routing rule injection, wg can be 2-253
         # * #0 subnet, #1 server, #255 broadcast, #254 is reserved
