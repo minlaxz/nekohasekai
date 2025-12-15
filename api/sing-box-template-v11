@@ -265,13 +265,6 @@
       },
       {
         "type": "logical",
-        "mode": "or",
-        "rules": [],
-        "action": "reject",
-        "method": "drop"
-      },
-      {
-        "type": "logical",
         "mode": "and",
         "rules": [
           {
