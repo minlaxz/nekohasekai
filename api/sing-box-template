@@ -17,8 +17,8 @@
       },
       {
         "tag": "dns-final",
-        "type": "udp",
-        "server": ""
+        "type": "local",
+        "detour": "direct"
       }
     ],
     "rules": [
@@ -28,6 +28,10 @@
       },
       {
         "clash_mode": "Expensive",
+        "server": "dns-remote"
+      },
+      {
+        "clash_mode": "Local",
         "server": "dns-final"
       }
     ],
@@ -235,6 +239,21 @@
         "mode": "or",
         "rules": [
           {
+            "network": "tcp",
+            "port": [
+              853,
+              5222
+            ]
+          }
+        ],
+        "action": "reject",
+        "method": "drop"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
             "rule_set": [
               "geoip-mm",
               "geosite-mmbank",
@@ -249,12 +268,6 @@
           },
           {
             "protocol": "stun"
-          },
-          {
-            "network": "tcp",
-            "port": [
-              5222
-            ]
           }
         ],
         "outbound": "direct"
@@ -268,7 +281,16 @@
         "mode": "and",
         "rules": [
           {
-            "clash_mode": "Novice"
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "clash_mode": "Novice"
+              },
+              {
+                "clash_mode": "Local"
+              }
+            ]
           },
           {
             "type": "logical",
