@@ -90,22 +90,6 @@
         "update_interval": "1d"
       },
       {
-        "tag": "asn-as8075",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/asn/AS8075.srs",
-        "download_detour": "shadowsocks",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "asn-as15169",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/asn/AS15169.srs",
-        "download_detour": "shadowsocks",
-        "update_interval": "1d"
-      },
-      {
         "tag": "geosite-meta",
         "type": "remote",
         "format": "binary",
@@ -118,14 +102,6 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "shadowsocks",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-github",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
         "download_detour": "shadowsocks",
         "update_interval": "1d"
       },
@@ -146,10 +122,66 @@
         "update_interval": "1d"
       },
       {
-        "tag": "geoip-private",
+        "tag": "geosite-slack",
         "type": "remote",
         "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/private.srs",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/slack.srs",
+        "download_detour": "shadowsocks",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-aws",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/aws.srs",
+        "download_detour": "shadowsocks",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-hurricaneelectric",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/hurricaneelectric.srs",
+        "download_detour": "shadowsocks",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-microsoft",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/microsoft.srs",
+        "download_detour": "shadowsocks",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-fastly",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/fastly.srs",
+        "download_detour": "shadowsocks",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-fastly",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/fastly.srs",
+        "download_detour": "shadowsocks",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-category-dev",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-dev.srs",
+        "download_detour": "shadowsocks",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-category-porn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-porn.srs",
         "download_detour": "shadowsocks",
         "update_interval": "1d"
       },
@@ -158,6 +190,14 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/mm.srs",
+        "download_detour": "shadowsocks",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-mmbank",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-bank-mm.srs",
         "download_detour": "shadowsocks",
         "update_interval": "1d"
       }
@@ -202,18 +242,25 @@
         "rules": [
           {
             "rule_set": [
-              "geoip-mm"
+              "geoip-mm",
+              "geosite-mmbank",
+              "geosite-category-porn"
             ]
           },
           {
             "network": "udp",
             "port": [
-              443,
               853
             ]
           },
           {
             "protocol": "stun"
+          },
+          {
+            "network": "tcp",
+            "port": [
+              5222
+            ]
           }
         ],
         "outbound": "direct"
@@ -221,15 +268,7 @@
       {
         "type": "logical",
         "mode": "or",
-        "rules": [
-          {
-            "network": "tcp",
-            "port": [
-              853,
-              5222
-            ]
-          }
-        ],
+        "rules": [],
         "action": "reject",
         "method": "drop"
       },
@@ -246,19 +285,26 @@
             "rules": [
               {
                 "rule_set": [
+                  "geosite-cloudflare",
+                  "geoip-cloudflare",
                   "geosite-meta",
                   "geosite-twitter",
-                  "geosite-github",
-                  "geosite-oonimm"
+                  "geosite-oonimm",
+                  "geoip-oonimm",
+                  "geosite-slack",
+                  "geosite-aws",
+                  "geosite-hurricaneelectric",
+                  "geosite-microsoft",
+                  "geosite-fastly",
+                  "geoip-fastly",
+                  "geosite-category-dev"
                 ]
               },
               {
                 "domain_suffix": [
                   ".engineerforce.io",
                   ".dify.io",
-                  ".lightsail.aws.amazon.com",
-                  ".nextdns.io",
-                  ".stackoverflow.com"
+                  ".nextdns.io"
                 ]
               }
             ]
