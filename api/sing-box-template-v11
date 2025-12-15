@@ -15,7 +15,7 @@
       },
       {
         "tag": "dns-final",
-        "address": "",
+        "address": "local",
         "detour": "direct"
       }
     ],
@@ -27,6 +27,10 @@
       {
         "clash_mode": "Expensive",
         "server": "dns-resolver"
+      },
+      {
+        "clash_mode": "Local",
+        "server": "dns-final"
       },
       {
         "outbound": "any",
@@ -211,18 +215,8 @@
     "rules": [
       {
         "inbound": "tun-in",
-        "action": "sniff",
-        "timeout": "1s"
-      },
-      {
-        "inbound": "tun-in",
         "action": "resolve",
         "strategy": "ipv4_only"
-      },
-      {
-        "inbound": "http-in",
-        "action": "sniff",
-        "timeout": "1s"
       },
       {
         "inbound": "http-in",
@@ -261,15 +255,24 @@
           },
           {
             "protocol": "stun"
-          },
+          }
+        ],
+        "outbound": "direct"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
           {
             "network": "tcp",
             "port": [
+              853,
               5222
             ]
           }
         ],
-        "outbound": "direct"
+        "action": "reject",
+        "method": "drop"
       },
       {
         "clash_mode": "Expensive",
@@ -280,7 +283,16 @@
         "mode": "and",
         "rules": [
           {
-            "clash_mode": "Novice"
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "clash_mode": "Novice"
+              },
+              {
+                "clash_mode": "Local"
+              }
+            ]
           },
           {
             "type": "logical",
@@ -317,10 +329,6 @@
         "outbound": "Novice-Out"
       }
     ],
-    "default_domain_resolver": {
-      "server": "dns-final",
-      "rewrite_ttl": 60
-    },
     "final": "direct",
     "auto_detect_interface": true
   },
