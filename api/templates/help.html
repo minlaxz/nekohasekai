@@ -10,17 +10,17 @@
         Usage: /c?...
             - p: a, i, m, l, w, or default: a                       (platform) required
             - v: 11, 12, or default: 12                             (version) required
-            - dp: nextdns profile id, or default: /                 (dns path)
-            - dd: any from outbounds, default: shadowsocks          (dns detour)
-            - df: any from dns servers, deafult: dns-remote         (dns final)
-            - dr: any from dns servers, default: 1.1.1.1            (dns resolver)
-            - rd: any from outbounds, default: shadowsocks          (route detour)
-            - rf: any from outbounds, default: direct               (route final)
-            - mx: true or false, default: false                     (multiplex)
-            - ll: trace, info, warn, error, critical, default: warn (log level)
+            - dp: nextdns profile id, or default: /                     (dns path)
+            - dd: any from outbounds, default: shadowsocks              (dns detour)
+            - df: any from dns servers, deafult: dns-final              (dns final)
+            - dr: remote dns resolver address (udp), default: 1.1.1.1   (remote dns resolver)
+            - rd: any from outbounds, default: shadowsocks              (route detour)
+            - mx: true or false, default: true                          (multiplex)
+            - ll: trace, info, warn, error, critical, default: warn     (log level)
             - j: username, default: None                            (username) required
             - k: psk, default: None                                 (password) required
-            - wg: wireguard position, default: None                 (Wireguard)
+            - ex: experimental, default false                           (experimental features)
+            - wg: wireguard peer index, default: None                   (Wireguard peer index)
     </pre>
   </body>
 </html>
