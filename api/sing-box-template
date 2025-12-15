@@ -209,18 +209,8 @@
     "rules": [
       {
         "inbound": "tun-in",
-        "action": "sniff",
-        "timeout": "1s"
-      },
-      {
-        "inbound": "tun-in",
         "action": "resolve",
         "strategy": "ipv4_only"
-      },
-      {
-        "inbound": "http-in",
-        "action": "sniff",
-        "timeout": "1s"
       },
       {
         "inbound": "http-in",
