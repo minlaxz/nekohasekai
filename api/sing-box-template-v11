@@ -27,6 +27,10 @@
       {
         "clash_mode": "Expensive",
         "server": "dns-resolver"
+      },
+      {
+        "outbound": "any",
+        "server": "dns-final"
       }
     ],
     "independent_cache": false,
@@ -50,6 +54,8 @@
       "auto_route": true,
       "strict_route": true,
       "stack": "gvisor",
+      "sniff": true,
+      "sniff_override_destination": true,
       "platform": {
         "http_proxy": {
           "enabled": false,
@@ -65,7 +71,9 @@
       "tag": "http-in",
       "listen": "0.0.0.0",
       "listen_port": 2080,
-      "tcp_fast_open": true
+      "tcp_fast_open": true,
+      "sniff": true,
+      "sniff_override_destination": true
     }
   ],
   "outbounds": [],
