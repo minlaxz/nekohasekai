@@ -186,14 +186,6 @@
         "update_interval": "1d"
       },
       {
-        "tag": "geosite-category-porn",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-porn.srs",
-        "download_detour": "shadowsocks",
-        "update_interval": "1d"
-      },
-      {
         "tag": "geoip-mm",
         "type": "remote",
         "format": "binary",
@@ -256,8 +248,7 @@
           {
             "rule_set": [
               "geoip-mm",
-              "geosite-mmbank",
-              "geosite-category-porn"
+              "geosite-mmbank"
             ]
           },
           {
