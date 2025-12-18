@@ -14,25 +14,16 @@
         "type": "udp",
         "server": "",
         "detour": "shadowsocks"
-      },
-      {
-        "tag": "dns-final",
-        "type": "local",
-        "detour": "direct"
       }
     ],
     "rules": [
       {
-        "clash_mode": "Novice",
+        "clash_mode": "Eco",
         "server": "dns-remote"
       },
       {
-        "clash_mode": "Expensive",
+        "clash_mode": "Full",
         "server": "dns-remote"
-      },
-      {
-        "clash_mode": "Local",
-        "server": "dns-final"
       }
     ],
     "independent_cache": false,
@@ -41,7 +32,7 @@
     "disable_expire": false,
     "cache_capacity": 10240,
     "reverse_mapping": true,
-    "final": "dns-final"
+    "final": "dns-resolver"
   },
   "inbounds": [
     {
@@ -49,8 +40,7 @@
       "tag": "tun-in",
       "interface_name": "utun1",
       "address": [
-        "10.69.69.0/28",
-        "fd00::1/126"
+        "10.69.69.0/28"
       ],
       "mtu": 1280,
       "auto_route": true,
@@ -204,26 +194,14 @@
     ],
     "rules": [
       {
-        "inbound": "tun-in",
+        "action": "sniff"
+      },
+      {
         "action": "resolve",
         "strategy": "ipv4_only"
       },
       {
-        "inbound": "http-in",
-        "action": "resolve",
-        "strategy": "ipv4_only"
-      },
-      {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "protocol": "dns"
-          },
-          {
-            "port": 53
-          }
-        ],
+        "protocol": "dns",
         "action": "hijack-dns"
       },
       {
@@ -233,9 +211,11 @@
           {
             "network": "tcp",
             "port": [
-              853,
               5222
             ]
+          },
+          {
+            "protocol": "stun"
           }
         ],
         "action": "reject",
@@ -256,33 +236,23 @@
             "port": [
               853
             ]
-          },
-          {
-            "protocol": "stun"
           }
         ],
         "outbound": "direct"
       },
       {
-        "clash_mode": "Expensive",
+        "domain_keyword": ["gstatic.com"],
+        "outbound": "Novice-Out"
+      },
+      {
+        "clash_mode": "Full",
         "outbound": "Expensive-Out"
       },
       {
         "type": "logical",
         "mode": "and",
         "rules": [
-          {
-            "type": "logical",
-            "mode": "or",
-            "rules": [
-              {
-                "clash_mode": "Novice"
-              },
-              {
-                "clash_mode": "Local"
-              }
-            ]
-          },
+          { "clash_mode": "Eco" },
           {
             "type": "logical",
             "mode": "or",
@@ -319,7 +289,7 @@
       }
     ],
     "default_domain_resolver": {
-      "server": "dns-final",
+      "server": "dns-resolver",
       "rewrite_ttl": 60
     },
     "final": "direct",
@@ -335,7 +305,7 @@
       "external_ui": "ui",
       "external_ui_download_detour": "shadowsocks",
       "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
-      "default_mode": "Novice",
+      "default_mode": "Eco",
       "access_control_allow_private_network": true
     },
     "cache_file": {
