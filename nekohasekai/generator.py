@@ -193,7 +193,7 @@ class ClientTLSReality(Tls):
 
 
 class ClientTLSInsecure(Tls):
-    utls: Utls
+    utls: Optional[Utls]
     insecure: bool
 
 
@@ -248,7 +248,7 @@ class InboundHysteria2(CommonFields, ListenFields):
     tls: ServerCertificateTLS | ServerRealityTLS
     masquerade: MasqueradeConfig | str
     brutal_debug: bool
-    network: Optional[Literal["udp", "tcp", ""]] # both if empty
+    network: Optional[Literal["udp", "tcp", ""]]  # both if empty
 
 
 class DailFields(TypedDict):
@@ -560,8 +560,8 @@ def main() -> None:
 
     if is_hysteria2_enabled:
         hysteria2_listen_port = curr = curr + 1
-        hysteria2_obfs_password = secrets.token_urlsafe(16)
-        hysteria2_password = secrets.token_urlsafe(12) + "=="
+        hysteria2_obfs_password = secrets.token_urlsafe(22)
+        hysteria2_password = secrets.token_urlsafe(22) + "=="
         inbound_hysteria2 = InboundHysteria2(
             type="hysteria2",
             tag="hysteria2",
@@ -583,7 +583,7 @@ def main() -> None:
             tls=ServerCertificateTLS(
                 enabled=True,
                 server_name=handshake_domain,
-                alpn=["h2", "http/1.1"],
+                alpn=["h3", "h2", "http/1.1"],
                 min_version="1.2",
                 max_version="1.3",
                 key_path="certs/private.key",
@@ -608,15 +608,12 @@ def main() -> None:
             password=hysteria2_password,
             tls=ClientTLSInsecure(
                 enabled=True,
-                server_name=handshake_domain,
-                alpn=["h2", "http/1.1"],
+                server_name=f"{handshake_domain}:{hysteria2_listen_port}",
+                alpn=["h3", "h2", "http/1.1"],
                 min_version="1.2",
                 max_version="1.3",
                 insecure=True,
-                utls=Utls(
-                    enabled=True,
-                    fingerprint="chrome",
-                ),
+                utls=None,
             ),
             brutal_debug=False,
         )

@@ -7,7 +7,6 @@ services:
     mem_limit: 128m
     mem_reservation: 64m
     memswap_limit: -1 # no swap limit
-    mem_swappiness: 10
     environment:
       - START_PORT=${START_PORT}
       - END_PORT=${END_PORT}
@@ -25,8 +24,6 @@ services:
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"
     networks:
       - nekohasekai-net
-    sysctls:
-      vm.vfs_cache_pressure: 50
 
   nekohasekai-api:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
@@ -42,9 +39,9 @@ services:
       - CONFIG_HOST=${CONFIG_HOST}
       - SSM_SERVER=${SSM_SERVER}
       - DNS_HOST=${DNS_HOST}
-      - DNS_PATH={DNS_PATH}
-      - LOCAL_JSON_PATH={LOCAL_JSON_PATH}
-      - REMOTE_JSON_URL={REMOTE_JSON_URL}
+      - DNS_PATH=${DNS_PATH}
+      - LOCAL_JSON_PATH=${LOCAL_JSON_PATH}
+      - REMOTE_JSON_URL=${REMOTE_JSON_URL}
     volumes:
       - ./public:/public:ro
     expose:
