@@ -108,8 +108,8 @@ def read_config(
     ll: Union[str, None] = None,
     # DNS options
     # client defined dns_path otherwise server defined dns_path
-    dh: Union[str, None] = os.getenv("DNS_HOST", "dns.nextdns.io"),
-    dp: Union[str, None] = os.getenv("DNS_PATH", "/"),
+    dh: Union[str, None] = os.getenv("DNS_HOST"),
+    dp: Union[str, None] = os.getenv("DNS_PATH"),
     dd: Union[str, None] = None,
     df: Union[str, None] = None,
     dr: Union[str, None] = "1.1.1.1",

@@ -31,7 +31,7 @@ services:
       - START_PORT=${START_PORT}
       - END_PORT=${END_PORT}
       - CONFIG_HOST=${CONFIG_HOST}
-      # - DNS_HOST=${DNS_HOST}
+      - DNS_HOST=${DNS_HOST}
       - DNS_PATH={DNS_PATH}
       - LOCAL_JSON_PATH=/public/outbounds.json
       - REMOTE_JSON_URL=https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template
