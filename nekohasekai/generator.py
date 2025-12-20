@@ -139,7 +139,7 @@ class OutboundMultiplex(Multiplex):
 
 class CommonFields(TypedDict):
     tag: str
-    type: Literal["shadowsocks", "vless", "ssm-api", "wireguard", "trojan"]
+    type: Literal["shadowsocks", "vless", "ssm-api", "wireguard", "trojan", "hysteria2"]
 
 
 class ListenFields(TypedDict):
@@ -207,7 +207,7 @@ class ShadowsocksUser(TypedDict):
     method: str
 
 
-class TrojanUser(TypedDict):
+class NamePasswordUser(TypedDict):
     name: str
     password: str
 
@@ -219,9 +219,35 @@ class InboundShadowsocks(CommonFields, ListenFields, Shadowsocks):
 
 
 class InboundTrojan(CommonFields, ListenFields):
-    users: List[TrojanUser]
+    users: List[NamePasswordUser]
     tls: ServerCertificateTLS | ServerRealityTLS
     multiplex: InboundMultiplex | Dict[str, Any]
+
+
+class Obfs(TypedDict):
+    type: Literal["salamander"]
+    password: str
+
+
+class MasqueradeConfig(TypedDict):
+    type: Literal["file", "proxy", "string"]
+    directory: Optional[str]
+    url: Optional[str]
+    rewrite_host: Optional[str]
+    status_code: Optional[int]
+    headers: Optional[Dict[str, str]]
+    content: Optional[str]
+
+
+class InboundHysteria2(CommonFields, ListenFields):
+    up_mbps: int
+    down_mbps: int
+    obfs: Obfs
+    users: List[NamePasswordUser]
+    ignore_client_bandwidth: bool
+    tls: ServerCertificateTLS | ServerRealityTLS
+    masquerade: MasqueradeConfig | str
+    brutal_debug: bool
 
 
 class DailFields(TypedDict):
@@ -239,6 +265,14 @@ class OutboundTrojan(CommonFields, DailFields):
     tls: ClientTLSInsecure
     multiplex: OutboundMultiplex | Dict[str, Any]
 
+
+class OutboundHysteria2(CommonFields, DailFields):
+    up_mbps: int
+    down_mbps: int
+    obfs: Obfs
+    password: str
+    tls: ClientTLSInsecure
+    brutal_debug: bool
 
 # --- Shadowsocks Config End ---
 
@@ -292,7 +326,7 @@ class EndpointsConfig(ConfigWriter):
 
 @dataclass
 class InboundsConfig(ConfigWriter):
-    inbounds: List[InboundShadowsocks | InboundTrojan]
+    inbounds: List[InboundShadowsocks | InboundTrojan | InboundHysteria2]
 
 
 class WireguardKeys(TypedDict):
@@ -329,7 +363,7 @@ class ServerOutboundsConfig(ConfigWriter):
 
 @dataclass
 class ClientOutboundsConfig(ConfigWriter):
-    outbounds: List[OutboundShadowsocks | OutboundTrojan | SSMService | WireguardKeys]
+    outbounds: List[OutboundShadowsocks | OutboundTrojan | OutboundHysteria2]
 
 
 logging.basicConfig(
@@ -371,6 +405,7 @@ def main() -> None:
 
     parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
     parser.add_argument("--trojan", action="store_true", help="Trojan")
+    parser.add_argument("--hysteria2", action="store_true", help="Hysteria2")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     args = parser.parse_args()
 
@@ -380,6 +415,7 @@ def main() -> None:
 
     is_ss_enabled = args.shadowsocks
     is_trojan_enabled = args.trojan
+    is_hysteria2_enabled = args.hysteria2
 
     handshake_domain = os.environ.get("HANDSHAKE_DOMAIN", "")
     # reality_privatekey = os.environ.get("REALITY_PRIVATEKEY", "")
@@ -392,6 +428,7 @@ def main() -> None:
         logging.info(f"Domain Strategy: {domain_strategy}")
         logging.info(f"Shadowsocks Enabled: {is_ss_enabled}")
         logging.info(f"Trojan Enabled: {is_trojan_enabled}")
+        logging.info(f"Hysteria2 Enabled: {is_hysteria2_enabled}")
 
     logging.info("Generating Sing-Box configuration...")
     os.makedirs("conf", exist_ok=True)
@@ -471,7 +508,7 @@ def main() -> None:
             listen="0.0.0.0",
             listen_port=trojan_listen_port,
             users=[
-                TrojanUser(
+                NamePasswordUser(
                     name="user",
                     password=trojan_password,
                 ),
@@ -522,6 +559,70 @@ def main() -> None:
         )
         inbounds_config.inbounds.append(inbound_trojan)
         client_outbounds_config.outbounds.append(outbound_trojan)
+
+    if is_hysteria2_enabled:
+        hysteria2_listen_port = curr = curr + 1
+        hysteria2_obfs_password = secrets.token_urlsafe(16)
+        hysteria2_password = secrets.token_urlsafe(12) + "=="
+        inbound_hysteria2 = InboundHysteria2(
+            type="hysteria2",
+            tag="hysteria2",
+            listen="0.0.0.0",
+            listen_port=hysteria2_listen_port,
+            up_mbps=100,
+            down_mbps=100,
+            obfs=Obfs(
+                type="salamander",
+                password=hysteria2_obfs_password,
+            ),
+            users=[
+                NamePasswordUser(
+                    name="user",
+                    password=hysteria2_password,
+                ),
+            ],
+            ignore_client_bandwidth=True,
+            tls=ServerCertificateTLS(
+                enabled=True,
+                server_name=handshake_domain,
+                alpn=["h2", "http/1.1"],
+                min_version="1.2",
+                max_version="1.3",
+                key_path="certs/private.key",
+                certificate_path="certs/cert.pem",
+            ),
+            masquerade="",
+            brutal_debug=False,
+        )
+        outbound_hysteria2 = OutboundHysteria2(
+            type="hysteria2",
+            tag="hysteria2",
+            server=server_ip,
+            server_port=hysteria2_listen_port,
+            domain_strategy=domain_strategy,
+            up_mbps=100,
+            down_mbps=100,
+            obfs=Obfs(
+                type="salamander",
+                password=hysteria2_obfs_password,
+            ),
+            password=hysteria2_password,
+            tls=ClientTLSInsecure(
+                enabled=True,
+                server_name=handshake_domain,
+                alpn=["h2", "http/1.1"],
+                min_version="1.2",
+                max_version="1.3",
+                insecure=True,
+                utls=Utls(
+                    enabled=True,
+                    fingerprint="chrome",
+                ),
+            ),
+            brutal_debug=False,
+        )
+        client_outbounds_config.outbounds.append(outbound_hysteria2)
+        inbounds_config.inbounds.append(inbound_hysteria2)
 
     inbounds_config.to_json(path="conf/05_inbounds.json")
     services_config.to_json(path="conf/06_services.json")
