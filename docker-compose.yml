@@ -4,14 +4,18 @@ services:
     # image: docker.io/minlaxz/nekohasekai:nekohasekai
     pull_policy: always
     command: ["./sing-box", "run", "-C", "/sing-box/conf"]
+    mem_limit: 128m
+    mem_reservation: 64m
+    memswap_limit: -1 # no swap limit
+    mem_swappiness: 10
     environment:
       - START_PORT=${START_PORT}
       - END_PORT=${END_PORT}
       - SKIP_INIT=${SKIP_INIT}
       - HANDSHAKE_DOMAIN=${CONFIG_HOST}
-      - SHADOWSOCKS=true
-      - TROJAN=true
-      - HYSTERIA2=true
+      - SHADOWSOCKS=${SHADOWSOCKS}
+      - TROJAN=${TROJAN}
+      - HYSTERIA2=${HYSTERIA2}
     volumes:
       - ./cache:/sing-box/cache
       - ./public:/sing-box/public
@@ -21,6 +25,8 @@ services:
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"
     networks:
       - nekohasekai-net
+    sysctls:
+      vm.vfs_cache_pressure: 50
 
   nekohasekai-api:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
@@ -34,10 +40,11 @@ services:
       - START_PORT=${START_PORT}
       - END_PORT=${END_PORT}
       - CONFIG_HOST=${CONFIG_HOST}
+      - SSM_SERVER=${SSM_SERVER}
       - DNS_HOST=${DNS_HOST}
       - DNS_PATH={DNS_PATH}
-      - LOCAL_JSON_PATH=/public/outbounds.json
-      - REMOTE_JSON_URL=https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/api/sing-box-template
+      - LOCAL_JSON_PATH={LOCAL_JSON_PATH}
+      - REMOTE_JSON_URL={REMOTE_JSON_URL}
     volumes:
       - ./public:/public:ro
     expose:

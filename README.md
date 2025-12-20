@@ -12,7 +12,8 @@ We first need three things:
 wget -qO- get.docker.com | bash
 ```
 
-### 2. TCP Brutal Multiplexing for TCP proxies
+### 2. TCP Brutal Multiplexing for TCP proxies 
+> (not recommended as brutal bandwidth is flat and may be detected by some ISPs)
 
 ```sh
 bash <(curl -fsSL https://tcp.hy2.sh/)
@@ -26,12 +27,24 @@ echo net.ipv4.tcp_congestion_control=bbr | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
 
-### 4. What are these directories?
+### 4. Swap memory (optional, but recommended for low RAM VPS)
+```sh
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
+echo 'vm.vfs_cache_pressure=50' | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+### 5. What are these directories?
 - [rules](/rules/) - my [rules](https://github.com/minlaxz/nekohasekai/tree/route-rules) for adblocking and proxy routing rules
 - [api](/api/) - dynamic config generator for sing-box clients
 - [nekohasekai](/nekohasekai/) - sing-box server side configs
 - [examples](/examples/) - example configurations for other protocols
 
 
-### 5. nekohasekai
+### 6. nekohasekai name
 - [nekohasekai](https://github.com/nekohasekai)

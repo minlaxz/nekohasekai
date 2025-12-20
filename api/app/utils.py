@@ -11,7 +11,7 @@ CONFIG_HOST: str = os.getenv("CONFIG_HOST", "www.gstatic.com")
 START_PORT: int = int(os.getenv("START_PORT", "8040"))
 END_PORT: int = int(os.getenv("END_PORT", "8050"))
 
-SSM_SERVER: str = os.getenv("SSM_SERVER", "nekohasekai")
+SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
 SSM_UPSTREAM = f"http://{SSM_SERVER}:{END_PORT}"
 
 
