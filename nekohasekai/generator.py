@@ -248,6 +248,7 @@ class InboundHysteria2(CommonFields, ListenFields):
     tls: ServerCertificateTLS | ServerRealityTLS
     masquerade: MasqueradeConfig | str
     brutal_debug: bool
+    network: Optional[Literal["udp", "tcp", ""]] # both if empty
 
 
 class DailFields(TypedDict):
@@ -273,6 +274,7 @@ class OutboundHysteria2(CommonFields, DailFields):
     password: str
     tls: ClientTLSInsecure
     brutal_debug: bool
+
 
 # --- Shadowsocks Config End ---
 
@@ -402,10 +404,6 @@ def main() -> None:
     parser.add_argument("--start-port", default=0, help="Starting port")
     parser.add_argument("--end-port", default=0, help="Ending port")
     parser.add_argument("--log-level", default="info", help="Log Level")
-
-    parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
-    parser.add_argument("--trojan", action="store_true", help="Trojan")
-    parser.add_argument("--hysteria2", action="store_true", help="Hysteria2")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     args = parser.parse_args()
 
@@ -413,9 +411,9 @@ def main() -> None:
     ssm_listen_port = int(args.end_port) or start_port + 10
     verbose = args.verbose
 
-    is_ss_enabled = args.shadowsocks
-    is_trojan_enabled = args.trojan
-    is_hysteria2_enabled = args.hysteria2
+    is_ss_enabled = os.environ.get("SHADOWSOCKS", "false").lower() == "true"
+    is_trojan_enabled = os.environ.get("TROJAN", "false").lower() == "true"
+    is_hysteria2_enabled = os.environ.get("HYSTERIA2", "false").lower() == "true"
 
     handshake_domain = os.environ.get("HANDSHAKE_DOMAIN", "")
     # reality_privatekey = os.environ.get("REALITY_PRIVATEKEY", "")
@@ -593,6 +591,7 @@ def main() -> None:
             ),
             masquerade="",
             brutal_debug=False,
+            network="",
         )
         outbound_hysteria2 = OutboundHysteria2(
             type="hysteria2",

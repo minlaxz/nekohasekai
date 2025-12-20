@@ -9,6 +9,9 @@ services:
       - END_PORT=${END_PORT}
       - SKIP_INIT=${SKIP_INIT}
       - HANDSHAKE_DOMAIN=${CONFIG_HOST}
+      - SHADOWSOCKS=true
+      - TROJAN=true
+      - HYSTERIA2=true
     volumes:
       - ./cache:/sing-box/cache
       - ./public:/sing-box/public

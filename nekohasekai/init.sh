@@ -20,8 +20,6 @@ python3 ./generator.py \
     --start-port "$START_PORT" \
     --end-port "$END_PORT" \
     --log-level "warn" \
-    --shadowsocks \
-    --trojan \
     --verbose
 fi
 
