@@ -10,7 +10,6 @@ HANDSHAKE_DOMAIN=${HANDSHAKE_DOMAIN:-"mozilla.org"}
 START_PORT=${START_PORT:-8040}
 END_PORT=${END_PORT:-8050}
 SKIP_INIT=${SKIP_INIT:-"false"}
-WG_COUNT=${WG_COUNT:-0}
 
 mkdir -p certs && \
 openssl ecparam -genkey -name prime256v1 -out certs/private.key && \
@@ -20,7 +19,6 @@ if [ "$SKIP_INIT" != "true" ]; then
 python3 ./generator.py \
     --start-port "$START_PORT" \
     --end-port "$END_PORT" \
-    --wg-pc "$WG_COUNT" \
     --log-level "warn" \
     --shadowsocks \
     --trojan \

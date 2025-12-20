@@ -6,12 +6,13 @@ import httpx
 
 LOCAL_JSON_PATH: str = os.getenv("LOCAL_JSON_PATH", "outs.json")
 REMOTE_JSON_URL: str = os.getenv("REMOTE_JSON_URL", "sing-box-template")
-CONFIG_SERVER: str = os.getenv("CONFIG_SERVER", "www.gstatic.com")
-START_PORT: int = int(os.getenv("START_PORT", "1080"))
-SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
-SSM_PORT: int = START_PORT + 10
-SSM_UPSTREAM = f"http://{SSM_SERVER}:{SSM_PORT}"
-DNS_PATH: str = os.getenv("DNS_PATH", "/")
+
+CONFIG_HOST: str = os.getenv("CONFIG_HOST", "www.gstatic.com")
+START_PORT: int = int(os.getenv("START_PORT", "8040"))
+END_PORT: int = int(os.getenv("END_PORT", "8050"))
+
+SSM_SERVER: str = os.getenv("SSM_SERVER", "nekohasekai")
+SSM_UPSTREAM = f"http://{SSM_SERVER}:{END_PORT}"
 
 
 class Loader:
@@ -19,6 +20,7 @@ class Loader:
         self,
         platform: str,
         version: int,
+        dns_host: str,
         dns_path: str,
         dns_detour: str,
         dns_final: str,
@@ -34,10 +36,11 @@ class Loader:
     ) -> None:
         self.local_path = LOCAL_JSON_PATH
         self.remote_url = REMOTE_JSON_URL
-        self.config_server = CONFIG_SERVER
+        self.config_host = CONFIG_HOST
         self.platform = platform
         self.version = version
         self.log_level = log_level
+        self.dns_host = dns_host
         self.dns_path = dns_path
         self.dns_detour = dns_detour
         self.dns_final = dns_final
@@ -92,7 +95,7 @@ class Loader:
             for i in self.remote_data["dns"]["servers"]:
                 match i.get("tag"):
                     case "dns-remote":
-                        i["address"] = f"https://dns.nextdns.io{dns_path}"
+                        i["address"] = f"https://{self.dns_host}{dns_path}"
                     case "dns-resolver":
                         i["address"] = self.dns_resolver
                         # Client provided `dns_detour` i.e: `dd` for dns-resolver
@@ -105,7 +108,7 @@ class Loader:
             for i in self.remote_data["dns"]["servers"]:
                 match i.get("tag"):
                     case "dns-remote":
-                        i["server"] = "dns.nextdns.io"
+                        i["server"] = self.dns_host
                         i["path"] = dns_path
                     case "dns-resolver":
                         i["server"] = self.dns_resolver
@@ -204,7 +207,7 @@ class Loader:
             "type": "urltest",
             "tag": "Novice-Out",
             "outbounds": outbound_names[1:],  # exclude `direct`
-            "url": f"https://{self.config_server}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
+            "url": f"https://{self.config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
             "tolerance": 100
         })
@@ -223,59 +226,7 @@ class Loader:
 
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
-        # fmt: off
-        if os.getenv("WARP_ENABLED", "false").lower() == "true":
-            endpoints.append(
-                {
-                    "type": "wireguard",
-                    "tag": "wgep-cloud",
-                    "system": False,
-                    "name": "",
-                    "mtu": 1280,
-                    "address": [
-                        os.getenv("INTERFACE_ADDRESS4"),
-                        os.getenv("INTERFACE_ADDRESS6"),
-                    ],
-                    "private_key": os.getenv("INTERFACE_PRIVATE_KEY"),
-                    "detour": "shadowsocks",
-                    "peers": [
-                        {
-                            "address": os.getenv("PEER_ADDRESS"),
-                            "port": 2408,
-                            "public_key": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
-                            "pre_shared_key": "",
-                            "allowed_ips": [
-                                "0.0.0.0/0",
-                                "::/0"
-                            ],
-                            "persistent_keepalive_interval": 25,
-                            "reserved": [
-                                0,
-                                0,
-                                0
-                            ]
-                        }
-                    ]
-                }
-            )
         self.remote_data["endpoints"] = endpoints
-        # fmt: on
-
-        # ! Remove WireGuard endpoint if wg=0 (default)
-        # if not self.wg:
-        #     del self.remote_data["endpoints"]
-        # else:
-        #     endpoint = self.remote_data["endpoints"][0]
-        #     peers = endpoint.get("peers", [])
-        #     # * Keys are always stored in the last outbound
-        #     wg_keys = self.local_data["outbounds"][-1]["keys"]
-
-        #     endpoint["address"] = [wg_keys[f"wg_address_{self.wg}"]]
-        #     endpoint["private_key"] = wg_keys[f"wg_priv_{self.wg}"]
-        #     for peer in peers:
-        #         peer["address"] = wg_keys["wg_address_0"]
-        #         peer["port"] = START_PORT + 2
-        #         peer["public_key"] = wg_keys["wg_pub_0"]
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         self.disabled: bool = disabled

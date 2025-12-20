@@ -36,9 +36,9 @@ origins = [
     "http://localhost",
     "http://localhost:8080",
 ]
-config_server = os.getenv("CONFIG_SERVER")
-if config_server:
-    origins.append(config_server)
+config_host = os.getenv("CONFIG_HOST")
+if config_host:
+    origins.append(config_host)
 
 app.add_middleware(
     CORSMiddleware,
@@ -108,6 +108,7 @@ def read_config(
     ll: Union[str, None] = None,
     # DNS options
     # client defined dns_path otherwise server defined dns_path
+    dh: Union[str, None] = os.getenv("DNS_HOST", "dns.nextdns.io"),
     dp: Union[str, None] = os.getenv("DNS_PATH", "/"),
     dd: Union[str, None] = None,
     df: Union[str, None] = None,
@@ -137,6 +138,7 @@ def read_config(
         platform=p,
         version=v,
         log_level=ll,
+        dns_host=dh,
         dns_path=dp,
         dns_detour=dd,
         dns_final=df,

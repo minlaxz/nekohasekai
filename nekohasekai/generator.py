@@ -362,12 +362,11 @@ def keys() -> Dict[str, str]:
 def main() -> None:
     resp = json.load(urllib.request.urlopen("https://myip.wtf/json"))
     server_ip = resp.get("YourFuckingIPAddress")
-    domain_strategy = "ipv4_only" if "." in server_ip else "ipv6_only"
+    domain_strategy = "ipv4_only" if "." in server_ip else "prefer_ipv4"
 
     parser = argparse.ArgumentParser(description="Sing-Box Config Generator Parser")
     parser.add_argument("--start-port", default=0, help="Starting port")
     parser.add_argument("--end-port", default=0, help="Ending port")
-    parser.add_argument("--wg-pc", default=0, help="Wireguard Peer Count")
     parser.add_argument("--log-level", default="info", help="Log Level")
 
     parser.add_argument("--shadowsocks", action="store_true", help="Shadowsocks")
@@ -376,8 +375,7 @@ def main() -> None:
     args = parser.parse_args()
 
     start_port = int(args.start_port)
-    end_port = int(args.end_port)
-    ssm_listen_port = end_port or start_port + 10
+    ssm_listen_port = int(args.end_port) or start_port + 10
     verbose = args.verbose
 
     is_ss_enabled = args.shadowsocks
@@ -387,13 +385,6 @@ def main() -> None:
     # reality_privatekey = os.environ.get("REALITY_PRIVATEKEY", "")
     # reality_publickey = os.environ.get("REALITY_PUBLICKEY", "")
 
-    trojan_password = secrets.token_urlsafe(12) + "=="
-    wg_pc = int(args.wg_pc)
-    is_wg_enabled = 0 < wg_pc < 254
-    ss_listen_port = start_port + 1
-    trojan_listen_port = start_port + 2
-    wg_listen_port = start_port + 3
-
     if verbose:
         logging.info(f"Start Port (Clash API): {start_port}")
         logging.info(f"End Port (SSM API): {ssm_listen_port}")
@@ -401,7 +392,6 @@ def main() -> None:
         logging.info(f"Domain Strategy: {domain_strategy}")
         logging.info(f"Shadowsocks Enabled: {is_ss_enabled}")
         logging.info(f"Trojan Enabled: {is_trojan_enabled}")
-        logging.info(f"WG Enabled: {is_wg_enabled}")
 
     logging.info("Generating Sing-Box configuration...")
     os.makedirs("conf", exist_ok=True)
@@ -428,7 +418,10 @@ def main() -> None:
     endpoints_config = EndpointsConfig(endpoints=[])
     client_outbounds_config = ClientOutboundsConfig(outbounds=[])
 
+    curr = start_port
+
     if is_ss_enabled:
+        ss_listen_port = curr = curr + 1
         inbound_shadowsocks = InboundShadowsocks(
             type="shadowsocks",
             tag="shadowsocks",
@@ -470,6 +463,8 @@ def main() -> None:
         services_config.services[0]["servers"] = {"/": inbound_shadowsocks["tag"]}
 
     if is_trojan_enabled:
+        trojan_listen_port = curr = curr + 1
+        trojan_password = secrets.token_urlsafe(12) + "=="
         inbound_trojan = InboundTrojan(
             type="trojan",
             tag="trojan",
@@ -527,49 +522,6 @@ def main() -> None:
         )
         inbounds_config.inbounds.append(inbound_trojan)
         client_outbounds_config.outbounds.append(outbound_trojan)
-
-    keys_dict: Dict[str, Any] = {}
-    if is_wg_enabled:
-        # Interface
-        wg_keys = keys()
-        keys_dict["wg_priv_0"] = wg_keys["private"]
-        keys_dict["wg_pub_0"] = wg_keys["public"]
-        keys_dict["wg_address_0"] = "10.10.10.1/24"
-
-        # peers start from 1 to wg peer count
-        # for example, wg_pc = 3 => peers: wg1, wg2, wg3
-        for i in range(1, wg_pc + 1):
-            wg_keys = keys()
-            keys_dict[f"wg_priv_{i}"] = wg_keys["private"]
-            keys_dict[f"wg_pub_{i}"] = wg_keys["public"]
-            # 10.10.10.2 is static ip for server, look at docker-compose.yml wg subnet
-            # .0 is network address, identify the subnet itself not a host
-            # .255 is broadcast address (for a /24 subnet)
-            keys_dict[f"wg_address_{i}"] = f"10.10.10.{i + 1}/32"
-
-        peers: List[WireguardPeer] = [
-            WireguardPeer(
-                public_key=keys_dict.get(f"wg_pub_{i}", ""),
-                allowed_ips=keys_dict.get(f"wg_address_{i}", ""),
-            )
-            for i in range(1, wg_pc + 1)
-        ]
-
-        wg_endpoint = WireguardEndpoint(
-            type="wireguard",
-            tag="wg-ep",
-            name="wg0",
-            system=False,
-            mtu=1280,
-            address=[keys_dict["wg_address_0"]],
-            private_key=keys_dict["wg_priv_0"],
-            listen_port=wg_listen_port,
-            peers=peers,
-        )
-        endpoints_config.endpoints.append(wg_endpoint)
-        client_outbounds_config.outbounds.append(
-            WireguardKeys(tag="wg-keys", keys=keys_dict)
-        )
 
     inbounds_config.to_json(path="conf/05_inbounds.json")
     services_config.to_json(path="conf/06_services.json")
