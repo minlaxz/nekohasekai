@@ -121,7 +121,9 @@ class Loader:
         try:
             self.wg_data: Dict[str, Any] = {}
             if IS_WG_ENABLED:
-                auth = httpx.BasicAuth(username=WG_SERVER_USERNAME, password=WG_SERVER_PASSWORD)
+                auth = httpx.BasicAuth(
+                    username=WG_SERVER_USERNAME, password=WG_SERVER_PASSWORD
+                )
                 response = httpx.get(
                     f"{WG_UPSTREAM}/api/client",
                     timeout=5,
@@ -179,12 +181,21 @@ class Loader:
         for i in self.remote_data["route"]["rule_set"]:
             i["download_detour"] = self.route_detour or i.get("download_detour")
 
+        # fmt: off
+        if len(self.wg_data) > 0:
+            self.remote_data["route"]["rules"].insert(5,
+            {
+                "ip_cidr": ["10.8.0.0/24", "fdcc:ad94:bacf:61a4::cafe:0/112"],
+                "outbound": "wg"
+            }
+        )
+
     def __inject_outbounds__(self) -> None:
         # fmt: off
         outbounds: list[dict[str, str | int | list[str]]] = [
             {"type": "direct", "tag": "direct"}
         ]
-        outbound_names: list["str"] = ["direct"]
+        outbound_names: list[str] = ["direct"]
         # fmt: on
 
         for i in self.local_data["outbounds"]:
@@ -206,7 +217,7 @@ class Loader:
         outbounds.append({
             "type": "urltest",
             "tag": f"rv-{year}{month:02d}{day:02d}",
-            "outbounds": outbound_names,
+            "outbounds": outbound_names + ["wg"] if len(self.wg_data) > 0 else outbound_names,
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
             "tolerance": 100
@@ -239,8 +250,8 @@ class Loader:
         if len(self.wg_data) > 0:
             endpoint = EndpointConfig.copy()
             endpoint["address"] = [
-                self.wg_data.get("ipv4Address", ""),
-                self.wg_data.get("ipv6Address", ""),
+                self.wg_data.get("ipv4Address", "10.8.0.0") + "/24",
+                self.wg_data.get("ipv6Address", "fdcc:ad94:bacf:61a4::cafe:0") + "/112",
             ]
             endpoint["private_key"] = self.wg_data.get("privateKey", "")
             endpoint["peers"][0]["address"] = self.__server_ip
