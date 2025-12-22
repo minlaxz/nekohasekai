@@ -12,20 +12,61 @@
         "tag": "dns-resolver",
         "address": "",
         "detour": "shadowsocks"
+      },
+      {
+        "tag": "dns-final",
+        "address": "8.8.8.8"
       }
     ],
     "rules": [
-      {
-        "clash_mode": "Eco",
-        "server": "dns-remote"
-      },
       {
         "clash_mode": "Full",
         "server": "dns-remote"
       },
       {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "clash_mode": "Eco"
+          },
+          {
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "rule_set": [
+                  "geosite-cloudflare",
+                  "geoip-cloudflare",
+                  "geosite-meta",
+                  "geosite-twitter",
+                  "geosite-oonimm",
+                  "geoip-oonimm",
+                  "geosite-slack",
+                  "geosite-aws",
+                  "geosite-hurricaneelectric",
+                  "geosite-microsoft",
+                  "geosite-fastly",
+                  "geoip-fastly",
+                  "geosite-category-dev"
+                ]
+              },
+              {
+                "domain_suffix": [
+                  ".engineerforce.io",
+                  ".dify.io",
+                  ".nextdns.io"
+                ]
+              }
+            ]
+          }
+        ],
+        "action": "route",
+        "server": "dns-remote"
+      },
+      {
         "outbound": "any",
-        "server": "dns-resolver"
+        "server": "dns-final"
       }
     ],
     "independent_cache": false,
@@ -34,7 +75,7 @@
     "disable_expire": false,
     "cache_capacity": 10240,
     "reverse_mapping": true,
-    "final": "dns-resolver"
+    "final": "dns-final"
   },
   "inbounds": [
     {

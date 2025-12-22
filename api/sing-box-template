@@ -7,22 +7,67 @@
         "type": "https",
         "server": "",
         "path": "",
-        "domain_resolver": "dns-resolver"
+        "domain_resolver": {
+          "server": "dns-resolver",
+          "strategy": "ipv4_only"
+        }
       },
       {
         "tag": "dns-resolver",
         "type": "udp",
         "server": "",
-        "detour": "shadowsocks"
+        "detour": "Eco-Out"
+      },
+      {
+        "tag": "dns-final",
+        "type": "udp",
+        "server": "8.8.8.8"
       }
     ],
     "rules": [
       {
-        "clash_mode": "Eco",
+        "clash_mode": "Full",
         "server": "dns-remote"
       },
       {
-        "clash_mode": "Full",
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "clash_mode": "Eco"
+          },
+          {
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "rule_set": [
+                  "geosite-cloudflare",
+                  "geoip-cloudflare",
+                  "geosite-meta",
+                  "geosite-twitter",
+                  "geosite-oonimm",
+                  "geoip-oonimm",
+                  "geosite-slack",
+                  "geosite-aws",
+                  "geosite-hurricaneelectric",
+                  "geosite-microsoft",
+                  "geosite-fastly",
+                  "geoip-fastly",
+                  "geosite-category-dev"
+                ]
+              },
+              {
+                "domain_suffix": [
+                  ".engineerforce.io",
+                  ".dify.io",
+                  ".nextdns.io"
+                ]
+              }
+            ]
+          }
+        ],
+        "action": "route",
         "server": "dns-remote"
       }
     ],
@@ -32,7 +77,7 @@
     "disable_expire": false,
     "cache_capacity": 10240,
     "reverse_mapping": true,
-    "final": "dns-resolver"
+    "final": "dns-final"
   },
   "inbounds": [
     {
@@ -237,7 +282,9 @@
         "outbound": "direct"
       },
       {
-        "domain_keyword": ["gstatic.com"],
+        "domain_keyword": [
+          "gstatic.com"
+        ],
         "outbound": "Eco-Out"
       },
       {
@@ -248,7 +295,9 @@
         "type": "logical",
         "mode": "and",
         "rules": [
-          { "clash_mode": "Eco" },
+          {
+            "clash_mode": "Eco"
+          },
           {
             "type": "logical",
             "mode": "or",
