@@ -3,6 +3,7 @@ from typing import Dict, Any
 import os
 import json
 import httpx
+import datetime
 
 LOCAL_JSON_PATH: str = os.getenv("LOCAL_JSON_PATH", "outs.json")
 REMOTE_JSON_URL: str = os.getenv("REMOTE_JSON_URL", "sing-box-template")
@@ -13,6 +14,40 @@ END_PORT: int = int(os.getenv("END_PORT", "8050"))
 
 SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
 SSM_UPSTREAM = f"http://{SSM_SERVER}:{END_PORT}"
+
+WG_SERVER: str = os.environ.get("WG_SERVER", "wg-easy")
+WG_SERVER_PORT: str = os.environ.get("WG_SERVER_PORT", "51821")
+WG_PUBLIC_KEY: str = os.getenv("WG_PUBLIC_KEY", "")
+WG_SERVER_USERNAME: str = os.getenv("WG_SERVER_USERNAME", "")
+WG_SERVER_PASSWORD: str = os.getenv("WG_SERVER_PASSWORD", "")
+WG_UPSTREAM = f"http://{WG_SERVER}:{WG_SERVER_PORT}"
+IS_WG_ENABLED = all([WG_SERVER_USERNAME, WG_SERVER_PASSWORD, WG_PUBLIC_KEY])
+
+day = datetime.datetime.now(datetime.timezone.utc).day
+month = datetime.datetime.now(datetime.timezone.utc).month
+year = datetime.datetime.now(datetime.timezone.utc).year
+
+EndpointConfig: Dict[str, Any] = {
+    "type": "wireguard",
+    "tag": "wg",
+    "system": False,
+    "name": "",
+    "mtu": 1280,
+    "address": [],
+    "private_key": "",
+    "detour": "Eco-Out",
+    "peers": [
+        {
+            "address": "",
+            "port": 0,
+            "public_key": "",
+            "pre_shared_key": "",
+            "allowed_ips": ["0.0.0.0/0", "::/0"],
+            "persistent_keepalive_interval": 25,
+            "reserved": [0, 0, 0],
+        }
+    ],
+}
 
 
 class Loader:
@@ -55,6 +90,9 @@ class Loader:
         try:
             with open(self.local_path, "r", encoding="utf-8") as file:
                 self.local_data: Dict[str, Any] = json.load(file)
+                self.__server_ip: str = self.local_data.get("outbounds", [])[0].get(
+                    "server", ""
+                )
         except (FileNotFoundError, json.JSONDecodeError):
             self.local_data = {}
 
@@ -79,6 +117,24 @@ class Loader:
                     self.remote_data = json.load(file)
         except (httpx.HTTPError, json.JSONDecodeError):
             self.remote_data = {}
+
+        try:
+            self.wg_data: Dict[str, Any] = {}
+            if IS_WG_ENABLED:
+                auth = httpx.BasicAuth(username=WG_SERVER_USERNAME, password=WG_SERVER_PASSWORD)
+                response = httpx.get(
+                    f"{WG_UPSTREAM}/api/client",
+                    timeout=5,
+                    auth=auth,
+                )
+                response.raise_for_status()
+                data = response.json()
+                for i in data:
+                    if i.get("name") == self.user_name:
+                        self.wg_data = i
+                        break
+        except (httpx.HTTPError, json.JSONDecodeError):
+            self.wg_data = {}
 
     def __inject_dns__(self) -> None:
         # Default: `dns-final` otherwise client provided
@@ -123,58 +179,12 @@ class Loader:
         for i in self.remote_data["route"]["rule_set"]:
             i["download_detour"] = self.route_detour or i.get("download_detour")
 
-        # Experimental WireGuard routing rule injection, wg can be 2-253
-        # * #0 subnet, #1 server, #255 broadcast, #254 is reserved
-        if self.wg > 1 and self.wg < 254:
-            # fmt: off
-            self.remote_data["route"]["rules"].append(
-                {
-                    "type": "logical",
-                    "mode": "or",
-                    "rules": [{"ip_cidr": [f"10.10.10.{self.wg}/24"]}],
-                    "action": "route",
-                    "outbound": "wg-ep-sb"
-                }
-            )
-        # fmt: on
-        if os.getenv("WARP_ENABLED", "false").lower() == "true":
-            # Inject WARP routing rule
-            # 0 to 3 is reserved by inbounds rules, 4 is reserved by dns rules
-            # fmt: off
-            self.remote_data["route"]["rules"].insert(5,
-                {
-                    "type": "logical",
-                    "mode": "or",
-                    "rules": [
-                        {
-                            "rule_set": [
-                                "geosite-cloudflare",
-                                "geoip-cloudflare"
-                            ]
-                        },
-                        {
-                            "ip_cidr": [
-                                os.getenv("INTERFACE_ADDRESS4", "").split("/")[0] + "/24",
-                                os.getenv("INTERFACE_ADDRESS6", "").split("/")[0] + "/124"
-                            ]
-                        },
-                        {
-                            "ip_version": 6
-                        }
-                    ],
-                    "action": "route",
-                    "outbound": "wgep-cloud"
-                }
-            )
-
     def __inject_outbounds__(self) -> None:
         # fmt: off
         outbounds: list[dict[str, str | int | list[str]]] = [
             {"type": "direct", "tag": "direct"}
         ]
         outbound_names: list["str"] = ["direct"]
-        if os.getenv("WARP_ENABLED", "false").lower() == "true":
-            outbound_names.append("wgep-cloud")
         # fmt: on
 
         for i in self.local_data["outbounds"]:
@@ -195,7 +205,7 @@ class Loader:
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
-            "tag": "Pullup",
+            "tag": f"rv-{year}{month:02d}{day:02d}",
             "outbounds": outbound_names,
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
@@ -205,7 +215,7 @@ class Loader:
         # Ruled outbounds
         outbounds.append({
             "type": "urltest",
-            "tag": "Novice-Out",
+            "tag": "Eco-Out",
             "outbounds": outbound_names[1:],  # exclude `direct`
             "url": f"https://{self.config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
@@ -213,7 +223,7 @@ class Loader:
         })
         outbounds.append({
             "type": "selector",
-            "tag": "Expensive-Out",
+            "tag": "Full-Out",
             "outbounds": outbound_names[1:],  # exclude `direct`
             "default": outbound_names[1] # Assuming there're two outbounds at least
         })
@@ -226,6 +236,20 @@ class Loader:
 
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
+        if len(self.wg_data) > 0:
+            endpoint = EndpointConfig.copy()
+            endpoint["address"] = [
+                self.wg_data.get("ipv4Address", ""),
+                self.wg_data.get("ipv6Address", ""),
+            ]
+            endpoint["private_key"] = self.wg_data.get("privateKey", "")
+            endpoint["peers"][0]["address"] = self.__server_ip
+            endpoint["peers"][0]["port"] = END_PORT + 1
+            endpoint["peers"][0]["public_key"] = WG_PUBLIC_KEY
+            endpoint["peers"][0]["pre_shared_key"] = self.wg_data.get(
+                "preSharedKey", ""
+            )
+            endpoints.append(endpoint)
         self.remote_data["endpoints"] = endpoints
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:

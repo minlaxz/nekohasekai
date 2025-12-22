@@ -231,10 +231,10 @@ class Obfs(TypedDict):
 
 class MasqueradeConfig(TypedDict):
     type: Literal["file", "proxy", "string"]
-    directory: Optional[str]
-    url: Optional[str]
+    directory: Optional[str] # if type is file
+    url: Optional[str] # if type is proxy
     rewrite_host: Optional[str]
-    status_code: Optional[int]
+    status_code: Optional[int] # if type is string
     headers: Optional[Dict[str, str]]
     content: Optional[str]
 
@@ -246,9 +246,8 @@ class InboundHysteria2(CommonFields, ListenFields):
     users: List[NamePasswordUser]
     ignore_client_bandwidth: bool
     tls: ServerCertificateTLS | ServerRealityTLS
-    masquerade: MasqueradeConfig | str
+    masquerade: MasqueradeConfig | Dict[str, Any]
     brutal_debug: bool
-    network: Optional[Literal["udp", "tcp", ""]]  # both if empty
 
 
 class DailFields(TypedDict):
@@ -589,9 +588,8 @@ def main() -> None:
                 key_path="certs/private.key",
                 certificate_path="certs/cert.pem",
             ),
-            masquerade="",
+            masquerade={},
             brutal_debug=False,
-            network="",
         )
         outbound_hysteria2 = OutboundHysteria2(
             type="hysteria2",

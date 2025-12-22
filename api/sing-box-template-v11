@@ -238,11 +238,11 @@
       },
       {
         "domain_keyword": ["gstatic.com"],
-        "outbound": "Novice-Out"
+        "outbound": "Eco-Out"
       },
       {
         "clash_mode": "Full",
-        "outbound": "Expensive-Out"
+        "outbound": "Full-Out"
       },
       {
         "type": "logical",
@@ -283,7 +283,7 @@
           }
         ],
         "action": "route",
-        "outbound": "Novice-Out"
+        "outbound": "Eco-Out"
       }
     ],
     "final": "direct",
