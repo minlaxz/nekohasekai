@@ -269,7 +269,8 @@
           {
             "network": "tcp",
             "port": [
-              5222
+              5222,
+              853
             ]
           },
           { "protocol": "stun" }

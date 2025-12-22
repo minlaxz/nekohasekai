@@ -183,12 +183,11 @@ class Loader:
 
         # fmt: off
         if len(self.wg_data) > 0:
-            self.remote_data["route"]["rules"].insert(5,
-            {
+            self.remote_data["route"]["rules"].insert(5, {
                 "ip_cidr": ["10.8.0.0/24", "fdcc:ad94:bacf:61a4::cafe:0/112"],
+                "ip_version": 6,
                 "outbound": "wg"
-            }
-        )
+            })
 
     def __inject_outbounds__(self) -> None:
         # fmt: off
