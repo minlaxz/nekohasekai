@@ -24,60 +24,13 @@
         "server": "8.8.8.8"
       }
     ],
-    "rules": [
-      {
-        "clash_mode": "Full",
-        "server": "dns-remote"
-      },
-      {
-        "type": "logical",
-        "mode": "and",
-        "rules": [
-          {
-            "clash_mode": "Eco"
-          },
-          {
-            "type": "logical",
-            "mode": "or",
-            "rules": [
-              {
-                "rule_set": [
-                  "geosite-cloudflare",
-                  "geoip-cloudflare",
-                  "geosite-meta",
-                  "geosite-twitter",
-                  "geosite-oonimm",
-                  "geoip-oonimm",
-                  "geosite-slack",
-                  "geosite-aws",
-                  "geosite-hurricaneelectric",
-                  "geosite-microsoft",
-                  "geosite-fastly",
-                  "geoip-fastly",
-                  "geosite-category-dev"
-                ]
-              },
-              {
-                "domain_suffix": [
-                  ".engineerforce.io",
-                  ".dify.io",
-                  ".nextdns.io"
-                ]
-              }
-            ]
-          }
-        ],
-        "action": "route",
-        "server": "dns-remote"
-      }
-    ],
     "independent_cache": false,
     "strategy": "ipv4_only",
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,
-    "reverse_mapping": true,
-    "final": "dns-final"
+    "reverse_mapping": false,
+    "final": "dns-remote"
   },
   "inbounds": [
     {
@@ -90,16 +43,7 @@
       "mtu": 1280,
       "auto_route": true,
       "strict_route": true,
-      "stack": "mixed",
-      "platform": {
-        "http_proxy": {
-          "enabled": false,
-          "server": "0.0.0.0",
-          "server_port": 2081,
-          "bypass_domain": [],
-          "match_domain": []
-        }
-      }
+      "stack": "mixed"
     },
     {
       "type": "http",
