@@ -38,7 +38,7 @@
       "tag": "tun-in",
       "interface_name": "utun1",
       "address": [
-        "10.69.69.0/28"
+        "10.10.10.0/24"
       ],
       "mtu": 1280,
       "auto_route": true,
@@ -202,6 +202,9 @@
           },
           {
             "protocol": "stun"
+          },
+          {
+            "ip_cidr": "0.0.0.0/32"
           }
         ],
         "action": "reject",
