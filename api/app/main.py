@@ -120,7 +120,7 @@ def read_config(
     k: Union[str, None] = None,
     # Misc options
     please: bool = False,  # Humorous parameter to appease the server
-    mx: Union[bool, None] = True,
+    mx: Union[bool, None] = False,
     # Experimentals and Wireguard options (not stable yet)
     # Experimental features without touching users
     ex: Union[bool, None] = False,
