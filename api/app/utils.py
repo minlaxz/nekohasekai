@@ -205,7 +205,7 @@ class Loader:
 
             # ! Remove multiplex from all outbounds if requested i.e. ?mx=false
             if not self.multiplex:
-                _ = i.pop("multiplex", None):
+                _ = i.pop("multiplex", None)
 
             # * Append other outbounds, e.g., trojan, vless, etc.
             outbounds.append(i)
