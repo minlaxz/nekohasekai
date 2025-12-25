@@ -6,9 +6,9 @@ import os
 import redis
 import time
 
-LOCAL_JSON_PATH = os.getenv("LOCAL_JSON_PATH", "/data/local.json")
-REMOTE_JSON_URL = os.getenv(
-    "REMOTE_JSON_URL",
+APP_LOCAL_JSON_PATH = os.getenv("APP_LOCAL_JSON_PATH", "/data/local.json")
+APP_REMOTE_JSON_URL = os.getenv(
+    "APP_REMOTE_JSON_URL",
     "https://raw.githubusercontent.com/minlaxz/nekohasekai/refs/heads/main/singbox/v2/sing-box-template",
 )
 CONFIG_DOMAIN = os.getenv("CONFIG_DOMAIN", "")
@@ -64,9 +64,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def __load(self):
         try:
-            with open(LOCAL_JSON_PATH) as f:
+            with open(APP_LOCAL_JSON_PATH) as f:
                 self.local_data = json.load(f)
-            with urllib.request.urlopen(REMOTE_JSON_URL) as r:
+            with urllib.request.urlopen(APP_REMOTE_JSON_URL) as r:
                 self.remote_data = json.load(r)
         except Exception as e:
             self.send_response(500)

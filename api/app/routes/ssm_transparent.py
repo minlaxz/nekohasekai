@@ -5,8 +5,8 @@ from fastapi import Request, Response, APIRouter
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
-SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
-SSM_UPSTREAM = f"http://{SSM_SERVER}:{END_PORT}"
+APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "localhost")
+SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
 
 router = APIRouter()
 

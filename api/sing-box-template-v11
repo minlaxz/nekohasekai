@@ -11,7 +11,7 @@
       {
         "tag": "dns-resolver",
         "address": "",
-        "detour": "shadowsocks"
+        "detour": ""
       },
       {
         "tag": "dns-final",
@@ -24,7 +24,7 @@
     "disable_expire": false,
     "cache_capacity": 10240,
     "reverse_mapping": false,
-    "final": "dns-remote"
+    "final": ""
   },
   "inbounds": [
     {
@@ -55,7 +55,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cloudflare.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -63,7 +63,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/cloudflare.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -71,7 +71,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/meta.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -79,7 +79,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -87,7 +87,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-oonimm.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -95,7 +95,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-ip-oonimm.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -103,7 +103,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/slack.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -111,7 +111,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/aws.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -119,7 +119,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/hurricaneelectric.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -127,7 +127,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/microsoft.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -135,7 +135,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/fastly.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -143,7 +143,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/fastly.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -151,7 +151,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-dev.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -159,7 +159,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/mm.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       },
       {
@@ -167,7 +167,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-bank-mm.srs",
-        "download_detour": "shadowsocks",
+        "download_detour": "",
         "update_interval": "1d"
       }
     ],

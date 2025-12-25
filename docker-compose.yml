@@ -7,14 +7,6 @@ services:
     mem_limit: 128m
     mem_reservation: 64m
     memswap_limit: -1 # no swap limit
-    environment:
-      - START_PORT=${START_PORT}
-      - END_PORT=${END_PORT}
-      - SKIP_INIT=${SKIP_INIT}
-      - HANDSHAKE_DOMAIN=${CONFIG_HOST}
-      - SHADOWSOCKS=${SHADOWSOCKS}
-      - TROJAN=${TROJAN}
-      - HYSTERIA2=${HYSTERIA2}
     volumes:
       - ./cache:/sing-box/cache
       - ./public:/sing-box/public
@@ -31,17 +23,6 @@ services:
     pull_policy: always
     depends_on:
       - nekohasekai
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONDONTWRITEBYTECODE=1
-      - START_PORT=${START_PORT}
-      - END_PORT=${END_PORT}
-      - CONFIG_HOST=${CONFIG_HOST}
-      - SSM_SERVER=${SSM_SERVER}
-      - DNS_HOST=${DNS_HOST}
-      - DNS_PATH=${DNS_PATH}
-      - LOCAL_JSON_PATH=${LOCAL_JSON_PATH}
-      - REMOTE_JSON_URL=${REMOTE_JSON_URL}
     volumes:
       - ./public:/public:ro
     expose:
@@ -50,7 +31,7 @@ services:
       - caddy-net
       - nekohasekai-net
     labels:
-      caddy: ${CONFIG_HOST}
+      caddy: ${APP_CONFIG_HOST}
       caddy.reverse_proxy: "{{upstreams 8000}}"
 
   wg-easy:
@@ -59,10 +40,6 @@ services:
     pull_policy: always
     depends_on:
       - nekohasekai-api
-    environment:
-      - WG_HOST=${WG_HOST}
-      - WG_PORT=${WG_PORT}
-      - INSECURE=false
     volumes:
       - /lib/modules:/lib/modules:ro
       - ./etc_wireguard:/etc/wireguard

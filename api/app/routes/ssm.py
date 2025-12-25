@@ -12,12 +12,12 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-CONFIG_HOST: str = os.getenv("CONFIG_HOST", "www.gstatic.com")
+APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "www.gstatic.com")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
-SSM_SERVER: str = os.getenv("SSM_SERVER", "localhost")
-SSM_UPSTREAM = f"http://{SSM_SERVER}:{END_PORT}"
+APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "localhost")
+SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
 
 @router.get(
     "/server/v1",
@@ -155,6 +155,6 @@ async def create_user(
             r.raise_for_status()
         except httpx.HTTPError as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
-    url = f"https://{CONFIG_HOST}/c?p={platform}&v={version}&j={username}&k={uPSK}"
+    url = f"https://{APP_CONFIG_HOST}/c?p={platform}&v={version}&j={username}&k={uPSK}"
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse("form.html", {"request": request, "result": url})

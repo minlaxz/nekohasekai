@@ -22,8 +22,17 @@ async def not_found(request: Request, exc: Any) -> Response:
     )
 
 
+async def internal_error(request: Request, exc: Any) -> Response:
+    print(f"500 Error: {exc.detail}")
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Nice! server error occurred."},
+    )
+
+
 exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
     404: not_found,
+    500: not_found,
 }
 
 app = FastAPI(exception_handlers=exceptions)
@@ -36,9 +45,9 @@ origins = [
     "http://localhost",
     "http://localhost:8080",
 ]
-config_host = os.getenv("CONFIG_HOST")
-if config_host:
-    origins.append(config_host)
+app_config_host = os.getenv("APP_CONFIG_HOST")
+if app_config_host:
+    origins.append(app_config_host)
 
 app.add_middleware(
     CORSMiddleware,
@@ -103,28 +112,26 @@ def health_check(
 @app.get("/c", response_class=JSONResponse)
 def read_config(
     # Common options
-    p: Union[str, None] = "a",
-    v: Union[int, None] = 12,
-    ll: Union[str, None] = None,
+    p: Union[str, None] = None, # Required
+    v: Union[int, None] = None, # Required
+    ll: Union[str, None] = os.getenv("APP_LOG_LEVEL", "info"),
     # DNS options
     # client defined dns_path otherwise server defined dns_path
-    dh: Union[str, None] = os.getenv("DNS_HOST"),
-    dp: Union[str, None] = os.getenv("DNS_PATH"),
-    dd: Union[str, None] = None,
-    df: Union[str, None] = None,
-    dr: Union[str, None] = "1.1.1.1",
+    dh: Union[str, None] = os.getenv("APP_DNS_HOST"),
+    dp: Union[str, None] = os.getenv("APP_DNS_PATH"),
+    dd: Union[str, None] = os.getenv("APP_DNS_DETOUR"),
+    df: Union[str, None] = os.getenv("APP_DNS_FINAL"),
+    dr: Union[str, None] = os.getenv("APP_DNS_RESOLVER"),
     # Route options
-    rd: Union[str, None] = None,
+    rd: Union[str, None] = os.getenv("APP_ROUTE_DETOUR"),
     # User authentication
-    j: Union[str, None] = None,
-    k: Union[str, None] = None,
-    # Misc options
+    j: Union[str, None] = None, # Required
+    k: Union[str, None] = None, # Required
+    # Experimental and other misc options
+    mx: Union[bool, None] = os.getenv("APP_MULTIPLEX_ENABLED") == "true",
+    wg: Union[bool, None] = os.getenv("APP_WG_ENABLED") == "true",
     please: bool = False,  # Humorous parameter to appease the server
-    mx: Union[bool, None] = False,
-    # Experimentals and Wireguard options (not stable yet)
-    # Experimental features without touching users
-    ex: Union[bool, None] = False,
-    wg: Union[int, None] = 0,  # WireGuard peer index
+    ex: Union[bool, None] = os.getenv("APP_EXPERIMENTAL_FEATURES") == "true",
 ) -> dict[str, Any]:
     if j is None or k is None:
         raise RequestValidationError([
