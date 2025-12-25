@@ -208,8 +208,12 @@ class Loader:
             if not self.multiplex:
                 _ = i.pop("multiplex", None)
 
-            outbounds.append(i)
-            outbound_names.append(i.get("tag"))
+            if "exp" in i.get("tag"):
+                if self.experimental:
+                    outbounds.append(i)
+                    outbound_names.append(i.get("tag"))
+                else:
+                    continue
 
         # Pullup outbounds
         outbounds.append({
