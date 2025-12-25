@@ -212,8 +212,9 @@ class Loader:
                 if self.experimental:
                     outbounds.append(i)
                     outbound_names.append(i.get("tag"))
-                else:
-                    continue
+            else:
+                outbounds.append(i)
+                outbound_names.append(i.get("tag"))
 
         # Pullup outbounds
         outbounds.append({
