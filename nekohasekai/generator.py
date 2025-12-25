@@ -1,4 +1,4 @@
-from typing import Any, List, Literal, Dict, Optional, TypedDict
+from typing import Any, List, Literal, Dict, Optional, TypedDict, NotRequired
 from dataclasses import dataclass, asdict, is_dataclass, field
 
 
@@ -139,12 +139,21 @@ class OutboundMultiplex(Multiplex):
 
 class CommonFields(TypedDict):
     tag: str
-    type: Literal["shadowsocks", "vless", "ssm-api", "wireguard", "trojan", "hysteria2"]
+    type: Literal[
+        "shadowsocks",
+        "ssm-api",
+        "wireguard",
+        "trojan",
+        "hysteria2",
+        "shadowtls",
+    ]
 
 
 class ListenFields(TypedDict):
-    listen: Literal["0.0.0.0", "::"]
-    listen_port: int
+    listen: Literal["0.0.0.0", "::", "127.0.0.1"]
+    listen_port: NotRequired[int]
+    detour: NotRequired[str]
+    network: NotRequired[Literal["tcp", "udp"]]
 
 
 class Handshake(TypedDict):
@@ -162,9 +171,9 @@ class ServerReality(TypedDict):
 class Tls(TypedDict):
     enabled: bool
     server_name: str
-    alpn: Optional[List[str]]
-    min_version: Literal["1.3", "1.2", "1.1", "1.0"]
-    max_version: Literal["1.3", "1.2", "1.1", "1.0"]
+    alpn: NotRequired[List[str]]
+    min_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]
+    max_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]
 
 
 class ServerRealityTLS(Tls):
@@ -194,7 +203,7 @@ class ClientTLSReality(Tls):
 
 class ClientTLSInsecure(Tls):
     utls: Optional[Utls]
-    insecure: bool
+    insecure: NotRequired[bool]
 
 
 class Shadowsocks(TypedDict):
@@ -213,15 +222,31 @@ class NamePasswordUser(TypedDict):
 
 
 class InboundShadowsocks(CommonFields, ListenFields, Shadowsocks):
-    users: List[ShadowsocksUser]
+    users: NotRequired[List[ShadowsocksUser]]
     managed: bool
-    multiplex: InboundMultiplex | Dict[str, Any]
+    multiplex: NotRequired[InboundMultiplex]
+
+
+class InboundShadowTLS(CommonFields, ListenFields):
+    version: Literal[1, 2, 3]
+    users: List[NamePasswordUser]
+    handshake: Handshake
 
 
 class InboundTrojan(CommonFields, ListenFields):
     users: List[NamePasswordUser]
     tls: ServerCertificateTLS | ServerRealityTLS
-    multiplex: InboundMultiplex | Dict[str, Any]
+    multiplex: NotRequired[InboundMultiplex]
+
+
+class DailFields(TypedDict):
+    server: NotRequired[str]
+    server_port: NotRequired[int]
+    domain_strategy: NotRequired[
+        Literal["ipv4_only", "prefer_ipv4", "ipv6_only", "ipv6_prefer"]
+    ]
+    detour: NotRequired[str]
+    udp_over_tcp: NotRequired[Dict[str, bool | int]]
 
 
 class Obfs(TypedDict):
@@ -231,10 +256,10 @@ class Obfs(TypedDict):
 
 class MasqueradeConfig(TypedDict):
     type: Literal["file", "proxy", "string"]
-    directory: Optional[str] # if type is file
-    url: Optional[str] # if type is proxy
+    directory: Optional[str]  # if type is file
+    url: Optional[str]  # if type is proxy
     rewrite_host: Optional[str]
-    status_code: Optional[int] # if type is string
+    status_code: Optional[int]  # if type is string
     headers: Optional[Dict[str, str]]
     content: Optional[str]
 
@@ -246,24 +271,18 @@ class InboundHysteria2(CommonFields, ListenFields):
     users: List[NamePasswordUser]
     ignore_client_bandwidth: bool
     tls: ServerCertificateTLS | ServerRealityTLS
-    masquerade: MasqueradeConfig | Dict[str, Any]
+    masquerade: NotRequired[MasqueradeConfig] | Dict[str, Any]
     brutal_debug: bool
 
 
-class DailFields(TypedDict):
-    server: str
-    server_port: int
-    domain_strategy: Literal["ipv4_only", "prefer_ipv4", "ipv6_only", "ipv6_prefer"]
-
-
 class OutboundShadowsocks(CommonFields, DailFields, Shadowsocks):
-    multiplex: OutboundMultiplex | Dict[str, Any]
+    multiplex: NotRequired[OutboundMultiplex]
 
 
 class OutboundTrojan(CommonFields, DailFields):
     password: str
     tls: ClientTLSInsecure
-    multiplex: OutboundMultiplex | Dict[str, Any]
+    multiplex: NotRequired[OutboundMultiplex]
 
 
 class OutboundHysteria2(CommonFields, DailFields):
@@ -275,7 +294,10 @@ class OutboundHysteria2(CommonFields, DailFields):
     brutal_debug: bool
 
 
-# --- Shadowsocks Config End ---
+class OutboundShadowTLS(CommonFields, DailFields):
+    version: Literal[1, 2, 3]
+    password: str
+    tls: ClientTLSInsecure
 
 
 class SSMService(CommonFields, ListenFields):
@@ -327,7 +349,9 @@ class EndpointsConfig(ConfigWriter):
 
 @dataclass
 class InboundsConfig(ConfigWriter):
-    inbounds: List[InboundShadowsocks | InboundTrojan | InboundHysteria2]
+    inbounds: List[
+        InboundShadowsocks | InboundTrojan | InboundHysteria2 | InboundShadowTLS
+    ]
 
 
 class WireguardKeys(TypedDict):
@@ -364,7 +388,9 @@ class ServerOutboundsConfig(ConfigWriter):
 
 @dataclass
 class ClientOutboundsConfig(ConfigWriter):
-    outbounds: List[OutboundShadowsocks | OutboundTrojan | OutboundHysteria2]
+    outbounds: List[
+        OutboundShadowsocks | OutboundTrojan | OutboundHysteria2 | OutboundShadowTLS
+    ]
 
 
 logging.basicConfig(
@@ -413,6 +439,7 @@ def main() -> None:
     is_ss_enabled = os.environ.get("SHADOWSOCKS", "false").lower() == "true"
     is_trojan_enabled = os.environ.get("TROJAN", "false").lower() == "true"
     is_hysteria2_enabled = os.environ.get("HYSTERIA2", "false").lower() == "true"
+    is_shadowtls_enabled = os.environ.get("SHADOWTLS", "false").lower() == "true"
 
     handshake_domain = os.environ.get("HANDSHAKE_DOMAIN", "")
     # reality_privatekey = os.environ.get("REALITY_PRIVATEKEY", "")
@@ -426,6 +453,7 @@ def main() -> None:
         logging.info(f"Shadowsocks Enabled: {is_ss_enabled}")
         logging.info(f"Trojan Enabled: {is_trojan_enabled}")
         logging.info(f"Hysteria2 Enabled: {is_hysteria2_enabled}")
+        logging.info(f"ShadowTLS Enabled: {is_shadowtls_enabled}")
 
     logging.info("Generating Sing-Box configuration...")
     os.makedirs("conf", exist_ok=True)
@@ -484,9 +512,9 @@ def main() -> None:
                 protocol="h2mux",
                 enabled=True,
                 padding=False,
-                max_connections=4,
-                min_streams=16,
-                max_streams=256,
+                max_connections=1,
+                min_streams=4,
+                max_streams=8,
                 # Brual is too flat
                 brutal=Brutal(enabled=False, up_mbps=0, down_mbps=0),
             ),
@@ -617,6 +645,69 @@ def main() -> None:
         )
         client_outbounds_config.outbounds.append(outbound_hysteria2)
         inbounds_config.inbounds.append(inbound_hysteria2)
+
+    if is_shadowtls_enabled:
+        shadowtls_listen_port = curr = curr + 1
+        # Not necessary to be identical but for simplicity
+        shadowtls_password = secrets.token_urlsafe(16) + "=="
+        inbound_shadowtls = InboundShadowTLS(
+            type="shadowtls",
+            tag="shadowtls",
+            listen="0.0.0.0",
+            listen_port=shadowtls_listen_port,
+            detour="ss-in",
+            version=3,
+            users=[
+                NamePasswordUser(
+                    name="user",
+                    password=shadowtls_password,
+                ),
+            ],
+            handshake=Handshake(
+                server=handshake_domain,
+                server_port=shadowtls_listen_port,
+            ),
+        )
+        inbound_shadowsocks = InboundShadowsocks(
+            type="shadowsocks",
+            tag="ss-in",
+            listen="127.0.0.1",
+            method="xchacha20-ietf-poly1305",
+            password=shadowtls_password,
+            managed=False,
+            network="tcp",
+        )
+        outbound_shadowsocks = OutboundShadowsocks(
+            type="shadowsocks",
+            tag="ss-out-exp",
+            detour="shadowtls-exp",
+            method="xchacha20-ietf-poly1305",
+            password=shadowtls_password,
+            udp_over_tcp={
+                "enabled": True,
+                "version": 2,
+            },  # version 1.11.4 users need version 1
+        )
+        outbound_shadowtls = OutboundShadowTLS(
+            type="shadowtls",
+            tag="shadowtls-exp",
+            server=server_ip,
+            server_port=shadowtls_listen_port,
+            version=3,
+            password=shadowtls_password,
+            tls=ClientTLSInsecure(
+                enabled=True,
+                server_name=handshake_domain,
+                utls=Utls(
+                    enabled=True,
+                    fingerprint="chrome",
+                ),
+            ),
+        )
+        inbounds_config.inbounds.append(inbound_shadowtls)
+        inbounds_config.inbounds.append(inbound_shadowsocks)
+        client_outbounds_config.outbounds.append(outbound_shadowtls)
+        client_outbounds_config.outbounds.append(outbound_shadowsocks)
 
     inbounds_config.to_json(path="conf/05_inbounds.json")
     services_config.to_json(path="conf/06_services.json")
