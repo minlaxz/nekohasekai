@@ -7,6 +7,8 @@ services:
     mem_limit: 128m
     mem_reservation: 64m
     memswap_limit: -1 # no swap limit
+    env_file:
+      - .env
     volumes:
       - ./cache:/sing-box/cache
       - ./public:/sing-box/public
@@ -25,6 +27,8 @@ services:
       - nekohasekai
     volumes:
       - ./public:/public:ro
+    env_file:
+      - .env
     expose:
       - "8000"
     networks:
@@ -40,6 +44,8 @@ services:
     pull_policy: always
     depends_on:
       - nekohasekai-api
+    env_file:
+      - .env
     volumes:
       - /lib/modules:/lib/modules:ro
       - ./etc_wireguard:/etc/wireguard

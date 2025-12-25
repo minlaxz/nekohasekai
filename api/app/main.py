@@ -114,24 +114,24 @@ def read_config(
     # Common options
     p: Union[str, None] = None, # Required
     v: Union[int, None] = None, # Required
-    ll: Union[str, None] = os.getenv("APP_LOG_LEVEL", "info"),
+    ll: Union[str, None] = "info",
     # DNS options
     # client defined dns_path otherwise server defined dns_path
-    dh: Union[str, None] = os.getenv("APP_DNS_HOST"),
-    dp: Union[str, None] = os.getenv("APP_DNS_PATH"),
-    dd: Union[str, None] = os.getenv("APP_DNS_DETOUR"),
-    df: Union[str, None] = os.getenv("APP_DNS_FINAL"),
-    dr: Union[str, None] = os.getenv("APP_DNS_RESOLVER"),
+    dh: Union[str, None] = None,
+    dp: Union[str, None] = None,
+    dd: Union[str, None] = None,
+    df: Union[str, None] = None,
+    dr: Union[str, None] = None,
     # Route options
-    rd: Union[str, None] = os.getenv("APP_ROUTE_DETOUR"),
+    rd: Union[str, None] = None,
     # User authentication
     j: Union[str, None] = None, # Required
     k: Union[str, None] = None, # Required
     # Experimental and other misc options
-    mx: Union[bool, None] = os.getenv("APP_MULTIPLEX_ENABLED") == "true",
-    wg: Union[bool, None] = os.getenv("APP_WG_ENABLED") == "true",
+    mx: Union[bool, None] = False,
+    wg: Union[bool, None] = True,
     please: bool = False,  # Humorous parameter to appease the server
-    ex: Union[bool, None] = os.getenv("APP_EXPERIMENTAL_FEATURES") == "true",
+    ex: Union[bool, None] = False,
 ) -> dict[str, Any]:
     if j is None or k is None:
         raise RequestValidationError([
@@ -144,19 +144,19 @@ def read_config(
     checker = Checker(
         platform=p,
         version=v,
-        log_level=ll,
-        dns_host=dh,
-        dns_path=dp,
-        dns_detour=dd,
-        dns_final=df,
-        dns_resolver=dr,
-        route_detour=rd,
+        log_level=ll or os.getenv("APP_LOG_LEVEL", "info"),
+        dns_host=dh or os.getenv("APP_DNS_HOST"),
+        dns_path=dp or os.getenv("APP_DNS_PATH"),
+        dns_detour=dd or os.getenv("APP_DNS_DETOUR"),
+        dns_final=df or os.getenv("APP_DNS_FINAL"),
+        dns_resolver=dr or os.getenv("APP_DNS_RESOLVER"),
+        route_detour=rd or os.getenv("APP_ROUTE_DETOUR"),
         username=j,
         psk=k,
+        multiplex=mx or os.getenv("APP_MULTIPLEX_ENABLED") == "true",
+        wg=wg or os.getenv("APP_WG_ENABLED") == "true",
         please=please,
-        multiplex=mx,
-        experimental=ex,
-        wg=wg,
+        experimental=ex or os.getenv("APP_EXPERIMENTAL_FEATURES") == "true",
     )
 
     if not checker.verify_key():
