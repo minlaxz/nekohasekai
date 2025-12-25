@@ -173,7 +173,8 @@
     ],
     "rules": [
       {
-        "action": "sniff"
+        "action": "sniff",
+        "timeout": "300ms"
       },
       {
         "action": "resolve",
