@@ -114,7 +114,7 @@ def read_config(
     # Common options
     p: Union[str, None] = None, # Required
     v: Union[int, None] = None, # Required
-    ll: Union[str, None] = "info",
+    ll: Union[str, None] = None,
     # DNS options
     # client defined dns_path otherwise server defined dns_path
     dh: Union[str, None] = None,
