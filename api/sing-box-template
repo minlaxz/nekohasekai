@@ -198,7 +198,8 @@
             "network": "tcp",
             "port": [
               5222,
-              853
+              853,
+              5228
             ]
           },
           {
@@ -282,10 +283,7 @@
         "outbound": "Eco-Out"
       }
     ],
-    "default_domain_resolver": {
-      "server": "dns-resolver",
-      "rewrite_ttl": 60
-    },
+    "default_domain_resolver": "dns-remote",
     "final": "direct",
     "auto_detect_interface": true
   },
@@ -296,9 +294,6 @@
   "experimental": {
     "clash_api": {
       "external_controller": "127.0.0.1:9090",
-      "external_ui": "ui",
-      "external_ui_download_detour": "shadowsocks",
-      "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
       "default_mode": "Eco",
       "access_control_allow_private_network": true
     },
