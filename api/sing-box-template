@@ -198,13 +198,9 @@
             "network": "tcp",
             "port": [
               5222,
-              853,
-              5228
+              853
             ]
-          },
-          {
-            "protocol": "stun"
-          },
+          }
           {
             "ip_cidr": "0.0.0.0/32"
           }
@@ -220,12 +216,6 @@
             "rule_set": [
               "geoip-mm",
               "geosite-mmbank"
-            ]
-          },
-          {
-            "network": "udp",
-            "port": [
-              853
             ]
           }
         ],
@@ -295,7 +285,8 @@
     "clash_api": {
       "external_controller": "127.0.0.1:9090",
       "default_mode": "Eco",
-      "access_control_allow_private_network": true
+      "access_control_allow_private_network": true,
+      "access_control_allow_origin": "*"
     },
     "cache_file": {
       "enabled": true,
