@@ -193,12 +193,6 @@
               "geoip-mm",
               "geosite-mmbank"
             ]
-          },
-          {
-            "network": "udp",
-            "port": [
-              853
-            ]
           }
         ],
         "outbound": "direct"
@@ -211,11 +205,9 @@
             "network": "tcp",
             "port": [
               5222,
-              853,
-              5228
+              853
             ]
           },
-          { "protocol": "stun" },
           {
             "ip_cidr": "0.0.0.0/32"
           }
