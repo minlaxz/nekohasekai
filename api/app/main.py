@@ -165,11 +165,11 @@ def read_config(
     return checker.unwarp()
 
 
-@app.get("/users/{name}")
-def read_user(name: str, q: Union[str, None] = None) -> dict[str, str | None]:
-    return {"name": name, "q": q}
+# @app.get("/users/{name}")
+# def read_user(name: str, q: Union[str, None] = None) -> dict[str, str | None]:
+#     return {"name": name, "q": q}
 
 
-@app.put("/users/{name}")
-def update_user(name: str, user: User) -> dict[str, str]:
-    return {"name": name, "psk": user.psk}
+# @app.put("/users/{name}")
+# def update_user(name: str, user: User) -> dict[str, str]:
+#     return {"name": name, "psk": user.psk}

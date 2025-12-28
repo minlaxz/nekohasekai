@@ -10,5 +10,5 @@ COPY . .
 
 EXPOSE 8000
 
-# See more options at https://fastapi.tiangolo.com/deployment/docker/
-CMD ["fastapi", "run", "app/main.py", "--port", "8000", "--proxy-headers"]
+# HEALTHCHECK --interval=10s --timeout=1s --start-period=5s --retries=3 \
+#   CMD curl -f http://localhost:8000 || exit 1

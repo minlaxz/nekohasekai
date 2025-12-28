@@ -12,21 +12,28 @@ APP_LOCAL_JSON_PATH: str = os.getenv("APP_LOCAL_JSON_PATH", "outs.json")
 APP_REMOTE_JSON_URL: str = os.getenv("APP_REMOTE_JSON_URL", "sing-box-template")
 APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "www.gstatic.com")
 APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "localhost")
+
 APP_WG_SERVER: str = os.environ.get("APP_WG_SERVER", "wg-easy")
 APP_WG_SERVER_PORT: str = os.environ.get("APP_WG_SERVER_PORT", "51821")
 APP_WG_PUBLIC_KEY: str = os.getenv("APP_WG_PUBLIC_KEY", "")
 APP_WG_SERVER_USERNAME: str = os.getenv("APP_WG_SERVER_USERNAME", "")
 APP_WG_SERVER_PASSWORD: str = os.getenv("APP_WG_SERVER_PASSWORD", "")
 
+APP_HS_SERVER: str = os.getenv("APP_HS_SERVER", "")
+APP_HS_SERVER_PORT: str = os.getenv("APP_HS_SERVER_PORT", "")
+APP_HS_API_KEY: str = os.getenv("APP_HS_API_KEY", "")
+
 SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
 WG_UPSTREAM = f"http://{APP_WG_SERVER}:{APP_WG_SERVER_PORT}"
+HS_UPSTREAM = f"http://{APP_HS_SERVER}:{APP_HS_SERVER_PORT}"
 IS_WG_ENABLED = all([APP_WG_SERVER_USERNAME, APP_WG_SERVER_PASSWORD, APP_WG_PUBLIC_KEY])
+IS_HS_ENABLED = APP_HS_API_KEY != ""
 
 day = datetime.datetime.now(datetime.timezone.utc).day
 month = datetime.datetime.now(datetime.timezone.utc).month
 year = datetime.datetime.now(datetime.timezone.utc).year
 
-EndpointConfig: Dict[str, Any] = {
+WireguardConfig: Dict[str, Any] = {
     "type": "wireguard",
     "tag": "wg",
     "system": False,
@@ -46,6 +53,16 @@ EndpointConfig: Dict[str, Any] = {
             "reserved": [0, 0, 0],
         }
     ],
+}
+
+TailscaleConfig: Dict[str, Any] = {
+    "type": "tailscale",
+    "tag": "ts",
+    "auth_key": "",
+    "control_url": os.getenv("HS_HOST", ""),
+    "hostname": "",
+    "accept_routes": True,
+    "udp_timeout": "5m0s",
 }
 
 
@@ -137,7 +154,40 @@ class Loader:
         except (httpx.HTTPError, json.JSONDecodeError):
             self.wg_data = {}
         finally:
+            # Server must support wireguard, user data must be present, and client enabled `wg=true`
+            # otherwise disable wireguard config and route injection
             self.wg_enabled = len(self.wg_data) > 0 and self.wg
+
+        try:
+            self.hs_data: Dict[str, Any] = {}
+            if IS_HS_ENABLED:
+                headers = {
+                    "Authorization": f"Bearer {APP_HS_API_KEY}",
+                    "Accept": "application/json",
+                }
+                user_response = httpx.get(
+                    f"{HS_UPSTREAM}/api/v1/user?name={self.user_name}",
+                    timeout=3,
+                    headers=headers,
+                )
+                user_response.raise_for_status()
+                user_id = user_response.json().get("users", [])[0].get("id", "")
+                response = httpx.get(
+                    f"{HS_UPSTREAM}/api/v1/preauthkey?user={user_id}",
+                    timeout=3,
+                    headers=headers,
+                )
+                response.raise_for_status()
+                response.json()
+                key = response.json().get("preAuthKeys", [])[-1].get("key", "")
+                self.hs_data = {
+                    "auth_key": key,
+                    "hostname": f"{self.user_name}-ts",
+                }
+        except (httpx.HTTPError, json.JSONDecodeError):
+            self.hs_data = {}
+        finally:
+            self.hs_enabled = len(self.hs_data) > 0
 
     def __inject_dns__(self) -> None:
         # Default: `dns-final` otherwise client provided
@@ -192,6 +242,14 @@ class Loader:
                     "outbound": "wg",
                 },
             )
+        if self.hs_enabled:
+            rules.insert(
+                5,
+                {
+                    "ip_cidr": ["100.0.0.0/8"],
+                    "outbound": "ts",
+                },
+            )
 
     def __inject_outbounds__(self) -> None:
         outbounds: List[Dict[str, Any]] = [{"type": "direct", "tag": "direct"}]
@@ -220,7 +278,7 @@ class Loader:
         outbounds.append({
             "type": "urltest",
             "tag": f"rv-{year}{month:02d}{day:02d}",
-            "outbounds": outbound_names + ["wg"] if self.wg_enabled else outbound_names,
+            "outbounds": outbound_names,
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
             "tolerance": 100,
@@ -230,7 +288,7 @@ class Loader:
         outbounds.append({
             "type": "urltest",
             "tag": "Eco-Out",
-            "outbounds": outbound_names[1:],  # exclude `direct`
+            "outbounds": [i for i in outbound_names if i != "direct"],
             "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
             "tolerance": 100,
@@ -240,8 +298,8 @@ class Loader:
         outbounds.append({
             "type": "selector",
             "tag": "Full-Out",
-            "outbounds": outbound_names[1:],  # exclude `direct`
-            "default": outbound_names[1],
+            "outbounds": [i for i in outbound_names if i != "direct"],
+            "default": outbound_names[1] if len(outbound_names) > 1 else "direct",
         })
 
         self.remote_data["outbounds"] = outbounds
@@ -253,7 +311,7 @@ class Loader:
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
         if self.wg_enabled:
-            endpoint = EndpointConfig.copy()
+            endpoint = WireguardConfig.copy()
             endpoint["address"] = [
                 self.wg_data.get("ipv4Address", "10.8.0.0") + "/24",
                 self.wg_data.get("ipv6Address", "fdcc:ad94:bacf:61a4::cafe:0") + "/112",
@@ -265,6 +323,11 @@ class Loader:
             endpoint["peers"][0]["pre_shared_key"] = self.wg_data.get(
                 "preSharedKey", ""
             )
+            endpoints.append(endpoint)
+        if self.hs_enabled:
+            endpoint = TailscaleConfig.copy()
+            endpoint["auth_key"] = self.hs_data.get("auth_key", "")
+            endpoint["hostname"] = self.hs_data.get("hostname", "")
             endpoints.append(endpoint)
         self.remote_data["endpoints"] = endpoints
 
