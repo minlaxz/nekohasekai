@@ -43,13 +43,6 @@ services:
       - .env
     expose:
       - "8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      start_period: 30s
-      start_interval: 15s
-      interval: 5m
-      timeout: 5s
-      retries: 3
     networks:
       - caddy-net
       - nekohasekai-net
