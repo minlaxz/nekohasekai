@@ -16,7 +16,7 @@ openssl ecparam -genkey -name prime256v1 -out certs/private.key && \
 openssl req -new -x509 -days 36500 -key certs/private.key -out certs/cert.pem -subj "/CN=${HANDSHAKE_DOMAIN}"
 
 if [ "$SKIP_INIT" != "true" ]; then
-python3 ./generator.py \
+python3 ./main.py \
     --start-port "$START_PORT" \
     --end-port "$END_PORT" \
     --log-level "warn" \
