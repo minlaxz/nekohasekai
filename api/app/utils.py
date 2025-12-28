@@ -187,7 +187,7 @@ class Loader:
         except (httpx.HTTPError, json.JSONDecodeError):
             self.hs_data = {}
         finally:
-            self.hs_enabled = len(self.hs_data) > 0
+            self.hs_enabled = len(self.hs_data) > 0 and self.version >= 12
 
     def __inject_dns__(self) -> None:
         # Default: `dns-final` otherwise client provided
