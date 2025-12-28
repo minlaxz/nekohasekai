@@ -5,7 +5,7 @@ ENV ARCH=$TARGETARCH
 
 WORKDIR /sing-box
 
-COPY init.sh generator.py ./
+COPY . ./
 
 RUN apt-get update && apt-get install --no-install-recommends -y curl jq
 
