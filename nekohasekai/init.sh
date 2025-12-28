@@ -19,7 +19,6 @@ if [ "$SKIP_INIT" != "true" ]; then
 python3 ./main.py \
     --start-port "$START_PORT" \
     --end-port "$END_PORT" \
-    --log-level "warn" \
     --verbose
 fi
 

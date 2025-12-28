@@ -73,8 +73,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    start_port = int(args.start_port)
-    ssm_listen_port = int(args.end_port) or start_port + 10
+    port_margin = 10
 
     proxies_enabled: List[str] = []
     is_ss_enabled = args.shadowsocks
@@ -89,6 +88,12 @@ def main() -> None:
     domain = os.environ.get("HANDSHAKE_DOMAIN", "")
     # reality_privatekey = os.environ.get("REALITY_PRIVATEKEY", "")
     # reality_publickey = os.environ.get("REALITY_PUBLICKEY", "")
+
+    start_port = int(args.start_port)
+    ssm_listen_port = int(args.end_port) or start_port + port_margin
+    if ssm_listen_port <= start_port + len(proxies_enabled):
+        ssm_listen_port = start_port + port_margin
+        logging.warning(f"Port conflict, setting end_port to {ssm_listen_port}")
 
     if not start_port:
         logging.error("Start port must be specified.")

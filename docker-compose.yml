@@ -3,7 +3,7 @@ services:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai
     pull_policy: always
     restart: unless-stopped
-    container_name: nekohasekai
+    container_name: nekohasekai-${PREFIX}
     command: ["./sing-box", "run", "-C", "/sing-box/conf"]
     mem_limit: 128m
     mem_reservation: 64m
@@ -19,6 +19,7 @@ services:
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${START_PORT}"]
+      start_period: 5s
       start_interval: 10s
       interval: 5m
       timeout: 5s
@@ -30,7 +31,7 @@ services:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
     pull_policy: always
     restart: unless-stopped
-    container_name: nekohasekai-api
+    container_name: nekohasekai-api-${PREFIX}
     # See more options at https://fastapi.tiangolo.com/deployment/docker/
     command: ["fastapi", "run", "app/main.py", "--port", "8000", "--proxy-headers"]
     depends_on:
@@ -44,6 +45,7 @@ services:
       - "8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      start_period: 30s
       start_interval: 15s
       interval: 5m
       timeout: 5s
@@ -58,7 +60,9 @@ services:
   headscale:
     image: docker.io/headscale/headscale:0.26.1
     restart: unless-stopped
-    container_name: headscale
+    container_name: headscale-${PREFIX}
+    env_file:
+      - .env
     expose:
       - "8080"
     volumes:
@@ -71,7 +75,7 @@ services:
     networks:
       - caddy-net
     labels:
-      caddy: ${HS_CONFIG_HOST}
+      caddy: ${HS_HOST}
       caddy.reverse_proxy: "{{upstreams 8080}}"
 
   wg-easy:
@@ -79,7 +83,9 @@ services:
     # image: docker.io/wg-easy/wg-easy:15
     pull_policy: always
     depends_on:
-      - nekohasekai-api
+      - nekohasekai-api-${PREFIX}
+    restart: unless-stopped
+    container_name: wg-easy-${PREFIX}
     env_file:
       - .env
     volumes:
