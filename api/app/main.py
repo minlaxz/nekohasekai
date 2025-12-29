@@ -15,7 +15,7 @@ from .routes.ssm_transparent import router as ssm_transparent_router
 
 
 async def not_found(request: Request, exc: Any) -> Response:
-    print(f"404 Error: {exc.detail}")
+    print(f"404 Error: {exc}")
     return JSONResponse(
         status_code=404,
         content={"message": "The resource you are looking for is not found."},

@@ -98,7 +98,6 @@ class Loader:
         experimental: bool,
         username: str,
         psk: str,
-        wg: int,
         please: bool = False,
     ) -> None:
         self.local_path = APP_LOCAL_JSON_PATH
