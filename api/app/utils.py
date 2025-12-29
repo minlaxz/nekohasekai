@@ -6,28 +6,44 @@ import httpx
 import datetime
 
 START_PORT: int = int(os.getenv("START_PORT", "8040"))
-END_PORT: int = int(os.getenv("END_PORT", "8050"))
-
 APP_LOCAL_JSON_PATH: str = os.getenv("APP_LOCAL_JSON_PATH", "outs.json")
 APP_REMOTE_JSON_URL: str = os.getenv("APP_REMOTE_JSON_URL", "sing-box-template")
-APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "www.gstatic.com")
-APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "localhost")
+APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "")
 
-APP_WG_SERVER: str = os.environ.get("APP_WG_SERVER", "wg-easy")
-APP_WG_SERVER_PORT: str = os.environ.get("APP_WG_SERVER_PORT", "51821")
+# SSM
+APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "nekohasekai")
+END_PORT: int = int(os.getenv("END_PORT", ""))
+SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
+
+# Wireguard
+APP_WG_ENABLED: bool = os.getenv("APP_WG_ENABLED", "false").lower() == "true"
+APP_WG_SERVER: str = os.environ.get("APP_WG_SERVER", "")
+APP_WG_SERVER_PORT: str = os.environ.get("APP_WG_SERVER_PORT", "")
 APP_WG_PUBLIC_KEY: str = os.getenv("APP_WG_PUBLIC_KEY", "")
 APP_WG_SERVER_USERNAME: str = os.getenv("APP_WG_SERVER_USERNAME", "")
 APP_WG_SERVER_PASSWORD: str = os.getenv("APP_WG_SERVER_PASSWORD", "")
+IS_WG_ENABLED = all([
+    APP_WG_ENABLED,
+    APP_WG_SERVER,
+    APP_WG_SERVER_PORT,
+    APP_WG_PUBLIC_KEY,
+    APP_WG_SERVER_USERNAME,
+    APP_WG_SERVER_PASSWORD,
+])
+WG_UPSTREAM = f"http://{APP_WG_SERVER}:{APP_WG_SERVER_PORT}"
 
+# Headscale
+APP_HS_ENABLED: bool = os.getenv("APP_HS_ENABLED", "false").lower() == "true"
 APP_HS_SERVER: str = os.getenv("APP_HS_SERVER", "")
 APP_HS_SERVER_PORT: str = os.getenv("APP_HS_SERVER_PORT", "")
 APP_HS_API_KEY: str = os.getenv("APP_HS_API_KEY", "")
-
-SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
-WG_UPSTREAM = f"http://{APP_WG_SERVER}:{APP_WG_SERVER_PORT}"
+IS_HS_ENABLED = all([
+    APP_HS_ENABLED,
+    APP_HS_SERVER,
+    APP_HS_SERVER_PORT,
+    APP_HS_API_KEY,
+])
 HS_UPSTREAM = f"http://{APP_HS_SERVER}:{APP_HS_SERVER_PORT}"
-IS_WG_ENABLED = all([APP_WG_SERVER_USERNAME, APP_WG_SERVER_PASSWORD, APP_WG_PUBLIC_KEY])
-IS_HS_ENABLED = APP_HS_API_KEY != ""
 
 day = datetime.datetime.now(datetime.timezone.utc).day
 month = datetime.datetime.now(datetime.timezone.utc).month
@@ -102,16 +118,27 @@ class Loader:
         self.please = please
         self.multiplex = multiplex
         self.experimental = experimental
-        self.wg = wg
+        self.local_data: Dict[str, Any] = {}
+        self.remote_data: Dict[str, Any] = {}
+        self.wg_data: Dict[str, Any] = {}
+        self.hs_data: Dict[str, Any] = {}
+        self.wg_enabled = False
+        self.hs_enabled = False
+        self.__server_ip: str = ""
+        self._load_local_data()
+        self._load_remote_data()
+
+    def _load_local_data(self):
         try:
             with open(self.local_path, "r", encoding="utf-8") as file:
-                self.local_data: Dict[str, Any] = json.load(file)
-                self.__server_ip: str = self.local_data.get("outbounds", [])[0].get(
+                self.local_data = json.load(file)
+                self.__server_ip = self.local_data.get("outbounds", [])[0].get(
                     "server", ""
                 )
         except (FileNotFoundError, json.JSONDecodeError):
             self.local_data = {}
 
+    def _load_remote_data(self):
         try:
             if self.remote_url.startswith("https://"):
                 response = httpx.get(
@@ -121,7 +148,7 @@ class Loader:
                     timeout=5,
                 )
                 response.raise_for_status()
-                self.remote_data: Dict[str, Any] = response.json()
+                self.remote_data = response.json()
             else:
                 with open(
                     self.remote_url + f"-v{self.version}"
@@ -134,8 +161,9 @@ class Loader:
         except (httpx.HTTPError, json.JSONDecodeError):
             self.remote_data = {}
 
+    def fetch_wg_data(self):
         try:
-            self.wg_data: Dict[str, Any] = {}
+            self.wg_data = {}
             if IS_WG_ENABLED:
                 auth = httpx.BasicAuth(
                     username=APP_WG_SERVER_USERNAME, password=APP_WG_SERVER_PASSWORD
@@ -154,12 +182,11 @@ class Loader:
         except (httpx.HTTPError, json.JSONDecodeError):
             self.wg_data = {}
         finally:
-            # Server must support wireguard, user data must be present, and client enabled `wg=true`
-            # otherwise disable wireguard config and route injection
-            self.wg_enabled = len(self.wg_data) > 0 and self.wg
+            self.wg_enabled = len(self.wg_data) > 0
 
+    def fetch_hs_data(self):
         try:
-            self.hs_data: Dict[str, Any] = {}
+            self.hs_data = {}
             if IS_HS_ENABLED:
                 headers = {
                     "Authorization": f"Bearer {APP_HS_API_KEY}",
@@ -334,12 +361,14 @@ class Loader:
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         self.disabled: bool = disabled
+        self.fetch_wg_data()
+        self.fetch_hs_data()
         self.__inject_dns__()
         self.__inject_log__()
         self.__inject_endpoints__()
         self.__inject_outbounds__()
         self.__inject_routes__()
-        return self.remote_data
+        return json.loads(json.dumps(self.remote_data, ensure_ascii=False, indent=2))
 
 
 class Checker(Loader):

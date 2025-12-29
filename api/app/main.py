@@ -129,7 +129,6 @@ def read_config(
     k: Union[str, None] = None, # Required
     # Experimental and other misc options
     mx: Union[bool, None] = False,
-    wg: Union[bool, None] = True,
     please: bool = False,  # Humorous parameter to appease the server
     ex: Union[bool, None] = False,
 ) -> dict[str, Any]:
@@ -144,7 +143,7 @@ def read_config(
     checker = Checker(
         platform=p,
         version=v,
-        log_level=ll or os.getenv("APP_LOG_LEVEL", "info"),
+        log_level=ll or os.getenv("APP_LOG_LEVEL"),
         dns_host=dh or os.getenv("APP_DNS_HOST"),
         dns_path=dp or os.getenv("APP_DNS_PATH"),
         dns_detour=dd or os.getenv("APP_DNS_DETOUR"),
@@ -154,7 +153,6 @@ def read_config(
         username=j,
         psk=k,
         multiplex=mx or os.getenv("APP_MULTIPLEX_ENABLED") == "true",
-        wg=wg or os.getenv("APP_WG_ENABLED") == "true",
         please=please,
         experimental=ex or os.getenv("APP_EXPERIMENTAL_FEATURES") == "true",
     )

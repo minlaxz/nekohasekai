@@ -54,8 +54,8 @@ services:
     image: docker.io/headscale/headscale:0.26.1
     restart: unless-stopped
     container_name: headscale-${PREFIX}
-    env_file:
-      - .env
+    environment:
+      - HS_HOST=${HS_HOST}
     expose:
       - "8080"
     volumes:
@@ -79,8 +79,10 @@ services:
       - nekohasekai-api-${PREFIX}
     restart: unless-stopped
     container_name: wg-easy-${PREFIX}
-    env_file:
-      - .env
+    environment:
+      - WG_HOST=${WG_HOST:-changeme.example.com}
+      - WG_PORT=${WG_PORT:-51820}
+      - INSECURE=false
     volumes:
       - /lib/modules:/lib/modules:ro
       - ./etc_wireguard:/etc/wireguard
@@ -98,9 +100,9 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.disable_ipv6=1
-      - net.ipv6.conf.all.forwarding=0
-      - net.ipv6.conf.default.forwarding=0
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv6.conf.default.forwarding=1
     labels:
       caddy: ${WG_HOST}
       caddy.reverse_proxy: "{{upstreams 51821}}"
