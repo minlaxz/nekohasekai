@@ -27,8 +27,8 @@ def generate(
         tls=InboundTlsCertificate(
             enabled=True,
             server_name=handshake_domain,
-            alpn=["h2", "http/1.1"],
-            min_version="1.2",
+            alpn=["h3", "h2", "http/1.1"],
+            min_version="1.3",
             max_version="1.3",
             key_path="certs/private.key",
             certificate_path="certs/cert.pem",
@@ -56,8 +56,8 @@ def generate(
         tls=OutboundTlsCertificate(
             enabled=True,
             server_name=handshake_domain,
-            alpn=["h2", "http/1.1"],
-            min_version="1.2",
+            alpn=["h3", "h2", "http/1.1"],
+            min_version="1.3",
             max_version="1.3",
             insecure=False,
             certificate=certificate_array,
