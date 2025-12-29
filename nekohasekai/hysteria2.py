@@ -1,10 +1,8 @@
-from typings.hysteria2 import InboundHysteria2
-from typings.hysteria2 import OutboundHysteria2
-from typings.hysteria2 import Obfs
-from typings.common import NamePasswordUser
-from typings.tls import InboundTlsCertificate
-from typings.tls import OutboundTlsCertificate
 from common import InboundsConfig, ClientOutboundsConfig
+
+from typings.hysteria2 import InboundHysteria2, OutboundHysteria2, Obfs
+from typings.common import NamePasswordUser
+from typings.tls import OutboundTlsCertificate, InboundTlsCertificate, Ech
 
 
 def generate(
@@ -44,6 +42,10 @@ def generate(
             max_version="1.3",
             key_path="certs/private.key",
             certificate_path="certs/cert.pem",
+            ech=Ech(
+                enabled=True,
+                key_path="certs/ech_private.key",
+            ),
         ),
         masquerade={},
         brutal_debug=False,
@@ -51,6 +53,9 @@ def generate(
 
     with open("certs/cert.pem", "r") as cert_file:
         certificate_array = [line.rstrip("\n") for line in cert_file]
+
+    with open("certs/ech_public.key", "r") as ech_file:
+        ech_config_array = [line.rstrip("\n") for line in ech_file]
 
     outbound_hysteria2 = OutboundHysteria2(
         type="hysteria2",
@@ -71,7 +76,11 @@ def generate(
             min_version="1.2",
             max_version="1.3",
             insecure=False,
-            certificate=certificate_array
+            certificate=certificate_array,
+            ech=Ech(
+                enabled=True,
+                config=ech_config_array,
+            ),
         ),
         brutal_debug=False,
     )

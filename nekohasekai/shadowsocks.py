@@ -1,7 +1,7 @@
-from typings.shadowsocks import InboundShadowsocks
-from typings.shadowsocks import OutboundShadowsocks
-from typings.multiplex import InboundMultiplex, OutboundMultiplex, Brutal
 from common import InboundsConfig, ClientOutboundsConfig, ServicesConfig
+
+from typings.shadowsocks import InboundShadowsocks, OutboundShadowsocks
+from typings.multiplex import InboundMultiplex, OutboundMultiplex, Brutal
 
 
 def generate(

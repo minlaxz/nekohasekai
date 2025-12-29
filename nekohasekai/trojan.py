@@ -1,8 +1,8 @@
-from typings.trojan import InboundTrojan, OutboundTrojan, NamePasswordUser
-from typings.tls import InboundTlsCertificate
-from typings.multiplex import InboundMultiplex, OutboundMultiplex, Brutal
-from typings.tls import OutboundTlsCertificate, Utls, Ech
 from common import InboundsConfig, ClientOutboundsConfig
+
+from typings.trojan import InboundTrojan, OutboundTrojan, NamePasswordUser
+from typings.tls import InboundTlsCertificate, OutboundTlsCertificate, Utls, Ech
+from typings.multiplex import InboundMultiplex, OutboundMultiplex, Brutal
 
 
 def generate(
