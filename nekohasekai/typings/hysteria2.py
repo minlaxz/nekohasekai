@@ -1,6 +1,6 @@
 from typing import TypedDict, Literal, List, Dict, Any, Optional, NotRequired
 from typings.common import CommonFields, ListenFields, NamePasswordUser, DailFields
-from typings.tls import InboundTlsCertificate, InboundTlsReality, OutboundTlsCertificate
+from typings.tls import InboundTlsCertificate, OutboundTlsCertificate
 
 
 class Obfs(TypedDict):
@@ -24,7 +24,7 @@ class InboundHysteria2(CommonFields, ListenFields):
     obfs: Obfs
     users: List[NamePasswordUser]
     ignore_client_bandwidth: bool
-    tls: InboundTlsCertificate | InboundTlsReality
+    tls: InboundTlsCertificate
     masquerade: NotRequired[MasqueradeConfig] | Dict[str, Any]
     brutal_debug: bool
 

@@ -1,7 +1,7 @@
 from typings.trojan import InboundTrojan, OutboundTrojan, NamePasswordUser
 from typings.tls import InboundTlsCertificate
 from typings.multiplex import InboundMultiplex, OutboundMultiplex, Brutal
-from typings.tls import OutboundTlsCertificate, Utls
+from typings.tls import OutboundTlsCertificate, Utls, Ech
 from common import InboundsConfig, ClientOutboundsConfig
 
 
@@ -32,12 +32,19 @@ def generate(
             max_version="1.3",
             key_path="certs/private.key",
             certificate_path="certs/cert.pem",
+            ech=Ech(
+                enabled=True,
+                key_path="certs/ech_private.key",
+            ),
         ),
         multiplex=InboundMultiplex(enabled=True, padding=False),
     )
 
     with open("certs/cert.pem", "r") as cert_file:
         certificate_array = [line.rstrip("\n") for line in cert_file]
+
+    with open("certs/ech_public.key", "r") as ech_file:
+        ech_config_array = [line.rstrip("\n") for line in ech_file]
 
     outbound_trojan = OutboundTrojan(
         type="trojan",
@@ -57,6 +64,10 @@ def generate(
             utls=Utls(
                 enabled=True,
                 fingerprint="chrome",
+            ),
+            ech=Ech(
+                enabled=True,
+                config=ech_config_array,
             ),
         ),
         multiplex=OutboundMultiplex(

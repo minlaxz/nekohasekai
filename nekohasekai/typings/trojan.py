@@ -1,12 +1,12 @@
 from typing import List, NotRequired, Literal
 from typings.common import CommonFields, ListenFields, NamePasswordUser, DailFields
 from typings.multiplex import InboundMultiplex, OutboundMultiplex
-from typings.tls import InboundTlsCertificate, InboundTlsReality, OutboundTlsCertificate
+from typings.tls import InboundTlsCertificate, OutboundTlsCertificate
 
 
 class InboundTrojan(CommonFields, ListenFields):
     users: List[NamePasswordUser]
-    tls: InboundTlsCertificate | InboundTlsReality
+    tls: InboundTlsCertificate
     multiplex: NotRequired[InboundMultiplex]
 
 

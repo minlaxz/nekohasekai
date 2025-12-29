@@ -1,4 +1,20 @@
-from typing import TypedDict, NotRequired, Literal, List, Optional
+from typing import TypedDict, NotRequired, Literal, List
+
+
+class Tls(TypedDict):
+    enabled: bool
+    server_name: str
+    alpn: NotRequired[List[str]]
+    min_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]
+    max_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]
+
+
+class Ech(TypedDict):
+    enabled: bool
+    key: NotRequired[List[str]]
+    key_path: NotRequired[str]
+    config: NotRequired[List[str]]
+    config_path: NotRequired[str]
 
 
 class Handshake(TypedDict):
@@ -13,21 +29,11 @@ class InboundReality(TypedDict):
     handshake: Handshake
 
 
-class Tls(TypedDict):
-    enabled: bool
-    server_name: str
-    alpn: NotRequired[List[str]]
-    min_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]
-    max_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]
-
-
-class InboundTlsReality(Tls):
-    reality: InboundReality
-
-
 class InboundTlsCertificate(Tls):
     key_path: str
     certificate_path: str
+    ech: NotRequired[Ech]
+    reality: NotRequired[InboundReality]
 
 
 class Utls(TypedDict):
@@ -41,12 +47,9 @@ class OutboundReality(TypedDict):
     short_id: str
 
 
-class OutboundTlsReality(Tls):
-    utls: Utls
-    reality: OutboundReality
-
-
 class OutboundTlsCertificate(Tls):
     certificate: List[str]
     insecure: bool
-    utls: Optional[Utls]
+    utls: NotRequired[Utls]
+    ech: NotRequired[Ech]
+    reality: NotRequired[OutboundReality]

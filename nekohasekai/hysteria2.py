@@ -71,8 +71,7 @@ def generate(
             min_version="1.2",
             max_version="1.3",
             insecure=False,
-            certificate=certificate_array,
-            utls=None,
+            certificate=certificate_array
         ),
         brutal_debug=False,
     )
