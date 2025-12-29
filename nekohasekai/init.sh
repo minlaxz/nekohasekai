@@ -24,6 +24,7 @@ if [ "$SKIP_INIT" != "true" ]; then
   printf '%s\n' "$REALITY_PRIVATE" > certs/reality_private.key
   printf '%s\n' "$REALITY_PUBLIC" > certs/reality_public.key
 
+  ECH_KEYPAIR=$(/sing-box/sing-box generate ech-keypair ${HANDSHAKE_DOMAIN})
   AUTO_ECH_PUBLIC=$(sed -n '/-----BEGIN ECH CONFIGS-----/,/-----END ECH CONFIGS-----/p' <<< "$ECH_KEYPAIR")
   AUTO_ECH_PRIVATE=$(sed -n '/-----BEGIN ECH KEYS-----/,/-----END ECH KEYS-----/p' <<< "$ECH_KEYPAIR")
   ECH_PRIVATE=${CUSTOM_ECH_PRIVATE:-$AUTO_ECH_PRIVATE}
