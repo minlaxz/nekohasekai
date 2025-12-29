@@ -21,16 +21,15 @@ if [ "$SKIP_INIT" != "true" ]; then
   AUTO_REALITY_PUBLIC=$(awk '/PublicKey/{print $NF}' <<< "$REALITY_KEYPAIR")
   REALITY_PRIVATE=${CUSTOM_REALITY_PRIVATE:-$AUTO_REALITY_PRIVATE}
   REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-$AUTO_REALITY_PUBLIC}
-  echo ${REALITY_PRIVATE} > certs/reality_private.key
-  echo ${REALITY_PUBLIC} > certs/reality_public.key
+  printf '%s\n' "$REALITY_PRIVATE" > certs/reality_private.key
+  printf '%s\n' "$REALITY_PUBLIC" > certs/reality_public.key
 
-  ECH_KEYPAIR=$(/sing-box/sing-box generate ech-keypair ${HANDSHAKE_DOMAIN})
-  AUTO_ECH_PUBLIC=$(sed -n '/-----BEGIN ECH CONFIGS-----/,/-----END ECH CONFIGS-----/p' <<< "$ECH_KEYPAIR" | sed '1d;$d' | tr -d '\n')
-  AUTO_ECH_PRIVATE=$(sed -n '/-----BEGIN ECH KEYS-----/,/-----END ECH KEYS-----/p' <<< "$ECH_KEYPAIR" | sed '1d;$d' | tr -d '\n')
+  AUTO_ECH_PUBLIC=$(sed -n '/-----BEGIN ECH CONFIGS-----/,/-----END ECH CONFIGS-----/p' <<< "$ECH_KEYPAIR")
+  AUTO_ECH_PRIVATE=$(sed -n '/-----BEGIN ECH KEYS-----/,/-----END ECH KEYS-----/p' <<< "$ECH_KEYPAIR")
   ECH_PRIVATE=${CUSTOM_ECH_PRIVATE:-$AUTO_ECH_PRIVATE}
   ECH_PUBLIC=${CUSTOM_ECH_PUBLIC:-$AUTO_ECH_PUBLIC}
-  echo ${ECH_PRIVATE} > certs/ech_private.key
-  echo ${ECH_PUBLIC} > certs/ech_public.key
+  printf '%s\n' "$ECH_PRIVATE" > certs/ech_private.key
+  printf '%s\n' "$ECH_PUBLIC" > certs/ech_public.key
 
   python3 ./main.py \
       --start-port "$START_PORT" \
