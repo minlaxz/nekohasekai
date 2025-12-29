@@ -197,19 +197,21 @@ class Loader:
                     headers=headers,
                 )
                 user_response.raise_for_status()
-                user_id = user_response.json().get("users", [])[0].get("id", "")
-                response = httpx.get(
-                    f"{HS_UPSTREAM}/api/v1/preauthkey?user={user_id}",
-                    timeout=3,
-                    headers=headers,
-                )
-                response.raise_for_status()
-                response.json()
-                key = response.json().get("preAuthKeys", [])[-1].get("key", "")
-                self.hs_data = {
-                    "auth_key": key,
-                    "hostname": f"{self.user_name}-ts",
-                }
+                users = user_response.json().get("users", [])
+                if len(users) > 0:
+                    user_id = int(users[0].get("id", 0))
+                    response = httpx.get(
+                        f"{HS_UPSTREAM}/api/v1/preauthkey?user={user_id}",
+                        timeout=3,
+                        headers=headers,
+                    )
+                    response.raise_for_status()
+                    response.json()
+                    key = response.json().get("preAuthKeys", [])[-1].get("key", "")
+                    self.hs_data = {
+                        "auth_key": key,
+                        "hostname": f"{self.user_name}-ts",
+                    }
         except (httpx.HTTPError, json.JSONDecodeError):
             self.hs_data = {}
         finally:
