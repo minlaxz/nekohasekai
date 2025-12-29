@@ -1,6 +1,6 @@
 from typing import Literal, List
 from typings.common import CommonFields, ListenFields, DailFields
-from typings.tls import Handshake, ClientTLSInsecure
+from typings.tls import Handshake, OutboundTlsCertificate
 from typings.common import NamePasswordUser
 
 
@@ -13,4 +13,4 @@ class InboundShadowTLS(CommonFields, ListenFields):
 class OutboundShadowTLS(CommonFields, DailFields):
     version: Literal[1, 2, 3]
     password: str
-    tls: ClientTLSInsecure
+    tls: OutboundTlsCertificate

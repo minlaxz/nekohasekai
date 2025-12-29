@@ -1,8 +1,9 @@
 from typings.trojan import InboundTrojan, OutboundTrojan, NamePasswordUser
-from typings.tls import InboundTLSCertificate
+from typings.tls import InboundTlsCertificate
 from typings.multiplex import InboundMultiplex, OutboundMultiplex, Brutal
-from typings.tls import ClientTLSInsecure, Utls
+from typings.tls import OutboundTlsCertificate, Utls
 from common import InboundsConfig, ClientOutboundsConfig
+
 
 def generate(
     trojan_listen_port: int,
@@ -23,7 +24,7 @@ def generate(
                 password=trojan_password,
             ),
         ],
-        tls=InboundTLSCertificate(
+        tls=InboundTlsCertificate(
             enabled=True,
             server_name=handshake_domain,
             alpn=["h2", "http/1.1"],
@@ -34,6 +35,10 @@ def generate(
         ),
         multiplex=InboundMultiplex(enabled=True, padding=False),
     )
+
+    with open("certs/cert.pem", "r") as cert_file:
+        certificate_array = [line.rstrip("\n") for line in cert_file]
+
     outbound_trojan = OutboundTrojan(
         type="trojan",
         tag="trojan",
@@ -41,13 +46,14 @@ def generate(
         server_port=trojan_listen_port,
         network="tcp",
         password=trojan_password,
-        tls=ClientTLSInsecure(
+        tls=OutboundTlsCertificate(
             enabled=True,
             server_name=handshake_domain,
             alpn=["h2", "http/1.1"],
             min_version="1.2",
             max_version="1.3",
-            insecure=True,
+            insecure=False,
+            certificate=certificate_array,
             utls=Utls(
                 enabled=True,
                 fingerprint="chrome",

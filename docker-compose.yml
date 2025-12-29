@@ -25,7 +25,11 @@ services:
       timeout: 5s
       retries: 3
     networks:
+      - caddy-net
       - nekohasekai-net
+    labels:
+      caddy: ${HANDSHAKE_DOMAIN}
+      caddy.reverse_proxy: "{{upstreams}}"
 
   nekohasekai-api:
     image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
@@ -54,8 +58,8 @@ services:
     image: docker.io/headscale/headscale:0.26.1
     restart: unless-stopped
     container_name: headscale-${PREFIX}
-    environment:
-      - HS_HOST=${HS_HOST}
+    env_file:
+      - .env
     expose:
       - "8080"
     volumes:
@@ -79,10 +83,8 @@ services:
       - nekohasekai-api-${PREFIX}
     restart: unless-stopped
     container_name: wg-easy-${PREFIX}
-    environment:
-      - WG_HOST=${WG_HOST:-changeme.example.com}
-      - WG_PORT=${WG_PORT:-51820}
-      - INSECURE=false
+    env_file:
+      - .env
     volumes:
       - /lib/modules:/lib/modules:ro
       - ./etc_wireguard:/etc/wireguard

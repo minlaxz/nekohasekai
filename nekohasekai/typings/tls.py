@@ -6,7 +6,7 @@ class Handshake(TypedDict):
     server_port: int
 
 
-class ServerReality(TypedDict):
+class InboundReality(TypedDict):
     enabled: bool
     private_key: str
     short_id: List[str | None]
@@ -21,11 +21,11 @@ class Tls(TypedDict):
     max_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]
 
 
-class ServerRealityTLS(Tls):
-    reality: ServerReality
+class InboundTlsReality(Tls):
+    reality: InboundReality
 
 
-class InboundTLSCertificate(Tls):
+class InboundTlsCertificate(Tls):
     key_path: str
     certificate_path: str
 
@@ -35,17 +35,18 @@ class Utls(TypedDict):
     fingerprint: Literal["chrome", "firefox", "safari", "edge"]
 
 
-class ClientReality(TypedDict):
+class OutboundReality(TypedDict):
     enabled: bool
     public_key: str
     short_id: str
 
 
-class ClientTLSReality(Tls):
+class OutboundTlsReality(Tls):
     utls: Utls
-    reality: ClientReality
+    reality: OutboundReality
 
 
-class ClientTLSInsecure(Tls):
+class OutboundTlsCertificate(Tls):
+    certificate: List[str]
+    insecure: bool
     utls: Optional[Utls]
-    insecure: NotRequired[bool]

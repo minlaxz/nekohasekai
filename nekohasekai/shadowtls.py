@@ -1,5 +1,5 @@
 from typings.common import NamePasswordUser
-from typings.tls import Handshake, Utls, ClientTLSInsecure
+from typings.tls import Handshake, Utls, OutboundTlsCertificate
 from typings.shadowtls import InboundShadowTLS, OutboundShadowTLS
 from typings.shadowsocks import InboundShadowsocks, OutboundShadowsocks
 from common import InboundsConfig, ClientOutboundsConfig
@@ -58,9 +58,11 @@ def generate(
         server_port=shadowtls_listen_port,
         version=3,
         password=shadowtls_password,
-        tls=ClientTLSInsecure(
+        tls=OutboundTlsCertificate(
             enabled=True,
             server_name=handshake_domain,
+            insecure=False,
+            certificate=[],
             utls=Utls(
                 enabled=True,
                 fingerprint="chrome",

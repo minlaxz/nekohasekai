@@ -6,16 +6,22 @@ AUTO_REALITY_PUBLIC=$(awk '/PublicKey/{print $NF}' <<< "$REALITY_KEYPAIR")
 REALITY_PRIVATE=${CUSTOM_REALITY_PRIVATE:-$AUTO_REALITY_PRIVATE}
 REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-$AUTO_REALITY_PUBLIC}
 
-HANDSHAKE_DOMAIN=${HANDSHAKE_DOMAIN:-"mozilla.org"}
+HANDSHAKE_DOMAIN=${HANDSHAKE_DOMAIN}
 START_PORT=${START_PORT:-8040}
 END_PORT=${END_PORT:-8050}
 SKIP_INIT=${SKIP_INIT:-"false"}
 
-mkdir -p certs && \
-openssl ecparam -genkey -name prime256v1 -out certs/private.key && \
-openssl req -new -x509 -days 36500 -key certs/private.key -out certs/cert.pem -subj "/CN=${HANDSHAKE_DOMAIN}"
 
 if [ "$SKIP_INIT" != "true" ]; then
+mkdir -p certs && \
+
+openssl ecparam -genkey -name prime256v1 -out certs/private.key && \
+openssl req -new -x509 -days 36500 \
+  -key certs/private.key \
+  -out certs/cert.pem \
+  -subj "/CN=${HANDSHAKE_DOMAIN}" \
+  -addext "subjectAltName=DNS:${HANDSHAKE_DOMAIN}"
+
 python3 ./main.py \
     --start-port "$START_PORT" \
     --end-port "$END_PORT"

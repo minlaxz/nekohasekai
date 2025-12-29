@@ -2,8 +2,8 @@ from typings.hysteria2 import InboundHysteria2
 from typings.hysteria2 import OutboundHysteria2
 from typings.hysteria2 import Obfs
 from typings.common import NamePasswordUser
-from typings.tls import InboundTLSCertificate
-from typings.tls import ClientTLSInsecure
+from typings.tls import InboundTlsCertificate
+from typings.tls import OutboundTlsCertificate
 from common import InboundsConfig, ClientOutboundsConfig
 
 
@@ -36,7 +36,7 @@ def generate(
             ),
         ],
         ignore_client_bandwidth=True,
-        tls=InboundTLSCertificate(
+        tls=InboundTlsCertificate(
             enabled=True,
             server_name=handshake_domain,
             alpn=["h3", "h2", "http/1.1"],
@@ -48,6 +48,10 @@ def generate(
         masquerade={},
         brutal_debug=False,
     )
+
+    with open("certs/cert.pem", "r") as cert_file:
+        certificate_array = [line.rstrip("\n") for line in cert_file]
+
     outbound_hysteria2 = OutboundHysteria2(
         type="hysteria2",
         tag="hysteria2",
@@ -60,13 +64,14 @@ def generate(
             password=hysteria2_obfs_password,
         ),
         password=hysteria2_password,
-        tls=ClientTLSInsecure(
+        tls=OutboundTlsCertificate(
             enabled=True,
-            server_name=f"{handshake_domain}:{hysteria2_listen_port}",
+            server_name=f"{handshake_domain}",
             alpn=["h3", "h2", "http/1.1"],
             min_version="1.2",
             max_version="1.3",
-            insecure=True,
+            insecure=False,
+            certificate=certificate_array,
             utls=None,
         ),
         brutal_debug=False,
