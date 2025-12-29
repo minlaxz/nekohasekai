@@ -274,7 +274,7 @@ class Loader:
             rules.insert(
                 5,
                 {
-                    "ip_cidr": ["100.0.0.0/8"],
+                    "ip_cidr": ["100.64.0.0/24"],
                     "outbound": "ts",
                 },
             )
