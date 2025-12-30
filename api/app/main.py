@@ -15,7 +15,7 @@ from .routes.ssm import router as ssm_router
 from .routes.ssm_transparent import router as ssm_transparent_router
 
 logging.basicConfig(
-    level=logging.NOTSET,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()],
 )

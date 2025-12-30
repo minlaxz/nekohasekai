@@ -83,7 +83,7 @@ TailscaleConfig: Dict[str, Any] = {
 }
 
 logging.basicConfig(
-    level=logging.NOTSET,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()],
 )
@@ -197,7 +197,6 @@ class Loader:
             if IS_HS_ENABLED:
                 headers = {
                     "Authorization": f"Bearer {APP_HS_API_KEY}",
-                    "Accept": "application/json",
                 }
                 user_response = httpx.get(
                     f"{HS_UPSTREAM}/api/v1/user?name={self.user_name}",
