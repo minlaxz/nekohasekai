@@ -126,6 +126,8 @@ class Loader:
         self.__server_ip: str = ""
         self._load_local_data()
         self._load_remote_data()
+        if self.version >= 12:
+            self._fetch_hs_data()
 
     def _load_local_data(self):
         try:
@@ -183,7 +185,7 @@ class Loader:
         finally:
             self.wg_enabled = len(self.wg_data) > 0
 
-    def fetch_hs_data(self):
+    def _fetch_hs_data(self):
         try:
             self.hs_data = {}
             if IS_HS_ENABLED:
@@ -215,7 +217,7 @@ class Loader:
         except (httpx.HTTPError, json.JSONDecodeError):
             self.hs_data = {}
         finally:
-            self.hs_enabled = len(self.hs_data) > 0 and self.version >= 12
+            self.hs_enabled = len(self.hs_data) > 0
 
     def __inject_dns__(self) -> None:
         # Default: `dns-final` otherwise client provided
@@ -302,10 +304,13 @@ class Loader:
                 outbounds.append(i)
                 outbound_names.append(i.get("tag"))
 
+        dt = f"rv-{year}{month:02d}{day:02d}"
+        version = version + "-hs" if self.hs_enabled else version
+        
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
-            "tag": f"rv-{year}{month:02d}{day:02d}",
+            "tag": "version",
             "outbounds": outbound_names,
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
@@ -362,8 +367,6 @@ class Loader:
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         self.disabled: bool = disabled
-        self.fetch_wg_data()
-        self.fetch_hs_data()
         self.__inject_dns__()
         self.__inject_log__()
         self.__inject_endpoints__()
