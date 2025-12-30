@@ -304,13 +304,13 @@ class Loader:
                 outbounds.append(i)
                 outbound_names.append(i.get("tag"))
 
-        dt = f"rv-{year}{month:02d}{day:02d}"
-        version = version + "-hs" if self.hs_enabled else version
+        now = f"rv-{year}{month:02d}{day:02d}"
+        version = now + "-hs" if self.hs_enabled else now
         
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
-            "tag": "version",
+            "tag": version,
             "outbounds": outbound_names,
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
