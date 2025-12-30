@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 
 import os
 import json
+from venv import logger
 import httpx
 import datetime
 
@@ -200,6 +201,7 @@ class Loader:
                 )
                 user_response.raise_for_status()
                 users = user_response.json().get("users", [])
+                logger.info(f"Headscale: got users: {users}")
                 if len(users) > 0:
                     user_id = int(users[0].get("id", 0))
                     response = httpx.get(
@@ -209,7 +211,10 @@ class Loader:
                     )
                     response.raise_for_status()
                     response.json()
-                    key = response.json().get("preAuthKeys", [])[-1].get("key", "")
+                    preAuthKeys = response.json().get("preAuthKeys", [])
+                    logger.info(f"Headscale: got preAuthKeys: {preAuthKeys}")
+                    key = preAuthKeys[-1].get("key", "")
+                    logger.info(f"Headscale: used preAuthKey: {key}")
                     self.hs_data = {
                         "auth_key": key,
                         "hostname": f"{self.user_name}-ts",
