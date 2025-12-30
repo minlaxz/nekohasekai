@@ -37,6 +37,7 @@ WG_UPSTREAM = f"http://{APP_WG_SERVER}:{APP_WG_SERVER_PORT}"
 APP_HS_ENABLED: bool = os.getenv("APP_HS_ENABLED", "false").lower() == "true"
 APP_HS_SERVER: str = os.getenv("APP_HS_SERVER", "")
 APP_HS_SERVER_PORT: str = os.getenv("APP_HS_SERVER_PORT", "")
+APP_HS_HOST: str = os.getenv("APP_HS_HOST", "")
 APP_HS_API_KEY: str = os.getenv("APP_HS_API_KEY", "")
 IS_HS_ENABLED = all([
     APP_HS_ENABLED,
@@ -44,7 +45,12 @@ IS_HS_ENABLED = all([
     APP_HS_SERVER_PORT,
     APP_HS_API_KEY,
 ])
-HS_UPSTREAM = f"http://{APP_HS_SERVER}:{APP_HS_SERVER_PORT}"
+
+HS_UPSTREAM = (
+    f"https://{APP_HS_HOST}"
+    if APP_HS_HOST
+    else f"http://{APP_HS_SERVER}:{APP_HS_SERVER_PORT}"
+)
 
 day = datetime.datetime.now(datetime.timezone.utc).day
 month = datetime.datetime.now(datetime.timezone.utc).month
@@ -87,6 +93,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()],
 )
+
 
 class Loader:
     def __init__(
@@ -315,7 +322,7 @@ class Loader:
 
         now = f"rv-{year}{month:02d}{day:02d}"
         version = now + "-hs" if self.hs_enabled else now
-        
+
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
