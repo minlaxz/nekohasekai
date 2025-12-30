@@ -1,6 +1,7 @@
 from typing import Union, Callable, Type, Any, Dict
 
 import os
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,9 +14,14 @@ from .utils import Checker
 from .routes.ssm import router as ssm_router
 from .routes.ssm_transparent import router as ssm_transparent_router
 
+logging.basicConfig(
+    level=logging.NOTSET,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
 
 async def not_found(request: Request, exc: Any) -> Response:
-    print(f"404 Error: {exc}")
+    logging.info(f"404 Error: {exc}")
     return JSONResponse(
         status_code=404,
         content={"message": "The resource you are looking for is not found."},
@@ -23,7 +29,7 @@ async def not_found(request: Request, exc: Any) -> Response:
 
 
 async def internal_error(request: Request, exc: Any) -> Response:
-    print(f"500 Error: {exc.detail}")
+    logging.info(f"500 Error: {exc.detail}")
     return JSONResponse(
         status_code=500,
         content={"message": "Nice! server error occurred."},
@@ -102,7 +108,7 @@ def health_check(
             }
         ])
     user_id, _ = j, k
-    print(f"""
+    logging.info(f"""
         Health check for user: {user_id}
         Mode: {"expensive" if expensive else "normal"}
     """)
