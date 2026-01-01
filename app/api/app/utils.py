@@ -5,9 +5,10 @@ import json
 import logging
 import httpx
 import datetime
+import yaml
 
 START_PORT: int = int(os.getenv("START_PORT", "8040"))
-APP_LOCAL_JSON_PATH: str = os.getenv("APP_LOCAL_JSON_PATH", "outs.json")
+APP_LOCAL_PATH: str = os.getenv("APP_LOCAL_PATH", "/cache/inbounds.yaml")
 APP_REMOTE_JSON_URL: str = os.getenv("APP_REMOTE_JSON_URL", "sing-box-template")
 APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "")
 
@@ -15,23 +16,6 @@ APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "")
 APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "nekohasekai")
 END_PORT: int = int(os.getenv("END_PORT", ""))
 SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
-
-# Wireguard
-APP_WG_ENABLED: bool = os.getenv("APP_WG_ENABLED", "false").lower() == "true"
-APP_WG_SERVER: str = os.environ.get("APP_WG_SERVER", "")
-APP_WG_SERVER_PORT: str = os.environ.get("APP_WG_SERVER_PORT", "")
-APP_WG_PUBLIC_KEY: str = os.getenv("APP_WG_PUBLIC_KEY", "")
-APP_WG_SERVER_USERNAME: str = os.getenv("APP_WG_SERVER_USERNAME", "")
-APP_WG_SERVER_PASSWORD: str = os.getenv("APP_WG_SERVER_PASSWORD", "")
-IS_WG_ENABLED = all([
-    APP_WG_ENABLED,
-    APP_WG_SERVER,
-    APP_WG_SERVER_PORT,
-    APP_WG_PUBLIC_KEY,
-    APP_WG_SERVER_USERNAME,
-    APP_WG_SERVER_PASSWORD,
-])
-WG_UPSTREAM = f"http://{APP_WG_SERVER}:{APP_WG_SERVER_PORT}"
 
 # Headscale
 APP_HS_ENABLED: bool = os.getenv("APP_HS_ENABLED", "false").lower() == "true"
@@ -113,7 +97,7 @@ class Loader:
         psk: str,
         please: bool = False,
     ) -> None:
-        self.local_path = APP_LOCAL_JSON_PATH
+        self.local_path = APP_LOCAL_PATH
         self.remote_url = APP_REMOTE_JSON_URL
         self.app_config_host = APP_CONFIG_HOST
         self.platform = platform
@@ -132,11 +116,10 @@ class Loader:
         self.experimental = experimental
         self.local_data: Dict[str, Any] = {}
         self.remote_data: Dict[str, Any] = {}
-        self.wg_data: Dict[str, Any] = {}
         self.hs_data: Dict[str, Any] = {}
-        self.wg_enabled = False
         self.hs_enabled = False
         self.__server_ip: str = ""
+        self.__enabled_proxies: List[str] = []
         self._load_local_data()
         self._load_remote_data()
         if self.version >= 12:
@@ -145,11 +128,12 @@ class Loader:
     def _load_local_data(self):
         try:
             with open(self.local_path, "r", encoding="utf-8") as file:
-                self.local_data = json.load(file)
-                self.__server_ip = self.local_data.get("outbounds", [])[0].get(
-                    "server", ""
+                self.local_data = yaml.safe_load(file) or {}
+                self.__server_ip = self.local_data.get("server", {}).get("ip", "")
+                self.__enabled_proxies = self.local_data.get("server", {}).get(
+                    "enabled_proxies", []
                 )
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, yaml.YAMLError):
             self.local_data = {}
 
     def _load_remote_data(self):
@@ -174,29 +158,6 @@ class Loader:
                     self.remote_data = json.load(file)
         except (httpx.HTTPError, json.JSONDecodeError):
             self.remote_data = {}
-
-    def fetch_wg_data(self):
-        try:
-            self.wg_data = {}
-            if IS_WG_ENABLED:
-                auth = httpx.BasicAuth(
-                    username=APP_WG_SERVER_USERNAME, password=APP_WG_SERVER_PASSWORD
-                )
-                response = httpx.get(
-                    f"{WG_UPSTREAM}/api/client",
-                    timeout=5,
-                    auth=auth,
-                )
-                response.raise_for_status()
-                data = response.json()
-                for i in data:
-                    if i.get("name") == self.user_name:
-                        self.wg_data = i
-                        break
-        except (httpx.HTTPError, json.JSONDecodeError):
-            self.wg_data = {}
-        finally:
-            self.wg_enabled = len(self.wg_data) > 0
 
     def _fetch_hs_data(self):
         try:
@@ -279,15 +240,7 @@ class Loader:
         for i in rule_set:
             i.update({"download_detour": self.route_detour})
 
-        # Client is registered with wireguard (handled internally)
-        if self.wg_enabled:
-            rules.insert(
-                5,
-                {
-                    "ip_cidr": ["10.8.0.0/24", "fdcc:ad94:bacf:61a4::cafe:0/112"],
-                    "outbound": "wg",
-                },
-            )
+        # Client is registered with headscale (handled internally)
         if self.hs_enabled:
             rules.insert(
                 5,
@@ -359,20 +312,6 @@ class Loader:
 
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
-        if self.wg_enabled:
-            endpoint = WireguardConfig.copy()
-            endpoint["address"] = [
-                self.wg_data.get("ipv4Address", "10.8.0.0") + "/24",
-                self.wg_data.get("ipv6Address", "fdcc:ad94:bacf:61a4::cafe:0") + "/112",
-            ]
-            endpoint["private_key"] = self.wg_data.get("privateKey", "")
-            endpoint["peers"][0]["address"] = self.__server_ip
-            endpoint["peers"][0]["port"] = END_PORT + 1
-            endpoint["peers"][0]["public_key"] = APP_WG_PUBLIC_KEY
-            endpoint["peers"][0]["pre_shared_key"] = self.wg_data.get(
-                "preSharedKey", ""
-            )
-            endpoints.append(endpoint)
         if self.hs_enabled:
             endpoint = TailscaleConfig.copy()
             endpoint["auth_key"] = self.hs_data.get("auth_key", "")

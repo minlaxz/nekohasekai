@@ -98,7 +98,7 @@ def main() -> None:
     os.makedirs(cache_path, exist_ok=True)
 
     config: Dict[Any, Any] = {}
-    with open(f"{cache_path}/server_info.yaml", "w") as f:
+    with open(f"{cache_path}/inbounds.yaml", "w") as f:
         config = {
             "server": {
                 "ip": server_ip,
@@ -120,17 +120,18 @@ def main() -> None:
     inbounds_config = InboundsConfig(inbounds=[])
     services_config = ServicesConfig(services=[])
 
-    for offset, proxy in enumerate(proxies_enabled):
+    clash_offset = 1
+    for index, proxy in enumerate(proxies_enabled):
         if proxy == "shadowsocks":
             ss, ssm = ss_inbound(
-                port=start_port + offset + 1,
+                port=start_port + index + clash_offset,
                 ssm_port=ssm_listen_port,
             )
             inbounds_config.inbounds.append(ss)
             services_config.services.append(ssm)
-            with open(f"{cache_path}/ssm_ss.yaml", "w") as f:
-                yaml.safe_dump({"shadowsocks_ssm": ssm}, f)
-            with open(f"{cache_path}/ss_ss.yaml", "w") as f:
+            with open(f"{cache_path}/inbounds.yaml", "a") as f:
+                yaml.safe_dump({"ssm": ssm}, f)
+            with open(f"{cache_path}/inbounds.yaml", "a") as f:
                 yaml.safe_dump({"shadowsocks": ss}, f)
 
     inbounds_config.to_json(path=conf_inbounds_path)
