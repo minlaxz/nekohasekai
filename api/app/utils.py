@@ -4,7 +4,7 @@ import os
 import json
 import logging
 import httpx
-import datetime
+from datetime import datetime, timezone
 
 START_PORT: int = int(os.getenv("START_PORT", "8040"))
 APP_LOCAL_JSON_PATH: str = os.getenv("APP_LOCAL_JSON_PATH", "outs.json")
@@ -18,15 +18,13 @@ SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
 
 # Wireguard
 APP_WG_ENABLED: bool = os.getenv("APP_WG_ENABLED", "false").lower() == "true"
-APP_WG_SERVER: str = os.environ.get("APP_WG_SERVER", "")
-APP_WG_SERVER_PORT: str = os.environ.get("APP_WG_SERVER_PORT", "")
+APP_WG_SERVER: str = os.environ.get("APP_WG_SERVER", "wg-easy")
+APP_WG_SERVER_PORT: str = os.environ.get("APP_WG_SERVER_PORT", "51821")
 APP_WG_PUBLIC_KEY: str = os.getenv("APP_WG_PUBLIC_KEY", "")
 APP_WG_SERVER_USERNAME: str = os.getenv("APP_WG_SERVER_USERNAME", "")
 APP_WG_SERVER_PASSWORD: str = os.getenv("APP_WG_SERVER_PASSWORD", "")
 IS_WG_ENABLED = all([
     APP_WG_ENABLED,
-    APP_WG_SERVER,
-    APP_WG_SERVER_PORT,
     APP_WG_PUBLIC_KEY,
     APP_WG_SERVER_USERNAME,
     APP_WG_SERVER_PASSWORD,
@@ -35,26 +33,19 @@ WG_UPSTREAM = f"http://{APP_WG_SERVER}:{APP_WG_SERVER_PORT}"
 
 # Headscale
 APP_HS_ENABLED: bool = os.getenv("APP_HS_ENABLED", "false").lower() == "true"
-APP_HS_SERVER: str = os.getenv("APP_HS_SERVER", "")
-APP_HS_SERVER_PORT: str = os.getenv("APP_HS_SERVER_PORT", "")
-APP_HS_HOST: str = os.getenv("APP_HS_HOST", "")
+APP_HS_SERVER: str = os.getenv("APP_HS_SERVER", "headscale")
+APP_HS_SERVER_PORT: str = os.getenv("APP_HS_SERVER_PORT", "8080")
+APP_HS_HOST: str = os.getenv("APP_HS_HOST", "headscale:8080")
 APP_HS_API_KEY: str = os.getenv("APP_HS_API_KEY", "")
 IS_HS_ENABLED = all([
     APP_HS_ENABLED,
-    APP_HS_SERVER,
-    APP_HS_SERVER_PORT,
     APP_HS_API_KEY,
 ])
-
 HS_UPSTREAM = (
     f"https://{APP_HS_HOST}"
     if APP_HS_HOST
     else f"http://{APP_HS_SERVER}:{APP_HS_SERVER_PORT}"
 )
-
-day = datetime.datetime.now(datetime.timezone.utc).day
-month = datetime.datetime.now(datetime.timezone.utc).month
-year = datetime.datetime.now(datetime.timezone.utc).year
 
 WireguardConfig: Dict[str, Any] = {
     "type": "wireguard",
@@ -320,13 +311,14 @@ class Loader:
                 outbounds.append(i)
                 outbound_names.append(i.get("tag"))
 
-        now = f"rv-{year}{month:02d}{day:02d}"
-        version = now + "-hs" if self.hs_enabled else now
+        utc_now = datetime.now(timezone.utc)
+        now = f"rev-{utc_now.year}{utc_now.month:02d}{utc_now.day:02d}"
+        revision_version = now + "-hs" if self.hs_enabled else now
 
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
-            "tag": version,
+            "tag": revision_version,
             "outbounds": outbound_names,
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
