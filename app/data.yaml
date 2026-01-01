@@ -1,0 +1,12 @@
+# users
+users:
+  - name: minlaxzios
+    password: minlaxziospassword==
+
+# shadowsocks configurations
+configs:
+  - name: shadowsocks
+    server: 0.0.0.0
+    server_port: null
+    method: xchacha20-ietf-poly1305
+    password: null
