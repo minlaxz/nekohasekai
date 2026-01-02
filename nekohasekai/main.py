@@ -125,7 +125,7 @@ def main() -> None:
     inbounds_config = InboundsConfig(inbounds=[])
     services_config = ServicesConfig()
     endpoints_config = EndpointsConfig(endpoints=[])
-    client_outbounds_config = ClientOutboundsConfig(outbounds=[])
+    outbounds_config = ClientOutboundsConfig(outbounds=[])
 
     curr = start_port
 
@@ -136,7 +136,7 @@ def main() -> None:
             ssm_listen_port,
             server_ip,
             inbounds_config,
-            client_outbounds_config,
+            outbounds_config,
             services_config,
         )
         services_config.to_json(path=conf_services_path)
@@ -145,12 +145,11 @@ def main() -> None:
         port = curr = curr + 1
         password = get_password("TROJAN_PASSWORD", 16)
         trojan_generate(
-            port,
-            password,
-            domain,
-            server_ip,
-            inbounds_config,
-            client_outbounds_config,
+            trojan_listen_port=port,
+            trojan_password=password,
+            server_name=domain,
+            inbounds_config=inbounds_config,
+            outbounds_config=outbounds_config,
         )
 
     if is_hysteria2_enabled:
@@ -158,13 +157,12 @@ def main() -> None:
         obfs = get_password("HYSTERIA2_OBFS_PASSWORD", 22)
         password = get_password("HYSTERIA2_PASSWORD", 22)
         hy2_generate(
-            port,
-            obfs,
-            password,
-            domain,
-            server_ip,
-            inbounds_config,
-            client_outbounds_config,
+            hysteria2_listen_port=port,
+            hysteria2_obfs_password=obfs,
+            hysteria2_password=password,
+            server_name=domain,
+            inbounds_config=inbounds_config,
+            outbounds_config=outbounds_config,
         )
 
     if is_shadowtls_enabled:
@@ -172,17 +170,17 @@ def main() -> None:
         # Not necessary to be identical but for simplicity
         password = get_password("SHADOWTLS_PASSWORD", 16)
         stls_generate(
-            port,
-            password,
-            domain,
-            server_ip,
-            inbounds_config,
-            client_outbounds_config,
+            shadowtls_listen_port=port,
+            shadowtls_password=password,
+            server_name=domain,
+            server_ip=server_ip,
+            inbounds_config=inbounds_config,
+            outbounds_config=outbounds_config,
         )
 
     inbounds_config.to_json(path=conf_inbounds_path)
     endpoints_config.to_json(path=conf_endpoints_path)
-    client_outbounds_config.to_json(path=public_outbounds_path)
+    outbounds_config.to_json(path=public_outbounds_path)
 
     logging.info("Sing-Box configuration generation completed.")
 

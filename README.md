@@ -12,8 +12,8 @@ We first need three things:
 wget -qO- get.docker.com | bash
 ```
 
-### 2. TCP Brutal Multiplexing for TCP proxies 
-> (not recommended as brutal bandwidth is flat and may be detected by some ISPs)
+### 2. TCP Brutal Multiplexing for TCP proxies
+> (not recommended as brutal bandwidth is flat and may be detected by some ISPs DPI)
 
 ```sh
 bash <(curl -fsSL https://tcp.hy2.sh/)

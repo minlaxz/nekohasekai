@@ -3,7 +3,7 @@ from typing import TypedDict, NotRequired, Literal, List
 
 class Tls(TypedDict):
     enabled: bool
-    server_name: str
+    server_name: NotRequired[str]
     alpn: NotRequired[List[str]]
     min_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]
     max_version: NotRequired[Literal["1.3", "1.2", "1.1", "1.0"]]

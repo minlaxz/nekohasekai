@@ -2,17 +2,16 @@ from common import InboundsConfig, ClientOutboundsConfig
 
 from typings.hysteria2 import InboundHysteria2, OutboundHysteria2, Obfs
 from typings.common import NamePasswordUser
-from typings.tls import OutboundTlsCertificate, InboundTlsCertificate, Ech
+from typings.tls import InboundTlsCertificate, OutboundTlsCertificate, Ech
 
 
 def generate(
     hysteria2_listen_port: int,
     hysteria2_obfs_password: str,
     hysteria2_password: str,
-    handshake_domain: str,
-    server_ip: str,
+    server_name: str,
     inbounds_config: InboundsConfig,
-    client_outbounds_config: ClientOutboundsConfig,
+    outbounds_config: ClientOutboundsConfig,
 ):
     pass
 
@@ -23,6 +22,7 @@ def generate(
         listen_port=hysteria2_listen_port,
         up_mbps=100,
         down_mbps=100,
+        ignore_client_bandwidth=True,
         obfs=Obfs(
             type="salamander",
             password=hysteria2_obfs_password,
@@ -33,13 +33,11 @@ def generate(
                 password=hysteria2_password,
             ),
         ],
-        ignore_client_bandwidth=True,
         tls=InboundTlsCertificate(
             enabled=True,
-            server_name=handshake_domain,
-            alpn=["h3", "h2", "http/1.1"],
+            server_name=server_name,
+            alpn=["h3", "h2"],
             min_version="1.3",
-            max_version="1.3",
             key_path="certs/private.key",
             certificate_path="certs/cert.pem",
             ech=Ech(
@@ -60,10 +58,10 @@ def generate(
     outbound_hysteria2 = OutboundHysteria2(
         type="hysteria2",
         tag="hysteria2",
-        server=server_ip,
+        server=server_name,
         server_port=hysteria2_listen_port,
-        up_mbps=100,
-        down_mbps=100,
+        up_mbps=10,
+        down_mbps=10,
         obfs=Obfs(
             type="salamander",
             password=hysteria2_obfs_password,
@@ -71,10 +69,8 @@ def generate(
         password=hysteria2_password,
         tls=OutboundTlsCertificate(
             enabled=True,
-            server_name=f"{handshake_domain}",
-            alpn=["h3", "h2", "http/1.1"],
+            alpn=["h3", "h2"],
             min_version="1.3",
-            max_version="1.3",
             insecure=False,
             certificate=certificate_array,
             ech=Ech(
@@ -84,5 +80,5 @@ def generate(
         ),
         brutal_debug=False,
     )
-    client_outbounds_config.outbounds.append(outbound_hysteria2)
     inbounds_config.inbounds.append(inbound_hysteria2)
+    outbounds_config.outbounds.append(outbound_hysteria2)

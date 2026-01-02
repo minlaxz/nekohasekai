@@ -1,5 +1,5 @@
 from typings.common import NamePasswordUser
-from typings.tls import Handshake, Utls, OutboundTlsCertificate
+from typings.tls import OutboundTlsCertificate, Utls, Handshake
 from typings.shadowtls import InboundShadowTLS, OutboundShadowTLS
 from typings.shadowsocks import InboundShadowsocks, OutboundShadowsocks
 from common import InboundsConfig, ClientOutboundsConfig
@@ -8,10 +8,10 @@ from common import InboundsConfig, ClientOutboundsConfig
 def generate(
     shadowtls_listen_port: int,
     shadowtls_password: str,
-    handshake_domain: str,
+    server_name: str,
     server_ip: str,
     inbounds_config: InboundsConfig,
-    client_outbounds_config: ClientOutboundsConfig,
+    outbounds_config: ClientOutboundsConfig,
 ):
     inbound_shadowtls = InboundShadowTLS(
         type="shadowtls",
@@ -27,7 +27,7 @@ def generate(
             ),
         ],
         handshake=Handshake(
-            server=handshake_domain,
+            server=server_name,
             server_port=shadowtls_listen_port,
         ),
     )
@@ -60,7 +60,7 @@ def generate(
         password=shadowtls_password,
         tls=OutboundTlsCertificate(
             enabled=True,
-            server_name=handshake_domain,
+            server_name=server_name,
             insecure=False,
             certificate=[],
             utls=Utls(
@@ -71,5 +71,5 @@ def generate(
     )
     inbounds_config.inbounds.append(inbound_shadowtls)
     inbounds_config.inbounds.append(inbound_shadowsocks)
-    client_outbounds_config.outbounds.append(outbound_shadowtls)
-    client_outbounds_config.outbounds.append(outbound_shadowsocks)
+    outbounds_config.outbounds.append(outbound_shadowtls)
+    outbounds_config.outbounds.append(outbound_shadowsocks)

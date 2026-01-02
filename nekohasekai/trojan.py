@@ -1,17 +1,16 @@
 from common import InboundsConfig, ClientOutboundsConfig
 
 from typings.trojan import InboundTrojan, OutboundTrojan, NamePasswordUser
-from typings.tls import InboundTlsCertificate, OutboundTlsCertificate, Utls, Ech
+from typings.tls import InboundTlsCertificate, OutboundTlsCertificate, Ech
 from typings.multiplex import InboundMultiplex, OutboundMultiplex, Brutal
 
 
 def generate(
     trojan_listen_port: int,
     trojan_password: str,
-    handshake_domain: str,
-    server_ip: str,
+    server_name: str,
     inbounds_config: InboundsConfig,
-    client_outbounds_config: ClientOutboundsConfig,
+    outbounds_config: ClientOutboundsConfig,
 ):
     inbound_trojan = InboundTrojan(
         type="trojan",
@@ -26,10 +25,9 @@ def generate(
         ],
         tls=InboundTlsCertificate(
             enabled=True,
-            server_name=handshake_domain,
-            alpn=["h3", "h2", "http/1.1"],
+            server_name=server_name,
+            alpn=["h3", "h2"],
             min_version="1.3",
-            max_version="1.3",
             key_path="certs/private.key",
             certificate_path="certs/cert.pem",
             ech=Ech(
@@ -49,22 +47,15 @@ def generate(
     outbound_trojan = OutboundTrojan(
         type="trojan",
         tag="trojan",
-        server=server_ip,
+        server=server_name,
         server_port=trojan_listen_port,
-        network="tcp",
         password=trojan_password,
         tls=OutboundTlsCertificate(
             enabled=True,
-            server_name=handshake_domain,
-            alpn=["h3", "h2", "http/1.1"],
+            alpn=["h3", "h2"],
             min_version="1.3",
-            max_version="1.3",
             insecure=False,
             certificate=certificate_array,
-            utls=Utls(
-                enabled=True,
-                fingerprint="chrome",
-            ),
             ech=Ech(
                 enabled=True,
                 config=ech_config_array,
@@ -81,4 +72,4 @@ def generate(
         ),
     )
     inbounds_config.inbounds.append(inbound_trojan)
-    client_outbounds_config.outbounds.append(outbound_trojan)
+    outbounds_config.outbounds.append(outbound_trojan)

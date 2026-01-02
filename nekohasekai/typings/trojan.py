@@ -14,4 +14,4 @@ class OutboundTrojan(CommonFields, DailFields):
     password: str
     tls: OutboundTlsCertificate
     multiplex: NotRequired[OutboundMultiplex]
-    network: NotRequired[Literal["tcp", "udp"]]
+    network: NotRequired[Literal["tcp", "udp"]] # enable both if not specified
