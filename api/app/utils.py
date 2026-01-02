@@ -291,8 +291,8 @@ class Loader:
         suffix = ""
         if self.hs_enabled:
             suffix += "hs"
-            outbound_names.append("hs-ep")
-            excluded_outbound_names.append("hs-ep")
+            # outbound_names.append("hs-ep")
+            # excluded_outbound_names.append("hs-ep")
         if self.cf_enabled:
             suffix += "cf"
             outbound_names.append("cf-ep")
