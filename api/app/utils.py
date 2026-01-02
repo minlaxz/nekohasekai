@@ -56,6 +56,7 @@ class Loader:
         dns_detour: str,
         dns_final: str,
         dns_resolver: str,
+        dns_version: int,
         log_level: str,
         route_detour: str,
         multiplex: bool,
@@ -80,6 +81,7 @@ class Loader:
         self.dns_detour = dns_detour
         self.dns_final = dns_final
         self.dns_resolver = dns_resolver
+        self.dns_version = dns_version
         self.route_detour = route_detour
         self.user_name = username
         self.user_psk = psk
@@ -194,7 +196,10 @@ class Loader:
         # Default: `dns-final` otherwise client provided
         # Values: dns-remote, dns-resolver, [dns-final]
         dns = self.remote_data.get("dns", {})
-        dns.update({"final": self.dns_final})
+        dns.update({
+            "final": self.dns_final,
+            "strategy": "ipv4_only" if self.dns_version == 4 else "prefer_ipv4",
+        })
 
         # Assuming APP_DNS_PATH ends with a trailing slash
         # e.g., /user_name
@@ -204,7 +209,12 @@ class Loader:
         if self.version == 11:
             for i in dns_servers:
                 if i.get("tag") == "dns-remote":
-                    i.update({"address": f"https://{self.dns_host}{dns_path}"})
+                    i.update({
+                        "address": f"https://{self.dns_host}{dns_path}",
+                        "address_strategy": "ipv4_only"
+                        if self.dns_version == 4
+                        else "prefer_ipv4",
+                    })
                 elif i.get("tag") == "dns-resolver":
                     # Client provided `dns_detour` i.e. `dd` for dns-resolver
                     i.update({
@@ -217,6 +227,12 @@ class Loader:
                     i.update({
                         "server": self.dns_host,
                         "path": dns_path,
+                        "domain_resolver": {
+                            "server": "dns-resolver",
+                            "strategy": "ipv4_only"
+                            if self.dns_version == 4
+                            else "prefer_ipv4",
+                        },
                     })
                 elif i.get("tag") == "dns-resolver":
                     # Client provided `dns_detour` i.e. `dd` for dns-resolver
@@ -244,9 +260,6 @@ class Loader:
                     "outbound": "hs-ep",
                 },
             )
-
-        if self.cf_enabled:
-            route["final"] = "cf-ep"
 
     def __inject_outbounds__(self) -> None:
         outbounds: List[Dict[str, Any]] = [{"type": "direct", "tag": "direct"}]
@@ -313,6 +326,13 @@ class Loader:
         log_level = self.log_level or self.remote_data["log"]["level"]
         self.remote_data["log"]["level"] = log_level
 
+    def __inject_inbounds__(self) -> None:
+        inbounds: List[Dict[str, Any]] = self.remote_data.get("inbounds", [])
+        if self.dns_version == 4:
+            for i in inbounds:
+                if i.get("tag") == "tun-in":
+                    i.get("address", []).pop()
+
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
         if self.cf_enabled:
@@ -329,6 +349,7 @@ class Loader:
         self.disabled: bool = disabled
         self.__inject_dns__()
         self.__inject_log__()
+        self.__inject_inbounds__()
         self.__inject_endpoints__()
         self.__inject_outbounds__()
         self.__inject_routes__()

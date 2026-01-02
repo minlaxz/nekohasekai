@@ -128,6 +128,7 @@ def read_config(
     dd: Union[str, None] = None,
     df: Union[str, None] = None,
     dr: Union[str, None] = None,
+    dv: Union[str, None] = None,
     # Route options
     rd: Union[str, None] = None,
     # User authentication
@@ -155,6 +156,7 @@ def read_config(
         dns_detour=dd or os.getenv("APP_DNS_DETOUR"),
         dns_final=df or os.getenv("APP_DNS_FINAL"),
         dns_resolver=dr or os.getenv("APP_DNS_RESOLVER"),
+        dns_version=dv or os.getenv("APP_DNS_VERSION") or 4,
         route_detour=rd or os.getenv("APP_ROUTE_DETOUR"),
         username=j,
         psk=k,
