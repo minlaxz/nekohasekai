@@ -148,8 +148,8 @@ def read_config(
             }
         ])
     checker = Checker(
-        platform=p,
-        version=v,
+        platform=p or "a",
+        version=v or 12,
         log_level=ll or os.getenv("APP_LOG_LEVEL"),
         dns_host=dh or os.getenv("APP_DNS_HOST"),
         dns_path=dp or os.getenv("APP_DNS_PATH"),
