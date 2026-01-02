@@ -37,7 +37,8 @@
       "type": "tun",
       "tag": "tun-in",
       "address": [
-        "10.10.10.0/24"
+        "10.10.10.0/24",
+        "fd00::1/126"
       ],
       "mtu": 1280,
       "auto_route": true,
@@ -103,10 +104,18 @@
           }
         ],
         "outbound": "direct"
+      },
+      {
+        "clash_mode": "Cloudflare",
+        "outbound": "cf-ep"
+      },
+      {
+        "clash_mode": "Normal",
+        "outbound": "Out"
       }
     ],
     "default_domain_resolver": "dns-final",
-    "final": "Out",
+    "final": "direct",
     "auto_detect_interface": true
   },
   "log": {
@@ -117,7 +126,8 @@
     "clash_api": {
       "external_controller": "127.0.0.1:9090",
       "access_control_allow_private_network": true,
-      "access_control_allow_origin": "*"
+      "access_control_allow_origin": "*",
+      "default_mode": "Cloudflare"
     },
     "cache_file": {
       "enabled": true,
