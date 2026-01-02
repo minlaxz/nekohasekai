@@ -6,7 +6,7 @@
         "tag": "dns-remote",
         "address": "",
         "address_resolver": "dns-resolver",
-        "address_strategy": "ipv4_only"
+        "address_strategy": "prefer_ipv4"
       },
       {
         "tag": "dns-resolver",
@@ -15,11 +15,18 @@
       },
       {
         "tag": "dns-final",
-        "address": "8.8.8.8"
+        "address": "8.8.8.8",
+        "detour": "direct"
+      }
+    ],
+    "rules": [
+      {
+        "outbound": "any",
+        "server": "dns-final"
       }
     ],
     "independent_cache": false,
-    "strategy": "ipv4_only",
+    "strategy": "prefer_ipv4",
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,
@@ -30,7 +37,6 @@
     {
       "type": "tun",
       "tag": "tun-in",
-      "interface_name": "utun1",
       "address": [
         "10.10.10.0/24"
       ],
@@ -38,122 +44,11 @@
       "auto_route": true,
       "strict_route": true,
       "stack": "mixed"
-    },
-    {
-      "type": "http",
-      "tag": "http-in",
-      "listen": "0.0.0.0",
-      "listen_port": 2080,
-      "tcp_fast_open": true
     }
   ],
   "outbounds": [],
   "route": {
     "rule_set": [
-      {
-        "tag": "geosite-cloudflare",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cloudflare.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-cloudflare",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/cloudflare.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-meta",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/meta.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-twitter",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-oonimm",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-oonimm.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-oonimm",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-ip-oonimm.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-slack",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/slack.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-aws",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/aws.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-hurricaneelectric",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/hurricaneelectric.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-microsoft",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/microsoft.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-fastly",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/fastly.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-fastly",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/fastly.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-category-dev",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-dev.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
       {
         "tag": "geoip-mm",
         "type": "remote",
@@ -173,29 +68,8 @@
     ],
     "rules": [
       {
-        "action": "sniff",
-        "timeout": "300ms"
-      },
-      {
-        "action": "resolve",
-        "strategy": "ipv4_only"
-      },
-      {
-        "protocol": "dns",
+        "port": 53,
         "action": "hijack-dns"
-      },
-      {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "rule_set": [
-              "geoip-mm",
-              "geosite-mmbank"
-            ]
-          }
-        ],
-        "outbound": "direct"
       },
       {
         "type": "logical",
@@ -219,56 +93,20 @@
         "method": "drop"
       },
       {
-        "domain_keyword": ["gstatic.com"],
-        "outbound": "Eco-Out"
-      },
-      {
-        "clash_mode": "Full",
-        "outbound": "Full-Out"
-      },
-      {
         "type": "logical",
-        "mode": "and",
+        "mode": "or",
         "rules": [
           {
-            "clash_mode": "Eco"
-          },
-          {
-            "type": "logical",
-            "mode": "or",
-            "rules": [
-              {
-                "rule_set": [
-                  "geosite-cloudflare",
-                  "geoip-cloudflare",
-                  "geosite-meta",
-                  "geosite-twitter",
-                  "geosite-oonimm",
-                  "geoip-oonimm",
-                  "geosite-slack",
-                  "geosite-aws",
-                  "geosite-hurricaneelectric",
-                  "geosite-microsoft",
-                  "geosite-fastly",
-                  "geoip-fastly",
-                  "geosite-category-dev"
-                ]
-              },
-              {
-                "domain_suffix": [
-                  ".engineerforce.io",
-                  ".dify.io",
-                  ".nextdns.io"
-                ]
-              }
+            "rule_set": [
+              "geoip-mm",
+              "geosite-mmbank"
             ]
           }
         ],
-        "action": "route",
-        "outbound": "Eco-Out"
+        "outbound": "direct"
       }
     ],
-    "final": "direct",
+    "final": "Out",
     "auto_detect_interface": true
   },
   "log": {
@@ -278,8 +116,8 @@
   "experimental": {
     "clash_api": {
       "external_controller": "127.0.0.1:9090",
-      "default_mode": "Eco",
-      "access_control_allow_private_network": true
+      "access_control_allow_private_network": true,
+      "access_control_allow_origin": "*"
     },
     "cache_file": {
       "enabled": true,
