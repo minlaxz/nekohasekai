@@ -250,7 +250,8 @@ class Loader:
 
     def __inject_outbounds__(self) -> None:
         outbounds: List[Dict[str, Any]] = [{"type": "direct", "tag": "direct"}]
-        outbound_names: list[str] = ["direct"]
+        outbound_names: List[str] = ["direct"]
+        excluded_outbound_names: List[str] = ["direct", "shadowsocks"]
 
         for i in self.local_data["outbounds"]:
             if i.get("tag") == "shadowsocks":
@@ -278,9 +279,11 @@ class Loader:
         if self.hs_enabled:
             suffix += "hs"
             outbound_names.append("hs-ep")
+            excluded_outbound_names.append("hs-ep")
         if self.cf_enabled:
             suffix += "cf"
             outbound_names.append("cf-ep")
+            excluded_outbound_names.append("cf-ep")
 
         # Pullup outbounds
         outbounds.append({
@@ -296,9 +299,9 @@ class Loader:
         outbounds.append({
             "type": "urltest",
             "tag": "Out",
-            "outbounds": [i for i in outbound_names if i != "direct"]
-            if len(outbound_names) > 1
-            else ["direct"],
+            "outbounds": [
+                i for i in outbound_names if i not in excluded_outbound_names
+            ],
             "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
             "tolerance": 100,
