@@ -341,7 +341,7 @@ class Loader:
             endpoint = TailscaleConfig.copy()
             endpoint["auth_key"] = self.hs_data.get("auth_key", "")
             endpoint["hostname"] = self.hs_data.get("hostname", "")
-            endpoint["control_url"] = self.hs_url,
+            endpoint["control_url"] = self.hs_url
             endpoints.append(endpoint)
         self.remote_data["endpoints"] = endpoints
 
