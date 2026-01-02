@@ -33,7 +33,7 @@ TailscaleConfig: Dict[str, Any] = {
     "type": "tailscale",
     "tag": "hs-ep",
     "auth_key": "",
-    "control_url": f"https://{APP_HS_HOST}",
+    "control_url": "",
     "hostname": "",
     "accept_routes": True,
     "udp_timeout": "5m0s",
@@ -341,7 +341,7 @@ class Loader:
             endpoint = TailscaleConfig.copy()
             endpoint["auth_key"] = self.hs_data.get("auth_key", "")
             endpoint["hostname"] = self.hs_data.get("hostname", "")
-            endpoint["control_url"] = "https://" + endpoint["control_url"]
+            endpoint["control_url"] = self.hs_url,
             endpoints.append(endpoint)
         self.remote_data["endpoints"] = endpoints
 
