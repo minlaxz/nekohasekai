@@ -182,7 +182,7 @@ class Loader:
                     preAuthKeys = response.json().get("preAuthKeys", [])
                     logging.info(f"Headscale: got preAuthKeys: {preAuthKeys}")
                     key = preAuthKeys[-1].get("key", "")
-                    logging.info(f"Headscale: used preAuthKey: {key}")
+                    logging.info("Headscale: used preAuthKey for user %s", self.user_name)
                     self.hs_data = {
                         "auth_key": key,
                         "hostname": f"{self.user_name}-ts",
