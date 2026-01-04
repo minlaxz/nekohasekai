@@ -40,11 +40,14 @@ sudo sysctl -p
 ```
 
 ### 5. What are these directories?
-- [rules](/rules/) - my [rules](https://github.com/minlaxz/nekohasekai/tree/route-rules) for adblocking and proxy routing rules
+- [rules](/rules/) - OONI probe for adblocking and proxy routing, check this [branch](https://github.com/minlaxz/nekohasekai/tree/route-rules) for more details
 - [api](/api/) - dynamic config generator for sing-box clients
-- [nekohasekai](/nekohasekai/) - sing-box server side configs
-- [examples](/examples/) - example configurations for other protocols
+- [sing-box](/sing-box/) - sing-box server side configs
 
 
-### 6. nekohasekai name
+### 6. repo name
 - [nekohasekai](https://github.com/nekohasekai)
+
+
+### 7. What to do next?
+- start from [sing-box](/sing-box/) directory
