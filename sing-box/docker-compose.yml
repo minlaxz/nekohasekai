@@ -1,6 +1,6 @@
 services:
   nekohasekai:
-    image: ghcr.io/minlaxz/nekohasekai:nekohasekai
+    image: ghcr.io/sagernet/sing-box:v1.12.14
     pull_policy: always
     restart: unless-stopped
     command: ["./sing-box", "run", "-C", "/sing-box/conf"]
@@ -28,7 +28,7 @@ services:
       - nekohasekai-net
 
   nekohasekai-api:
-    image: ghcr.io/minlaxz/nekohasekai:nekohasekai-api
+    image: ghcr.io/minlaxz/nekohasekai:sing-box-api
     pull_policy: always
     restart: unless-stopped
     # See more options at https://fastapi.tiangolo.com/deployment/docker/

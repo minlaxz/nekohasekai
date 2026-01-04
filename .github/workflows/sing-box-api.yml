@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - master
     paths:
       - "api/app/**/*.py"
       - "api/templates/*.html"
@@ -47,5 +47,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ${{ env.IMAGE_NAME }}:nekohasekai-api
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nekohasekai-api
+            ${{ env.IMAGE_NAME }}:sing-box-api
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sing-box-api
