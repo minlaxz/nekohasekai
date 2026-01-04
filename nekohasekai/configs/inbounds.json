@@ -48,6 +48,7 @@
       "up_mbps": 0,
       "down_mbps": 0,
       "obfs": {
+        "type": "salamander",
         "password": ""
       },
       "users": [],

@@ -42,8 +42,7 @@
         "max_connections": 2,
         "min_streams": 4,
         "max_streams": 8
-      },
-      "certificate": []
+      }
     },
     {
       "type": "hysteria2",
@@ -53,7 +52,7 @@
       "up_mbps": 0,
       "down_mbps": 0,
       "obfs": {
-        "type": "",
+        "type": "salamander",
         "password": ""
       },
       "password": "",
@@ -70,8 +69,7 @@
           "config": []
         }
       },
-      "brutal_debug": false,
-      "certificate": []
+      "brutal_debug": false
     }
   ]
 }

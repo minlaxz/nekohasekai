@@ -7,10 +7,6 @@ import httpx
 from datetime import datetime, timezone
 
 START_PORT: int = int(os.getenv("START_PORT", "8040"))
-APP_LOCAL_JSON_PATH: str = os.getenv("APP_LOCAL_JSON_PATH", "outbounds.json")
-APP_USERS_JSON_PATH: str = os.getenv("APP_USERS_JSON_PATH", "users.json")
-APP_CF_JSON_PATH: str = os.getenv("APP_CF_JSON_PATH", "cloudflare.json")
-APP_REMOTE_JSON_URL: str = os.getenv("APP_REMOTE_JSON_URL", "sing-box-template")
 APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "")
 
 # SSM
@@ -20,10 +16,8 @@ SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
 
 # Headscale
 APP_HS_ENABLED: bool = os.getenv("APP_HS_ENABLED", "false").lower() == "true"
-APP_HS_HOST: str = os.getenv("APP_HS_HOST", "")
 APP_HS_API_KEY: str = os.getenv("APP_HS_API_KEY", "")
 IS_HS_ENABLED = all([
-    APP_HS_HOST,
     APP_HS_ENABLED,
     APP_HS_API_KEY,
 ])
@@ -65,13 +59,12 @@ class Loader:
         psk: str,
         please: bool = False,
     ) -> None:
-        self.local_path = APP_LOCAL_JSON_PATH
-        self.remote_url = APP_REMOTE_JSON_URL
-        self.hs_url = f"https://{APP_HS_HOST}"
+        self.remote_url = os.getenv("APP_REMOTE_URL", "sing-box-template")
+        self.local_path = os.getenv("APP_LOCAL_PATH", "/public/outbounds.json")
+        # self.users_path = os.getenv("APP_LOCAL_USERS_PATH", "/public/users.json")
+        self.cf_path = os.getenv("APP_LOCAL_CF_PATH", "/public/cloudflare.json")
+        self.hs_url = f"https://{os.getenv('APP_HS_HOST', '')}"
         self.app_config_host = APP_CONFIG_HOST
-
-        self.users_path = APP_USERS_JSON_PATH
-        self.cf_path = APP_CF_JSON_PATH
 
         self.platform = platform
         self.version = version
@@ -89,18 +82,17 @@ class Loader:
         self.multiplex = multiplex
         self.experimental = experimental
 
-        self.local_data: Dict[str, Any] = {}
-        self.remote_data: Dict[str, Any] = {}
-        self.users_data: Dict[str, str] = {}
-        self.cf_data: Dict[str, Any] = {}
+        self.local_data: Dict[str, Any] = {}  # outbounds
+        self.remote_data: Dict[str, Any] = {}  # base config
+        self.user_data: Dict[str, Any] = {}  # user name and psk
         self.cf_enabled = False
-        self.hs_data: Dict[str, Any] = {}
+        self.cf_data: Dict[str, Any] = {}  # cloudflare warp config
         self.hs_enabled = False
+        self.hs_data: Dict[str, Any] = {}  # headscale config
 
         self._load_local_data()
         self._load_remote_data()
-        # Not for now.
-        # self._load_users_data()
+        # self._load_user_data()
         self._load_cf_data()
 
         if self.version >= 12:
@@ -113,13 +105,16 @@ class Loader:
         except (FileNotFoundError, json.JSONDecodeError):
             self.local_data = {}
 
-    def _load_users_data(self):
-        try:
-            with open(self.users_path, "r", encoding="utf-8") as file:
-                # self.users_data => {"username": "psk"}
-                self.users_data = json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.users_data = {}
+    # def _load_user_data(self):
+    #     try:
+    #         with open(self.users_path, "r", encoding="utf-8") as file:
+    #             # self.user_data => {"users": [{"name": ..., "password": ...}, ...]}
+    #             for user in json.load(file).get("users", []):
+    #                 if user.get("name") == self.user_name:
+    #                     self.user_data = user
+    #                     break
+    #     except (FileNotFoundError, json.JSONDecodeError):
+    #         self.user_data = {}
 
     def _load_cf_data(self):
         try:
@@ -186,7 +181,9 @@ class Loader:
                         self.user_name,
                     )
                     key = preAuthKeys[-1].get("key", "")
-                    logging.info("Headscale: used preAuthKey for user %s", self.user_name)
+                    logging.info(
+                        "Headscale: used preAuthKey for user %s", self.user_name
+                    )
                     self.hs_data = {
                         "auth_key": key,
                         "hostname": f"{self.user_name}-ts",
@@ -268,13 +265,12 @@ class Loader:
     def __inject_outbounds__(self) -> None:
         outbounds: List[Dict[str, Any]] = [{"type": "direct", "tag": "direct"}]
         outbound_names: List[str] = ["direct"]
-        excluded_outbound_names: List[str] = ["direct", "shadowsocks"]
+        excluded_outbound_names: List[str] = ["direct"]
 
         for i in self.local_data["outbounds"]:
-            if i.get("tag") == "shadowsocks":
-                # ! Overwrite psk for shadowsocks outbound if quota exceeded
-                upsk = "invalid_psk_overwritten" if self.disabled else self.user_psk
-                i["password"] = upsk
+            # ! Overwrite psk if quota exceeded
+            upsk = "invalid_psk_overwritten" if self.disabled else self.user_psk
+            i["password"] = upsk
 
             # Remove multiplex from all outbounds by default
             # It can be enabled with ?mx=true
@@ -299,8 +295,8 @@ class Loader:
             # excluded_outbound_names.append("hs-ep")
         if self.cf_enabled:
             suffix += "cf"
-            outbound_names.append("cf-ep")
-            excluded_outbound_names.append("cf-ep")
+            # outbound_names.append("cf-ep")
+            # excluded_outbound_names.append("cf-ep")
 
         # Pullup outbounds
         outbounds.append({
@@ -312,7 +308,7 @@ class Loader:
             "tolerance": 100,
         })
 
-        # Eco outbounds
+        # Outbounds
         outbounds.append({
             "type": "urltest",
             "tag": "Out",

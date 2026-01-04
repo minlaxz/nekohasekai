@@ -3,6 +3,28 @@
 log:
   level: warn
 
+users: &users
+  - name: user1
+    password: password1wawa4uwgg==
+
+ech: &ech
+  enabled: true
+  key_path: certs/ech.key
+
+tls: &tls
+  enabled: true
+  server_name: c.svr-0.yourdomain.tld
+  alpn:
+    - h2
+    - h3
+  min_version: 1.3
+  key_path: certs/private.key
+  certificate_path: certs/certificate.crt
+  ech: *ech
+
+client_ech:
+  config_path: certs/ech.config
+
 inbounds:
   - tag: shadowsocks
     type: shadowsocks
@@ -15,59 +37,34 @@ inbounds:
     multiplex:
       enabled: true
       padding: false
+
   - tag: trojan
     type: trojan
     listen: 0.0.0.0
     listen_port: 0
-    users:
-      - name: user1
-        password: password1wawa4uwgg==
-    tls:
-      enabled: true
-      server_name: c.svr-0.yourdomain.tld
-      alpn:
-        - h2
-        - h3
-      min_version: 1.3
-      key_path: certs/private.key
-      certificate_path: certs/certificate.crt
-      ech:
-        enabled: true
-        key_path: certs/ech.key
+    users: *users
+    tls: *tls
+
   - tag: hysteria2
     type: hysteria2
     listen: 0.0.0.0
     listen_port: 0
     up_mbps: 1000
     down_mbps: 1000
-    obfs:
-      method: salamander
-      password: obfspass1wawa4uwgg==
-    users:
-      - name: user1
-        password: password1wawa4uwgg==
     ignore_client_bandwidth: false
-    tls:
-      enabled: true
-      server_name: c.svr-0.yourdomain.tld
-      alpn:
-        - h2
-        - h3
-      min_version: 1.3
-      key_path: certs/private.key
-      certificate_path: certs/certificate.crt
-      ech:
-        enabled: true
-        key_path: certs/ech.key
-      masquerade:
-      brutal_debug: false
+    obfs:
+      type: salamander
+      password: obfspass1wawa4uwgg==
+    users: *users
+    tls: *tls
+    masquerade: {}
+    brutal_debug: false
 
 services:
   - tag: ssm-api
     type: ssm-api
     listen: 0.0.0.0
     listen_port: 0
-    cache_path: ssm-cache.json
+    cache_path: cache/ssm-cache.json
     servers:
       /: shadowsocks
-

@@ -10,10 +10,10 @@ services:
     env_file:
       - .env
     volumes:
-      - ./ssm-cache.json:/sing-box/ssm-cache.json
-      - ./public:/sing-box/public
+      - ./cache:/sing-box/cache
       - ./conf:/sing-box/conf
       - ./certs:/sing-box/certs
+      - ./public:/sing-box/public
     ports:
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/tcp"
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"

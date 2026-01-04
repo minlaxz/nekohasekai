@@ -44,16 +44,19 @@ def load_and_update(config: Dict[str, Any] = {}, name: str = ""):
         json_config = json.load(f)
 
     if name in ["inbounds", "services"]:
-        yaml_inbounds = config.get(name, [])
+        yaml_array = config.get(name, [])
         for json_item in json_config.get(name, []):
             tag = json_item.get("tag")
             yaml_item = next(
-                (i for i in yaml_inbounds if i.get("tag") == tag),
+                (i for i in yaml_array if i.get("tag") == tag),
                 None,
             )
             if yaml_item:
+                # if json tag matches yaml tag, do a deep update
+                logging.info(f"Updating {name} for tag: {tag}")
                 deep_update(json_item, yaml_item)
     else:
+        # log, etc.
         yaml_section = config.get(name, {})
         if isinstance(yaml_section, dict):
             deep_update(json_config.get(name, {}), yaml_section)  # type: ignore
@@ -131,24 +134,42 @@ def main():
     with open("config.yaml") as f:
         config: Dict[str, Any] = yaml.safe_load(f) or {}
         inbounds = config.get("inbounds", [])
+        services = config.get("services", [])
+
         config["inbounds"] = [
             {**inbound, "listen_port": start_port + i + clash_api_offset}
             for i, inbound in enumerate(inbounds)
             if inbound.get("tag", "") in proxies_enabled
         ]
-        services = config.get("services", [])
         config["services"] = [
             {**service, "listen_port": ssm_listen_port}
             for service in services
             if service.get("tag", "") == "ssm-api"
         ]
-    for section in config:
+
+    # only log, inbounds, services need to be updated from yaml
+    for section in ["log", "inbounds", "services"]:
         load_and_update(config, section)
+    logging.info("Done: Configured inbounds and services.")
 
-    with open("certs/certificate.crt", "r") as cert_file:
+    certificate_path = config.get("tls", {}).get("certificate_path", "")
+    if not certificate_path or not os.path.isfile(certificate_path):
+        logging.error("Certificate path not specified in config.yaml.")
+        return
+
+    ech_config_path = config.get("client_ech", {}).get("config_path", "")
+    if not ech_config_path or not os.path.isfile(ech_config_path):
+        logging.error("ECH config path not specified in config.yaml.")
+        return
+
+    logging.info("Reading certificate, ech & users...")
+    certificate_array: List[str] = []
+    ech_config_array: List[str] = []
+    # users: List[Dict[str, Any]] = config.get("users", [])
+
+    with open(certificate_path, "r") as cert_file:
         certificate_array = [line.rstrip("\n") for line in cert_file]
-
-    with open("certs/ech.config", "r") as ech_file:
+    with open(ech_config_path, "r") as ech_file:
         ech_config_array = [line.rstrip("\n") for line in ech_file]
 
     with open("public/outbounds.json", "r") as f:
@@ -166,7 +187,7 @@ def main():
                 i["server"] = get_server_ip()
             else:
                 i["server"] = get_field(i.get("tag", ""), config, "server_name")
-                i["certificate"] = certificate_array
+                i["tls"]["certificate"] = certificate_array
                 i["tls"]["ech"]["config"] = ech_config_array
                 if i.get("tag") == "hysteria2":
                     i["obfs"]["password"] = get_field(
@@ -174,6 +195,8 @@ def main():
                     )
     with open("public/outbounds.json", "w") as f:
         json.dump({"outbounds": outbounds}, f, indent=2)
+    # with open("public/users.json", "w") as f:
+    #     json.dump({"users": users}, f, indent=2)
 
     logging.info("Configuration completed.")
 
