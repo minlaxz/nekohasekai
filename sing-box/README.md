@@ -29,24 +29,29 @@ ECH_KEYPAIR=$(docker run --rm ghcr.io/sagernet/sing-box:v1.12.14 generate ech-ke
   printf '%s\n' "$ECH_PUBLIC" > certs/ech.config
 ```
 
-2. Then run the generator script:
-
-```python
-python generator.py --start-port 1080 --shadowsocks --trojan --hysteria2
-```
-
-3. Copy sample.env to .env and modify as needed (probably you only need to set the following):
-
-- APP_CONFIG_HOST={should be same as `SERVER_NAME` above}
-
-4. Check config.yaml and modify as needed.
+2. Check config.yaml and modify as needed.
 
 - users add your users.
 - tls.server_name should be same as `SERVER_NAME` above.
 - inbounds[hysteria2].obfs.password set your obfs password.
 
+3. Copy sample.env to .env and modify as needed (probably you only need to set the following):
+
+- APP_CONFIG_HOST={should be same as `SERVER_NAME` above}
+- APP_HS_HOST={your headscale domain, if you use headscale}
+- APP_HS_API_KEY={your headscale api key, if you use headscale}
+
+3a. If you use headscale, make sure to check [this](https://headscale.net/0.27.1/setup/install/container/) out
+
+2. Then run the generator script:
+
+```python
+python3 generator.py --start-port 1080 --shadowsocks --trojan --hysteria2
+```
+
+
 5. Compose up!
 
 ```sh
-docker compose up -d
+docker compose up -d # docker compose --profile with-headscale up -d
 ```

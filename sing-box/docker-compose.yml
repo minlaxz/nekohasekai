@@ -3,7 +3,7 @@ services:
     image: ghcr.io/sagernet/sing-box:v1.12.14
     pull_policy: always
     restart: unless-stopped
-    command: ["./sing-box", "run", "-C", "/sing-box/conf"]
+    command: ["run", "-C", "/sing-box/configs"]
     mem_limit: 128m
     mem_reservation: 64m
     memswap_limit: -1 # no swap limit
@@ -11,19 +11,12 @@ services:
       - .env
     volumes:
       - ./cache:/sing-box/cache
-      - ./conf:/sing-box/conf
+      - ./configs:/sing-box/configs
       - ./certs:/sing-box/certs
       - ./public:/sing-box/public
     ports:
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/tcp"
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${START_PORT}"]
-      start_period: 5s
-      start_interval: 10s
-      interval: 5m
-      timeout: 5s
-      retries: 3
     networks:
       - nekohasekai-net
 
@@ -34,8 +27,7 @@ services:
     # See more options at https://fastapi.tiangolo.com/deployment/docker/
     command: ["fastapi", "run", "app/main.py", "--port", "8000", "--proxy-headers"]
     depends_on:
-      nekohasekai:
-        condition: service_healthy
+      - nekohasekai
     volumes:
       - ./public:/public:ro
     env_file:
@@ -50,7 +42,7 @@ services:
       caddy.reverse_proxy: "{{upstreams 8000}}"
 
   headscale:
-    image: docker.io/headscale/headscale:0.26.1
+    image: docker.io/headscale/headscale:0.27.1
     restart: unless-stopped
     env_file:
       - .env
@@ -67,8 +59,10 @@ services:
       - nekohasekai-net
       - caddy-net
     labels:
-      caddy: ${HS_HOST}
+      caddy: ${APP_HS_HOST}
       caddy.reverse_proxy: "{{upstreams 8080}}"
+    profiles:
+      - with-headscale
 
 networks:
   nekohasekai-net:

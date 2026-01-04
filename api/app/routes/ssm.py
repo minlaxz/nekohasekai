@@ -16,7 +16,7 @@ APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "www.gstatic.com")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
-APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "localhost")
+APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "nekohasekai")
 SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
 
 @router.get(

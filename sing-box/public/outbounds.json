@@ -5,7 +5,7 @@
       "tag": "shadowsocks",
       "server": "",
       "server_port": 0,
-      "method": "",
+      "method": "xchacha20-ietf-poly1305",
       "password": "",
       "multiplex": {
         "protocol": "h2mux",

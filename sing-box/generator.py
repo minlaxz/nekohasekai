@@ -152,12 +152,12 @@ def main():
         load_and_update(config, section)
     logging.info("Done: Configured inbounds and services.")
 
-    certificate_path = config.get("tls", {}).get("certificate_path", "")
+    certificate_path = config.get("client_tls", {}).get("tls_certificate_path", "")
     if not certificate_path or not os.path.isfile(certificate_path):
         logging.error("Certificate path not specified in config.yaml.")
         return
 
-    ech_config_path = config.get("client_ech", {}).get("config_path", "")
+    ech_config_path = config.get("client_tls", {}).get("ech_config_path", "")
     if not ech_config_path or not os.path.isfile(ech_config_path):
         logging.error("ECH config path not specified in config.yaml.")
         return
