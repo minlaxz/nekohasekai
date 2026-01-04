@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./cache:/sing-box/cache
+      - ./ssm-cache.json:/sing-box/ssm-cache.json
       - ./public:/sing-box/public
       - ./conf:/sing-box/conf
       - ./certs:/sing-box/certs
