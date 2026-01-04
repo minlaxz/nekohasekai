@@ -1,0 +1,73 @@
+# Log configuration
+# https://sing-box.sagernet.org/configuration/log/
+log:
+  level: warn
+
+inbounds:
+  - tag: shadowsocks
+    type: shadowsocks
+    listen: 0.0.0.0
+    listen_port: 0
+    method: xchacha20-ietf-poly1305
+    password: ""
+    users: []
+    managed: true
+    multiplex:
+      enabled: true
+      padding: false
+  - tag: trojan
+    type: trojan
+    listen: 0.0.0.0
+    listen_port: 0
+    users:
+      - name: user1
+        password: password1wawa4uwgg==
+    tls:
+      enabled: true
+      server_name: c.svr-0.yourdomain.tld
+      alpn:
+        - h2
+        - h3
+      min_version: 1.3
+      key_path: certs/private.key
+      certificate_path: certs/certificate.crt
+      ech:
+        enabled: true
+        key_path: certs/ech.key
+  - tag: hysteria2
+    type: hysteria2
+    listen: 0.0.0.0
+    listen_port: 0
+    up_mbps: 1000
+    down_mbps: 1000
+    obfs:
+      method: salamander
+      password: obfspass1wawa4uwgg==
+    users:
+      - name: user1
+        password: password1wawa4uwgg==
+    ignore_client_bandwidth: false
+    tls:
+      enabled: true
+      server_name: c.svr-0.yourdomain.tld
+      alpn:
+        - h2
+        - h3
+      min_version: 1.3
+      key_path: certs/private.key
+      certificate_path: certs/certificate.crt
+      ech:
+        enabled: true
+        key_path: certs/ech.key
+      masquerade:
+      brutal_debug: false
+
+services:
+  - tag: ssm-api
+    type: ssm-api
+    listen: 0.0.0.0
+    listen_port: 0
+    cache_path: ssm-cache.json
+    servers:
+      /: shadowsocks
+

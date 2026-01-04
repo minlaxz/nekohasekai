@@ -1,0 +1,32 @@
+name: Cleanup Runs, Artifacts and Packages
+
+on:
+  schedule:
+  # Run every day at 6 past 9 UTC
+    - cron: "6 9 * * *"
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Sing-box API Image", "Build Sing-box Server Image"]
+    types:
+      - completed
+
+jobs:
+  run:
+    name: Cleanup Job
+    runs-on: ubuntu-latest
+    permissions: write-all
+
+    steps:
+      - uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 3
+          keep_minimum_runs: 3
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          keep-n-tagged: 3
+          delete-untagged: true
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: '*'

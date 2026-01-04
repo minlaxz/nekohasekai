@@ -1,0 +1,77 @@
+{
+  "outbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks",
+      "server": "",
+      "server_port": 0,
+      "method": "",
+      "password": "",
+      "multiplex": {
+        "protocol": "h2mux",
+        "enabled": true,
+        "padding": false,
+        "max_connections": 2,
+        "min_streams": 4,
+        "max_streams": 8
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "trojan",
+      "server": "",
+      "server_port": 0,
+      "password": "",
+      "tls": {
+        "enabled": true,
+        "alpn": [
+          "h3",
+          "h2"
+        ],
+        "min_version": "1.3",
+        "certificate": [],
+        "ech": {
+          "enabled": true,
+          "config": []
+        }
+      },
+      "multiplex": {
+        "protocol": "h2mux",
+        "enabled": true,
+        "padding": false,
+        "max_connections": 2,
+        "min_streams": 4,
+        "max_streams": 8
+      },
+      "certificate": []
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2",
+      "server": "",
+      "server_port": 0,
+      "up_mbps": 0,
+      "down_mbps": 0,
+      "obfs": {
+        "type": "",
+        "password": ""
+      },
+      "password": "",
+      "tls": {
+        "enabled": true,
+        "alpn": [
+          "h3",
+          "h2"
+        ],
+        "min_version": "1.3",
+        "certificate": [],
+        "ech": {
+          "enabled": true,
+          "config": []
+        }
+      },
+      "brutal_debug": false,
+      "certificate": []
+    }
+  ]
+}

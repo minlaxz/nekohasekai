@@ -1,0 +1,74 @@
+{
+  "inbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "method": "",
+      "password": "",
+      "users": [],
+      "managed": true,
+      "multiplex": {
+        "enabled": true,
+        "padding": false
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "trojan",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "users": [],
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h3",
+          "h2"
+        ],
+        "min_version": "",
+        "key_path": "",
+        "certificate_path": "",
+        "ech": {
+          "enabled": true,
+          "key_path": ""
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "padding": false
+      }
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "up_mbps": 0,
+      "down_mbps": 0,
+      "obfs": {
+        "password": ""
+      },
+      "users": [],
+      "ignore_client_bandwidth": true,
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h3",
+          "h2"
+        ],
+        "min_version": "",
+        "key_path": "",
+        "certificate_path": "",
+        "ech": {
+          "enabled": true,
+          "key_path": ""
+        }
+      },
+      "masquerade": {},
+      "brutal_debug": false
+    }
+  ]
+}

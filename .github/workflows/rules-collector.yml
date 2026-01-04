@@ -1,0 +1,44 @@
+name: "Build Sing-box rules from OONI"
+
+on:
+  workflow_dispatch:
+  schedule:
+  # Run every day at 6 past 23 UTC
+    - cron: "6 23 * * *"
+
+# env:
+#   oonimm-output: ooni/oonimm.lst
+
+jobs:
+  run-scripts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - run: |
+          python -m pip install --upgrade pip requests setuptools wheel
+          curl -Lo generate-geoip-geosite.tar.gz https://github.com/Dunamis4tw/generate-geoip-geosite/releases/download/v1.3.1/generate-geoip-geosite-1.3.1-linux-amd64.tar.gz
+          tar -xzf generate-geoip-geosite.tar.gz && chmod +x generate-geoip-geosite
+          python rules/probe.py --country MM --day-range 14 --output rules/route-rules/include-domain-oonimm.lst
+          python rules/resolver.py --input rules/route-rules/include-domain-oonimm.lst --output rules/route-rules/include-ip-oonimm.lst
+          sed -i 's/^/*./' rules/route-rules/include-domain-oonimm.lst
+      - run: |
+          ./generate-geoip-geosite -i ./rules/route-rules -o ./rules/route-rules
+          
+
+      # - name: Convert files to LF (Unix format)
+      #   run: |
+      #     sudo apt-get update && sudo apt-get install -y dos2unix
+      #     find . -type f -name "*.lst" -exec dos2unix {} \;
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ github.token }}
+          publish_branch: route-rules
+          publish_dir: rules/route-rules
+          force_orphan: true
