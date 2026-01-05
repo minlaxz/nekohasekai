@@ -280,7 +280,7 @@ class Loader:
     def __inject_outbounds__(self) -> None:
         outbounds: List[Dict[str, Any]] = [{"type": "direct", "tag": "direct"}]
         outbound_names: List[str] = ["direct"]
-        excluded_outbound_names: List[str] = ["direct"]
+        excluded_outbound_names: List[str] = ["direct", "shadowtls"]
 
         for i in self.local_data["outbounds"]:
             if not i.get("tag").startswith("--"):
@@ -293,7 +293,7 @@ class Loader:
             if not self.multiplex:
                 _ = i.pop("multiplex", None)
 
-            if not i.get("tag").startswith("--"):
+            if i.get("tag") not in ["shadowtls"]:
                 outbound_names.append(i.get("tag"))
             outbounds.append(i)
 
