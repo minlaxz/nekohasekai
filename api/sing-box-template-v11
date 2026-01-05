@@ -83,14 +83,6 @@
         "update_interval": "1d"
       },
       {
-        "tag": "geoip-whatsapp",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/whatsapp.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
         "tag": "geosite-whatsapp",
         "type": "remote",
         "format": "binary",
