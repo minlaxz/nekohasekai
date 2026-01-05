@@ -126,6 +126,10 @@ class Loader:
             self.cf_data = {}
         finally:
             self.cf_enabled = len(self.cf_data) > 0
+            # Force override dns_version to 6 when Cloudflare WARP is enabled
+            if self.cf_enabled and self.experimental:
+                logging.info("Cloudflare WARP enabled for user %s", self.user_name)
+                self.dns_version = 6
 
     def _load_remote_data(self):
         try:
@@ -251,11 +255,22 @@ class Loader:
         for i in rule_set:
             i.update({"download_detour": self.route_detour})
 
+        # Insert Cloudflare WARP routes if enabled
+        if self.cf_enabled:
+            # IPv6 traffic to Cloudflare WARP
+            rules.insert(
+                1,
+                {
+                    "ip_version": 6,
+                    "outbound": "cf-ep",
+                },
+            )
+
         # Logs monitoring for routing error in client side
         # ws://100.64.0.x/logs, ws://100.64.0.x/connections
         if self.hs_enabled:
             rules.insert(
-                5,
+                2,
                 {
                     "ip_cidr": ["100.64.0.0/24"],
                     "outbound": "hs-ep",
@@ -349,9 +364,9 @@ class Loader:
         self.disabled: bool = disabled
         self.__inject_dns__()
         self.__inject_log__()
+        self.__inject_outbounds__()
         self.__inject_inbounds__()
         self.__inject_endpoints__()
-        self.__inject_outbounds__()
         self.__inject_routes__()
         return json.loads(json.dumps(self.remote_data, ensure_ascii=False, indent=2))
 

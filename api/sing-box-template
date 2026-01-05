@@ -50,14 +50,6 @@
   "route": {
     "rule_set": [
       {
-        "tag": "geosite-cloudflare",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cloudflare.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
         "tag": "geoip-cloudflare",
         "type": "remote",
         "format": "binary",
@@ -66,10 +58,82 @@
         "update_interval": "1d"
       },
       {
-        "tag": "geosite-meta",
+        "tag": "geosite-cloudflare",
         "type": "remote",
         "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/meta.srs",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cloudflare.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-facebook",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/facebook.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-facebook",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-whatsapp",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/whatsapp.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-whatsapp",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-instagram",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/instagram.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-instagram",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-messenger",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/messenger.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-messenger",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-twitter",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/twitter.srs",
         "download_detour": "",
         "update_interval": "1d"
       },
@@ -82,18 +146,18 @@
         "update_interval": "1d"
       },
       {
-        "tag": "geosite-oonimm",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-oonimm.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
         "tag": "geoip-oonimm",
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-ip-oonimm.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-oonimm",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-oonimm.srs",
         "download_detour": "",
         "update_interval": "1d"
       },
@@ -118,22 +182,6 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/microsoft.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-fastly",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/fastly.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-fastly",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/fastly.srs",
         "download_detour": "",
         "update_interval": "1d"
       },
@@ -181,6 +229,10 @@
         "method": "drop"
       },
       {
+        "action": "sniff",
+        "timeout": "100ms"
+      },
+      {
         "type": "logical",
         "mode": "or",
         "rules": [
@@ -206,17 +258,18 @@
             "rules": [
               {
                 "rule_set": [
-                  "geosite-cloudflare",
                   "geoip-cloudflare",
-                  "geosite-meta",
+                  "geosite-cloudflare",
+                  "geoip-facebook",
+                  "geosite-facebook",
+                  "geosite-whatsapp",
+                  "geosite-instagram",
+                  "geosite-messenger",
+                  "geoip-twitter",
                   "geosite-twitter",
-                  "geosite-oonimm",
-                  "geoip-oonimm",
                   "geosite-slack",
                   "geosite-aws",
-                  "geosite-microsoft",
-                  "geosite-fastly",
-                  "geoip-fastly"
+                  "geosite-microsoft"
                 ]
               },
               {
