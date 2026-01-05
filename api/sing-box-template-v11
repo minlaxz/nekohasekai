@@ -91,26 +91,10 @@
         "update_interval": "1d"
       },
       {
-        "tag": "geoip-instagram",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/instagram.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
         "tag": "geosite-instagram",
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-messenger",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/messenger.srs",
         "download_detour": "",
         "update_interval": "1d"
       },
@@ -135,22 +119,6 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-oonimm",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-ip-oonimm.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-oonimm",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/ruleset-domain-oonimm.srs",
         "download_detour": "",
         "update_interval": "1d"
       },
