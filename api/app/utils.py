@@ -292,13 +292,8 @@ class Loader:
             if not self.multiplex:
                 _ = i.pop("multiplex", None)
 
-            if "exp" in i.get("tag"):
-                if self.experimental:
-                    outbounds.append(i)
-                    outbound_names.append(i.get("tag"))
-            else:
-                outbounds.append(i)
-                outbound_names.append(i.get("tag"))
+            outbounds.append(i)
+            outbound_names.append(i.get("tag"))
 
         utc_now = datetime.now(timezone.utc)
         now = f"rev-{utc_now.year}{utc_now.month:02d}{utc_now.day:02d}"
@@ -324,6 +319,16 @@ class Loader:
         })
 
         # Outbounds
+        outbounds.append({
+            "type": "urltest",
+            "tag": "IP-Out",
+            "outbounds": [
+                i for i in outbound_names if i not in excluded_outbound_names
+            ],
+            "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
+            "interval": "30s",
+            "tolerance": 100,
+        })
         outbounds.append({
             "type": "urltest",
             "tag": "Out",
