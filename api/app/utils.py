@@ -283,17 +283,19 @@ class Loader:
         excluded_outbound_names: List[str] = ["direct"]
 
         for i in self.local_data["outbounds"]:
-            # ! Overwrite psk if quota exceeded
-            upsk = "invalid_psk_overwritten" if self.disabled else self.user_psk
-            i["password"] = upsk
+            if not i.get("tag").startswith("--"):
+                # ! Overwrite psk if quota exceeded
+                upsk = "invalid_psk_overwritten" if self.disabled else self.user_psk
+                i["password"] = upsk
 
             # Remove multiplex from all outbounds by default
             # It can be enabled with ?mx=true
             if not self.multiplex:
                 _ = i.pop("multiplex", None)
 
+            if not i.get("tag").startswith("--"):
+                outbound_names.append(i.get("tag"))
             outbounds.append(i)
-            outbound_names.append(i.get("tag"))
 
         utc_now = datetime.now(timezone.utc)
         now = f"rev-{utc_now.year}{utc_now.month:02d}{utc_now.day:02d}"
