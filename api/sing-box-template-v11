@@ -161,6 +161,22 @@
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-bank-mm.srs",
         "download_detour": "",
         "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-figma",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/figma.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-github",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
+        "download_detour": "",
+        "update_interval": "1d"
       }
     ],
     "rules": [
@@ -190,20 +206,7 @@
         "method": "drop"
       },
       {
-        "action": "sniff",
-        "timeout": "100ms"
-      },
-      {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {
-            "rule_set": [
-              "geoip-mm",
-              "geosite-mmbank"
-            ]
-          }
-        ],
+        "rule_set": "geoip-mm",
         "outbound": "direct"
       },
       {
@@ -220,17 +223,48 @@
               {
                 "rule_set": [
                   "geoip-cloudflare",
-                  "geosite-cloudflare",
                   "geoip-facebook",
+                  "geoip-twitter"
+                ]
+              }
+            ]
+          }
+        ],
+        "action": "route",
+        "outbound": "IP-Out"
+      },
+      {
+        "action": "sniff",
+        "timeout": "100ms"
+      },
+      {
+        "rule_set": "geosite-mmbank",
+        "outbound": "direct"
+      },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "clash_mode": "Eco"
+          },
+          {
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "rule_set": [
+                  "geosite-cloudflare",
                   "geosite-facebook",
                   "geosite-whatsapp",
                   "geosite-instagram",
                   "geosite-messenger",
-                  "geoip-twitter",
                   "geosite-twitter",
                   "geosite-slack",
                   "geosite-aws",
-                  "geosite-microsoft"
+                  "geosite-microsoft",
+                  "geosite-github",
+                  "geosite-figma"
                 ]
               },
               {
