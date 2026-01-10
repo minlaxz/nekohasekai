@@ -279,28 +279,25 @@ class Loader:
 
     def __inject_outbounds__(self) -> None:
         outbounds: List[Dict[str, Any]] = [{"type": "direct", "tag": "direct"}]
-        outbound_names: List[str] = ["direct"]
-        excluded_outbound_names: List[str] = ["direct", "shadowtls"]
+        excluded_outbounds: List[str] = ["direct", "shadowtls"]
 
         for i in self.local_data["outbounds"]:
-            if not i.get("tag").startswith("--"):
-                # ! Overwrite psk if quota exceeded
-                upsk = "invalid_psk_overwritten" if self.disabled else self.user_psk
-                i["password"] = upsk
+            # ! Overwrite psk if quota exceeded
+            upsk = "invalid_psk_overwritten" if self.disabled else self.user_psk
+            i["password"] = upsk
 
             # Remove multiplex from all outbounds by default
-            # It can be enabled with ?mx=true
+            # can still be enabled from client side with &?mx=true
             if not self.multiplex:
                 _ = i.pop("multiplex", None)
 
-            if i.get("tag") not in ["shadowtls"]:
-                outbound_names.append(i.get("tag"))
+            # Append all proxy outbounds
             outbounds.append(i)
 
         utc_now = datetime.now(timezone.utc)
         now = f"rev-{utc_now.year}{utc_now.month:02d}{utc_now.day:02d}"
 
-        suffix = ""
+        suffix = "-"
         if self.hs_enabled:
             suffix += "hs"
             # outbound_names.append("hs-ep")
@@ -313,8 +310,8 @@ class Loader:
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
-            "tag": f"{now}-{suffix}",
-            "outbounds": outbound_names,
+            "tag": f"{now}{suffix}",
+            "outbounds": [i.get("tag") for i in outbounds],
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
             "tolerance": 100,
@@ -325,7 +322,9 @@ class Loader:
             "type": "urltest",
             "tag": "IP-Out",
             "outbounds": [
-                i for i in outbound_names if i not in excluded_outbound_names
+                i.get("tag")
+                for i in outbounds
+                if i.get("tag") not in excluded_outbounds
             ],
             "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
@@ -335,7 +334,9 @@ class Loader:
             "type": "urltest",
             "tag": "Out",
             "outbounds": [
-                i for i in outbound_names if i not in excluded_outbound_names
+                i.get("tag")
+                for i in outbounds
+                if i.get("tag") not in excluded_outbounds
             ],
             "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
