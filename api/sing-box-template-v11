@@ -249,7 +249,7 @@
         "mode": "and",
         "rules": [
           {
-            "clash_mode": "Eco"
+            "clash_mode": "Auto"
           },
           {
             "type": "logical",
