@@ -304,17 +304,17 @@ class Loader:
         utc_now = datetime.now(timezone.utc)
         now = f"rev-{utc_now.year}{utc_now.month:02d}{utc_now.day:02d}"
 
-        suffix = "-"
+        suffix = ""
         if self.hs_enabled:
-            suffix += "hs"
+            suffix += "-hs"
         if self.cf_enabled:
-            suffix += "cf"
+            suffix += "-cf"
 
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
             "tag": f"{now}{suffix}",
-            "outbounds": outbound_names.append("direct"),
+            "outbounds": outbound_names + ["direct"],
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
             "tolerance": 100,
