@@ -1,17 +1,39 @@
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import logging
 import os
-import argparse
 import json
 import urllib.request
 import yaml
 
-PORT_MARGIN = int(os.environ.get("PORT_MARGIN", 10))
+from dotenv import load_dotenv, find_dotenv
+
+if find_dotenv("sample.env"):
+    load_dotenv(find_dotenv("sample.env"))
+
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.NOTSET,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
+
+START_PORT = int(os.environ.get("START_PORT", 0))
+TLS_SERVER_NAME = os.environ.get("TLS_SERVER_NAME", "")
+OBFS_PASSWORD = os.environ.get("OBFS_PASSWORD", "")
+
+list_sections = ["inbounds", "outbounds", "services", "endpoints"]
+dict_sections = ["log", "dns"]
+
+
+def __fetch_configs_wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
+    """:3"""
+
+    def wrapper(**kwargs: Dict[str, Any]) -> Any:
+        resp = json.load(urllib.request.urlopen("https://myip.wtf/json"))
+        server_ip = resp.get("YourFuckingIPAddress")  # Fuck yeah!
+        return func(**kwargs, server_ip=server_ip)
+
+    return wrapper
 
 
 def deep_update(dst: Dict[str, Any], src: Dict[str, Any]):
@@ -22,28 +44,11 @@ def deep_update(dst: Dict[str, Any], src: Dict[str, Any]):
             dst[k] = v
 
 
-def get_server_ip() -> str:
-    resp = json.load(urllib.request.urlopen("https://myip.wtf/json"))
-    server_ip = resp.get("YourFuckingIPAddress")  # Fuck yeah!
-    return server_ip
-
-
-def get_field(proxy_name: str, yaml_config: Dict[str, Any], field: str) -> str:
-    inbounds = yaml_config.get("inbounds", [])
-    for inbound in inbounds:
-        if inbound.get("tag") == proxy_name:
-            if field == "server_name":
-                return inbound.get("tls", {}).get("server_name", "")
-            elif field == "obfs_password":
-                return inbound.get("obfs", {}).get("password", "")
-    return ""
-
-
 def load_and_update(config: Dict[str, Any] = {}, name: str = ""):
     with open(f"configs/{name}.json") as f:
         json_config = json.load(f)
 
-    if name in ["inbounds", "services"]:
+    if name in list_sections:
         yaml_array = config.get(name, [])
         for json_item in json_config.get(name, []):
             tag = json_item.get("tag")
@@ -56,7 +61,7 @@ def load_and_update(config: Dict[str, Any] = {}, name: str = ""):
                 logging.info(f"Updating {name} for tag: {tag}")
                 deep_update(json_item, yaml_item)
     else:
-        # log, etc.
+        # log, dns, etc.
         yaml_section = config.get(name, {})
         if isinstance(yaml_section, dict):
             deep_update(json_config.get(name, {}), yaml_section)  # type: ignore
@@ -65,138 +70,78 @@ def load_and_update(config: Dict[str, Any] = {}, name: str = ""):
         json.dump(json_config, f, indent=2)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Sing-Box Config Generator Parser")
-    parser.add_argument("--start-port", default=0, help="Starting port")
-    parser.add_argument("--end-port", default=0, help="Ending port")
-    parser.add_argument(
-        "--shadowsocks",
-        action="store_true",
-        default=os.environ.get("SHADOWSOCKS", "false").lower() == "true",
-        help="Shadowsocks",
-    )
-    parser.add_argument(
-        "--trojan",
-        action="store_true",
-        default=os.environ.get("TROJAN", "false").lower() == "true",
-        help="Trojan",
-    )
-    parser.add_argument(
-        "--hysteria2",
-        action="store_true",
-        default=os.environ.get("HYSTERIA2", "false").lower() == "true",
-        help="Hysteria2",
-    )
-    parser.add_argument(
-        "--shadowtls",
-        action="store_true",
-        default=os.environ.get("SHADOWTLS", "false").lower() == "true",
-        help="ShadowTLS",
-    )
-    args = parser.parse_args()
+@__fetch_configs_wrapper
+def main(**kwargs: Dict[str, Any]):
+    server_ip = kwargs.get("server_ip", "")
+    config: Dict[str, Any] = yaml.safe_load(open("config.yaml")) or {}
+    users: Dict[str, Any] = yaml.safe_load(open("users.yaml")) or {}
+    config["start_port"] = START_PORT
+    config["users"] = users.get("users", [])
 
-    proxies_enabled: List[str] = []
-    is_ss_enabled = args.shadowsocks
-    proxies_enabled.append("shadowsocks") if is_ss_enabled else None
-    is_trojan_enabled = args.trojan
-    proxies_enabled.append("trojan") if is_trojan_enabled else None
-    is_hysteria2_enabled = args.hysteria2
-    proxies_enabled.append("hysteria2") if is_hysteria2_enabled else None
-    is_shadowtls_enabled = args.shadowtls
-    proxies_enabled.append("shadowtls") if is_shadowtls_enabled else None
-
-    # domain = os.environ.get("HANDSHAKE_DOMAIN", "")
-    # reality_privatekey = os.environ.get("REALITY_PRIVATEKEY", "")
-    # reality_publickey = os.environ.get("REALITY_PUBLICKEY", "")
-
-    start_port = int(args.start_port)
-    ssm_listen_port = int(args.end_port) or start_port + PORT_MARGIN
-    if ssm_listen_port <= start_port + len(proxies_enabled):
-        ssm_listen_port = start_port + PORT_MARGIN
-        logging.warning(f"Port conflict, resetting `end_port` to {ssm_listen_port}")
-
+    start_port = config.get("start_port")
     if not start_port:
-        logging.error("Start port must be specified.")
-        return
-
-    if len(proxies_enabled) == 0:
-        logging.error("No proxies are enabled.")
+        logging.error("start_port is not specified.")
         return
 
     logging.info(f"Start Port (Clash API): {start_port}")
-    logging.info(f"End Port (SSM API): {ssm_listen_port}")
-    logging.info(f"Enabled Proxies: {', '.join(proxies_enabled)}")
-    logging.info(f"Server IP: {get_server_ip()}")
-    logging.info("Sing-Box configuration...")
-    os.makedirs("public", exist_ok=True)
+    logging.info(f"Server IP: {server_ip}")
 
-    clash_api_offset = 1  # in case clash api is enabled on `start_port`
-    with open("config.yaml") as f:
-        config: Dict[str, Any] = yaml.safe_load(f) or {}
-        inbounds = config.get("inbounds", [])
-        services = config.get("services", [])
+    proxies_enabled: Dict[str, Any] = {}
 
-        config["inbounds"] = [
-            {**inbound, "listen_port": start_port + i + clash_api_offset}
-            for i, inbound in enumerate(inbounds)
-            if inbound.get("tag", "") in proxies_enabled
-        ]
-        config["services"] = [
-            {**service, "listen_port": ssm_listen_port}
-            for service in services
-            if service.get("tag", "") == "ssm-api"
-        ]
+    # Shadowsocks with SSM API and detour over ShadowTLS with user authentication
+    proxies_enabled["shadowsocks"] = {"port": start_port + 1}
+    proxies_enabled["shadowtls"] = {"port": start_port + 2}
+    # Trojan with user authentication
+    proxies_enabled["trojan"] = {"port": start_port + 3}
+    # Hysteria2 with obfs with user authentication
+    proxies_enabled["hysteria2"] = {"port": start_port + 4}
 
-    # only log, inbounds, services need to be updated from yaml
-    for section in ["log", "inbounds", "services"]:
-        load_and_update(config, section)
-    logging.info("Done: Configured inbounds and services.")
-
-    certificate_path = config.get("client_tls", {}).get("tls_certificate_path", "")
-    if not certificate_path or not os.path.isfile(certificate_path):
+    tls_cert_path = "certs/certificate.crt"
+    if not os.path.isfile(tls_cert_path):
         logging.error("Certificate path not specified in config.yaml.")
         return
 
-    ech_config_path = config.get("client_tls", {}).get("ech_config_path", "")
-    if not ech_config_path or not os.path.isfile(ech_config_path):
+    ech_config_path = "certs/ech.config"
+    if not os.path.isfile(ech_config_path):
         logging.error("ECH config path not specified in config.yaml.")
         return
 
-    logging.info("Reading certificate, ech & users...")
-    certificate_array: List[str] = []
-    ech_config_array: List[str] = []
-    # users: List[Dict[str, Any]] = config.get("users", [])
+    logging.info(f"Enabled Proxies: {', '.join(proxies_enabled)}")
+    config["inbounds"] = [
+        {**i, "listen_port": proxies_enabled.get(i.get("tag", ""), {}).get("port")}
+        for i in config.get("inbounds", [])
+        if i.get("tag", "") in proxies_enabled.keys()
+    ]
 
-    with open(certificate_path, "r") as cert_file:
-        certificate_array = [line.rstrip("\n") for line in cert_file]
-    with open(ech_config_path, "r") as ech_file:
-        ech_config_array = [line.rstrip("\n") for line in ech_file]
+    for section in list_sections + dict_sections:
+        load_and_update(config, section)
+    logging.info("Done: Configured inbounds")
+
+    # Client Outbounds
+    certificate_array = [line.rstrip("\n") for line in open(tls_cert_path, "r")]
+    ech_config_array = [line.rstrip("\n") for line in open(ech_config_path, "r")]
 
     with open("public/outbounds.json", "r") as f:
-        outbounds = json.load(f).get("outbounds", [])
-        outbounds = [
+        outbounds: List[Dict[str, Any]] = [
             {**outbound}
-            for outbound in outbounds
-            if outbound.get("tag", "") in proxies_enabled
+            for outbound in json.load(f).get("outbounds", [])
+            if outbound.get("type", "") in proxies_enabled
         ]
         for i in outbounds:
-            i["server_port"] = (
-                start_port + proxies_enabled.index(i.get("tag", "")) + clash_api_offset
-            )
-            if i.get("tag") == "shadowsocks":
-                i["server"] = get_server_ip()
-            else:
-                i["server"] = get_field(i.get("tag", ""), config, "server_name")
+            if i.get("server", None) == "" and i.get("server_port", None) == 0:
+                i["server"] = server_ip
+                i["server_port"] = proxies_enabled.get(i.get("tag", ""), {}).get("port")
+            if i.get("tls", {}).get("certificate", None) == []:
                 i["tls"]["certificate"] = certificate_array
+            if i.get("tls", {}).get("ech", {}).get("config", None) == []:
                 i["tls"]["ech"]["config"] = ech_config_array
-                if i.get("tag") == "hysteria2":
-                    i["obfs"]["password"] = get_field(
-                        "hysteria2", config, "obfs_password"
-                    )
+            if i.get("tls", {}).get("server_name", None) == "":
+                i["tls"]["server_name"] = config.get("tls_server_name", "")
+            if i.get("obfs", {}).get("password", None) == "":
+                i["obfs"]["password"] = config.get("obfs_password", "")
+
     with open("public/outbounds.json", "w") as f:
         json.dump({"outbounds": outbounds}, f, indent=2)
-    # with open("public/users.json", "w") as f:
-    #     json.dump({"users": users}, f, indent=2)
 
     logging.info("Configuration completed.")
 

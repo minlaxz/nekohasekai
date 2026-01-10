@@ -19,13 +19,19 @@ services:
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"
     networks:
       - nekohasekai-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   nekohasekai-api:
     image: ghcr.io/minlaxz/nekohasekai:sing-box-api
     pull_policy: always
     restart: unless-stopped
     # See more options at https://fastapi.tiangolo.com/deployment/docker/
-    command: ["fastapi", "run", "app/main.py", "--port", "8000", "--proxy-headers"]
+    command:
+      ["fastapi", "run", "app/main.py", "--port", "8000", "--proxy-headers"]
     depends_on:
       - nekohasekai
     volumes:
@@ -40,6 +46,11 @@ services:
     labels:
       caddy: ${APP_CONFIG_HOST}
       caddy.reverse_proxy: "{{upstreams 8000}}"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   headscale:
     image: docker.io/headscale/headscale:0.27.1
@@ -63,6 +74,11 @@ services:
       caddy.reverse_proxy: "{{upstreams 8080}}"
     profiles:
       - with-headscale
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   nekohasekai-net:

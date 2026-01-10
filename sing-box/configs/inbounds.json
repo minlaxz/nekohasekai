@@ -5,8 +5,7 @@
       "tag": "shadowsocks",
       "listen": "0.0.0.0",
       "listen_port": 0,
-      "method": "",
-      "password": "",
+      "method": "xchacha20-ietf-poly1305",
       "users": [],
       "managed": true,
       "multiplex": {
@@ -24,10 +23,9 @@
         "enabled": true,
         "server_name": "",
         "alpn": [
-          "h3",
-          "h2"
+          "h3"
         ],
-        "min_version": "",
+        "min_version": "1.3",
         "key_path": "",
         "certificate_path": "",
         "ech": {
@@ -57,10 +55,9 @@
         "enabled": true,
         "server_name": "",
         "alpn": [
-          "h3",
-          "h2"
+          "h3"
         ],
-        "min_version": "",
+        "min_version": "1.3",
         "key_path": "",
         "certificate_path": "",
         "ech": {
@@ -70,6 +67,20 @@
       },
       "masquerade": {},
       "brutal_debug": false
+    },
+    {
+      "type": "shadowtls",
+      "tag": "shadowtls",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "detour": "shadowsocks",
+      "version": 3,
+      "users": [],
+      "handshake": {
+        "server": "",
+        "server_port": 443
+      },
+      "strict_mode": true
     }
   ]
 }

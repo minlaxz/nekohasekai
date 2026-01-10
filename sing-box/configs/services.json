@@ -4,8 +4,8 @@
       "type": "ssm-api",
       "tag": "ssm-api",
       "listen": "0.0.0.0",
-      "listen_port": 1090,
-      "cache_path": "ssm-cache.json",
+      "listen_port": 8888,
+      "cache_path": "",
       "servers": {
         "/": "shadowsocks"
       }
