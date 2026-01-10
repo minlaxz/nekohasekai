@@ -286,7 +286,7 @@
       {
         "clash_mode": "Full",
         "outbound": "Out"
-      },
+      }
     ],
     "default_domain_resolver": "dns-remote",
     "final": "direct",
