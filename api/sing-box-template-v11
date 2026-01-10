@@ -12,17 +12,12 @@
         "tag": "dns-resolver",
         "address": "",
         "detour": ""
-      },
-      {
-        "tag": "dns-final",
-        "address": "8.8.8.8",
-        "detour": "direct"
       }
     ],
     "rules": [
       {
         "outbound": "any",
-        "server": "dns-final"
+        "server": "dns-remote"
       }
     ],
     "independent_cache": false,
@@ -38,8 +33,7 @@
       "type": "tun",
       "tag": "tun-in",
       "address": [
-        "10.10.10.0/24",
-        "fd00::1/126"
+        "10.10.10.0/24"
       ],
       "mtu": 1280,
       "auto_route": true,
@@ -177,6 +171,14 @@
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
         "download_detour": "",
         "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-akamai",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/akamai.srs",
+        "download_detour": "",
+        "update_interval": "1d"
       }
     ],
     "rules": [
@@ -264,7 +266,8 @@
                   "geosite-aws",
                   "geosite-microsoft",
                   "geosite-github",
-                  "geosite-figma"
+                  "geosite-figma",
+                  "geosite-akamai"
                 ]
               },
               {
@@ -283,10 +286,6 @@
       {
         "clash_mode": "Full",
         "outbound": "Out"
-      },
-      {
-        "clash_mode": "Cloudflare",
-        "outbound": "cf-ep"
       }
     ],
     "final": "direct",
@@ -301,7 +300,7 @@
       "external_controller": "127.0.0.1:9090",
       "access_control_allow_private_network": true,
       "access_control_allow_origin": "*",
-      "default_mode": "Eco"
+      "default_mode": "Auto"
     },
     "cache_file": {
       "enabled": true,
