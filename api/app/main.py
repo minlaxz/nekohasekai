@@ -20,6 +20,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()],
 )
 
+
 async def not_found(request: Request, exc: Any) -> Response:
     logging.info(f"404 Error: {exc}")
     return JSONResponse(
@@ -118,8 +119,8 @@ def health_check(
 @app.get("/c", response_class=JSONResponse)
 def read_config(
     # Common options
-    p: Union[str, None] = None, # Required
-    v: Union[int, None] = None, # Required
+    p: Union[str, None] = None,  # Required
+    v: Union[int, None] = None,  # Required
     ll: Union[str, None] = None,
     # DNS options
     # client defined dns_path otherwise server defined dns_path
@@ -132,8 +133,8 @@ def read_config(
     # Route options
     rd: Union[str, None] = None,
     # User authentication
-    j: Union[str, None] = None, # Required
-    k: Union[str, None] = None, # Required
+    j: Union[str, None] = None,  # Required
+    k: Union[str, None] = None,  # Required
     # Experimental and other misc options
     mx: Union[bool, None] = False,
     please: bool = False,  # Humorous parameter to appease the server

@@ -5,13 +5,16 @@ import json
 import logging
 import httpx
 from datetime import datetime, timezone
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 START_PORT: int = int(os.getenv("START_PORT", "8040"))
 APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "")
 
 # SSM
 APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "nekohasekai")
-END_PORT: int = int(os.getenv("END_PORT", ""))
+END_PORT: int = int(os.getenv("END_PORT", 0))
 SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
 
 # Headscale
@@ -59,10 +62,10 @@ class Loader:
         psk: str,
         please: bool = False,
     ) -> None:
-        self.remote_url = os.getenv("APP_REMOTE_URL", "sing-box-template")
-        self.local_path = os.getenv("APP_LOCAL_PATH", "/public/outbounds.json")
-        # self.users_path = os.getenv("APP_LOCAL_USERS_PATH", "/public/users.json")
-        self.cf_path = os.getenv("APP_LOCAL_CF_PATH", "/public/cloudflare.json")
+        self.remote_url = os.getenv("APP_REMOTE_JSON_URL", "")
+        self.local_path = os.getenv("APP_LOCAL_JSON_PATH", "")
+        # self.users_path = os.getenv("APP_LOCAL_USERS_PATH", "")
+        self.cf_path = os.getenv("APP_LOCAL_CF_PATH", "")
         self.hs_url = f"https://{os.getenv('APP_HS_HOST', '')}"
         self.app_config_host = APP_CONFIG_HOST
 
@@ -102,8 +105,8 @@ class Loader:
         try:
             with open(self.local_path, "r", encoding="utf-8") as file:
                 self.local_data = json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.local_data = {}
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.error("Error loading local outbounds.json: %s", e)
 
     # def _load_user_data(self):
     #     try:
