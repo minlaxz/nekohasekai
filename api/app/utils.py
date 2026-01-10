@@ -281,8 +281,8 @@ class Loader:
             )
 
     def __inject_outbounds__(self) -> None:
-        outbounds: List[Dict[str, Any]] = [{"type": "direct", "tag": "direct"}]
-        excluded_outbounds: List[str] = ["direct", "shadowtls"]
+        outbounds: List[Dict[str, Any]] = []
+        outbound_names: List[str] = []
 
         for i in self.local_data["outbounds"]:
             # ! Overwrite psk if quota exceeded
@@ -296,6 +296,10 @@ class Loader:
 
             # Append all proxy outbounds
             outbounds.append(i)
+            if i.get("tag") not in ["shadowtls", "cf-ep", "hs-ep"]:
+                outbound_names.append(i.get("tag"))
+
+        outbounds.append({"type": "direct", "tag": "direct"})
 
         utc_now = datetime.now(timezone.utc)
         now = f"rev-{utc_now.year}{utc_now.month:02d}{utc_now.day:02d}"
@@ -303,18 +307,14 @@ class Loader:
         suffix = "-"
         if self.hs_enabled:
             suffix += "hs"
-            # outbound_names.append("hs-ep")
-            # excluded_outbound_names.append("hs-ep")
         if self.cf_enabled:
             suffix += "cf"
-            # outbound_names.append("cf-ep")
-            # excluded_outbound_names.append("cf-ep")
 
         # Pullup outbounds
         outbounds.append({
             "type": "urltest",
             "tag": f"{now}{suffix}",
-            "outbounds": [i.get("tag") for i in outbounds],
+            "outbounds": outbound_names.append("direct"),
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
             "tolerance": 100,
@@ -324,11 +324,7 @@ class Loader:
         outbounds.append({
             "type": "urltest",
             "tag": "IP-Out",
-            "outbounds": [
-                i.get("tag")
-                for i in outbounds
-                if i.get("tag") not in excluded_outbounds
-            ],
+            "outbounds": outbound_names,
             "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
             "tolerance": 100,
@@ -336,11 +332,7 @@ class Loader:
         outbounds.append({
             "type": "urltest",
             "tag": "Out",
-            "outbounds": [
-                i.get("tag")
-                for i in outbounds
-                if i.get("tag") not in excluded_outbounds
-            ],
+            "outbounds": outbound_names,
             "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
             "interval": "30s",
             "tolerance": 100,
