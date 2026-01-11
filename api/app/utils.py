@@ -296,8 +296,15 @@ class Loader:
 
             # Append all proxy outbounds
             outbounds.append(i)
-            if i.get("tag") not in ["shadowtls", "cf-ep", "hs-ep"]:
-                outbound_names.append(i.get("tag"))
+            tag = i.get("tag")
+            # Globally disabled these outbounds from being tested.
+            if tag not in ["shadowtls", "cf-ep", "hs-ep"]:
+                # Unstable outbounds with exp keyword in tag name
+                if "exp" in tag:
+                    if self.experimental:
+                         outbound_names.append(tag)
+                else:
+                    outbound_names.append(tag)
 
         outbounds.append({"type": "direct", "tag": "direct"})
 
@@ -321,22 +328,36 @@ class Loader:
         })
 
         # Outbounds
-        outbounds.append({
-            "type": "urltest",
-            "tag": "IP-Out",
-            "outbounds": outbound_names,
-            "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
-            "interval": "30s",
-            "tolerance": 100,
-        })
-        outbounds.append({
-            "type": "urltest",
-            "tag": "Out",
-            "outbounds": outbound_names,
-            "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&expensive=false",
-            "interval": "30s",
-            "tolerance": 100,
-        })
+        if self.experimental:
+            outbounds.append({
+                "type": "selector",
+                "tag": "IP-Out",
+                "outbounds": outbound_names,
+                "default": outbound_names[0],
+            })
+            outbounds.append({
+                "type": "selector",
+                "tag": "Out",
+                "outbounds": outbound_names,
+                "default": outbound_names[0],
+            })
+        else:
+            outbounds.append({
+                "type": "urltest",
+                "tag": "IP-Out",
+                "outbounds": outbound_names,
+                "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&version={now}",
+                "interval": "30s",
+                "tolerance": 100,
+            })
+            outbounds.append({
+                "type": "urltest",
+                "tag": "Out",
+                "outbounds": outbound_names,
+                "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&version={now}",
+                "interval": "30s",
+                "tolerance": 100,
+            })
 
         self.remote_data["outbounds"] = outbounds
 
