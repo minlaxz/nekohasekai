@@ -99,6 +99,7 @@ def health_check(
     j: Union[str, None] = None,
     k: Union[str, None] = None,
     expensive: Union[bool, None] = False,
+    version: Union[str, None] = None,
 ) -> Response:
     if j is None or k is None:
         raise RequestValidationError([
@@ -111,6 +112,7 @@ def health_check(
     user_id, _ = j, k
     logging.info(f"""
         Health check for user: {user_id}
+        Version: {version}
         Mode: {"expensive" if expensive else "normal"}
     """)
     return Response(status_code=204)
