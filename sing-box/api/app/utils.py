@@ -171,7 +171,7 @@ class Loader:
             users: List[Dict[str, Any]] = response.json()
 
             for u in users:
-                if u.get("username") == self.user_name:
+                if u.get("name") == self.user_name:
                     wg_api = wg_api + f"/{u.get('id')}"
                     response = client.get(wg_api, timeout=5)
                     response.raise_for_status()
