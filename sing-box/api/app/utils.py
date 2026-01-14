@@ -393,6 +393,8 @@ class Loader:
                 self.wg_data.get("ipv6Address", "") + "/128",
             ]
             endpoint["private_key"] = self.wg_data.get("privateKey", "")
+            endpoint["detour"] = "IP-Out"
+            endpoint["persistent_keepalive_interval"] = 10
             endpoint["peers"][0]["address"] = wg_peer_ip
             endpoint["peers"][0]["port"] = int(os.getenv(
                 "APP_WG_OVERRIDE_PORT", os.getenv("END_PORT", 0)
