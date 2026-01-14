@@ -1,7 +1,15 @@
-users: &users []
-tls_server_name: &tls_server_name addons.mozilla.org
+debug: true
+verbose: info
+end_port: 1090
+start_port: 1080
+server_name: c.svr-0.domain.tld
+tls_server_name: &tls_server_name mozilla.org
 obfs_password: &obfs_password passwordneedtobechangedonce==
 
+# You don't usually need to update from here below this line
+
+users: &users []
+users_with_uuid: &users_with_uuid []
 
 handshake: &handshake
   server: *tls_server_name
@@ -44,9 +52,18 @@ inbounds:
     type: shadowsocks
     listen: 0.0.0.0
     method: xchacha20-ietf-poly1305
-    users: *users
+    users: []
     managed: true
     multiplex: *multiplex
+
+  - tag: shadowtls
+    type: shadowtls
+    listen: 0.0.0.0
+    detour: shadowsocks
+    version: 3
+    users: *users
+    handshake: *handshake
+    strict_mode: true
 
   - tag: trojan
     type: trojan
@@ -67,14 +84,15 @@ inbounds:
     masquerade: {}
     brutal_debug: false
 
-  - tag: shadowtls
-    type: shadowtls
+  - tag: tuic
+    type: tuic
     listen: 0.0.0.0
-    detour: shadowsocks
-    version: 3
-    users: *users
-    handshake: *handshake
-    strict_mode: true
+    users: *users_with_uuid
+    congestion_control: bbr
+    auth_timeout: 3s
+    zero_rtt_handshake: false
+    heartbeat: 10s
+    tls: *tls
 
 outbounds:
   - tag: direct

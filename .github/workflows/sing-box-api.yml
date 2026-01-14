@@ -6,8 +6,8 @@ on:
     branches:
       - master
     paths:
-      - "api/**/*.py"
-      - "api/**/*.html"
+      - "sing-box/api/**/*.py"
+      - "sing-box/api/**/*.html"
 
 env:
   REGISTRY: ghcr.io
@@ -42,8 +42,8 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64
-          context: ./api
-          file: ./api/Dockerfile
+          context: ./sing-box/api
+          file: ./sing-box/api/Dockerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |

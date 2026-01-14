@@ -4,11 +4,13 @@ import os
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+
+# from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, Response
 from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
+import urllib.parse
 
 from .utils import Checker
 from .routes.ssm import router as ssm_router
@@ -29,8 +31,8 @@ async def not_found(request: Request, exc: Any) -> Response:
     )
 
 
-async def internal_error(request: Request, exc: Any) -> Response:
-    logging.info(f"500 Error: {exc.detail}")
+async def internal_error(request: Request, exc: Exception) -> Response:
+    logging.exception(f"500 Error: {exc}")
     return JSONResponse(
         status_code=500,
         content={"message": "Nice! server error occurred."},
@@ -39,7 +41,7 @@ async def internal_error(request: Request, exc: Any) -> Response:
 
 exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
     404: not_found,
-    500: not_found,
+    Exception: internal_error,
 }
 
 app = FastAPI(exception_handlers=exceptions)
@@ -65,10 +67,9 @@ app.add_middleware(
 )
 
 
-class User(BaseModel):
-    username: str
-    psk: str
-    is_active: Union[bool, None] = True
+# class User(BaseModel):
+#     j: str
+#     k: str
 
 
 @app.get("/")
@@ -93,29 +94,27 @@ def read_help():
     return templates.TemplateResponse("help.html", {"request": {}})
 
 
-@app.head("/generate_204", response_class=JSONResponse, status_code=200)
-def health_check(
-    request: Request,
-    j: Union[str, None] = None,
-    k: Union[str, None] = None,
-    expensive: Union[bool, None] = False,
-    version: Union[str, None] = None,
-) -> Response:
-    if j is None or k is None:
-        raise RequestValidationError([
-            {
-                "loc": ["query", "j" if j is None else "k"],
-                "msg": "field required",
-                "type": "value_error.missing",
-            }
-        ])
-    user_id, _ = j, k
-    logging.info(f"""
-        Health check for user: {user_id}
-        Version: {version}
-        Mode: {"expensive" if expensive else "normal"}
-    """)
-    return Response(status_code=204)
+# @app.head("/generate_204", response_class=JSONResponse, status_code=200)
+# def health_check(
+#     request: Request,
+#     j: Union[str, None] = None,
+#     k: Union[str, None] = None,
+#     expensive: Union[bool, None] = False,
+# ) -> Response:
+#     if j is None or k is None:
+#         raise RequestValidationError([
+#             {
+#                 "loc": ["query", "j" if j is None else "k"],
+#                 "msg": "field required",
+#                 "type": "value_error.missing",
+#             }
+#         ])
+#     user_id, _ = j, k
+#     logging.info(f"""
+#         Health check for user: {user_id}
+#         Mode: {"expensive" if expensive else "normal"}
+#     """)
+#     return Response(status_code=204)
 
 
 @app.get("/c", response_class=JSONResponse)
@@ -169,16 +168,29 @@ def read_config(
     )
 
     if not checker.verify_key():
-        raise RequestValidationError([{"error": "Your key is disabled or invalid!"}])
+        raise RequestValidationError([{"message": "Your key is disabled or invalid!"}])
 
     return checker.unwarp()
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=400,
+        content={"message": "Bad request"},
+    )
+
+
+@app.get("/config")
+def read_user(request: Request, p: str = "a", v: int = 12, j: str = "", k: str = ""):
+    url = "https://" + os.getenv("APP_CONFIG_HOST", "") + f"/c?p={p}&v={v}&j={j}&k={k}"
+    encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"
+    templates = Jinja2Templates(directory="templates")
+    return templates.TemplateResponse(
+        "render.html", {"request": request, "j": j, "encoded_url": encoded_url}
+    )
+
+
 # @app.get("/users/{name}")
-# def read_user(name: str, q: Union[str, None] = None) -> dict[str, str | None]:
-#     return {"name": name, "q": q}
-
-
-# @app.put("/users/{name}")
-# def update_user(name: str, user: User) -> dict[str, str]:
-#     return {"name": name, "psk": user.psk}
+# def read_user():
+#     return {"user": "name"}

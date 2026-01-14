@@ -8,14 +8,12 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
-
-START_PORT: int = int(os.getenv("START_PORT", "8040"))
-APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "")
+START_PORT: int = int(os.getenv("START_PORT", "1080"))
+END_PORT: int = int(os.getenv("START_PORT", "1090"))
+APP_UNSTABLE_OUTBOUNDS: List[str] = os.getenv("APP_UNSTABLE_OUTBOUNDS", "").split(",")
 
 # SSM
-APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "nekohasekai")
-END_PORT: int = int(os.getenv("END_PORT", 0))
-SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
+SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://nekohasekai:8888")
 
 # Headscale
 APP_HS_ENABLED: bool = os.getenv("APP_HS_ENABLED", "false").lower() == "true"
@@ -23,6 +21,15 @@ APP_HS_API_KEY: str = os.getenv("APP_HS_API_KEY", "")
 IS_HS_ENABLED = all([
     APP_HS_ENABLED,
     APP_HS_API_KEY,
+])
+
+APP_WG_ENABLED: bool = os.getenv("APP_WG_ENABLED", "false").lower() == "true"
+APP_WG_USERNAME: str = os.getenv("APP_WG_USERNAME", "")
+APP_WG_PASSWORD: str = os.getenv("APP_WG_PASSWORD", "")
+IS_WG_ENABLED = all([
+    APP_WG_ENABLED,
+    APP_WG_USERNAME,
+    APP_WG_PASSWORD,
 ])
 
 
@@ -34,6 +41,28 @@ TailscaleConfig: Dict[str, Any] = {
     "hostname": "",
     "accept_routes": True,
     "udp_timeout": "5m0s",
+}
+
+WireguardConfig: Dict[str, Any] = {
+    "type": "wireguard",
+    "tag": "wg-ep",
+    "system": False,
+    "mtu": 1280,
+    "address": [],
+    "private_key": "",
+    "peers": [
+        {
+            "address": "",
+            "port": 0,
+            "public_key": "",
+            "pre_shared_key": "",
+            "allowed_ips": ["0.0.0.0/0", "::/0"],
+            "persistent_keepalive_interval": 0,
+            "reserved": [0, 0, 0],
+        }
+    ],
+    "workers": 2,
+    "detour": "",
 }
 
 logging.basicConfig(
@@ -66,8 +95,8 @@ class Loader:
         self.local_path = os.getenv("APP_LOCAL_JSON_PATH", "")
         # self.users_path = os.getenv("APP_LOCAL_USERS_PATH", "")
         self.cf_path = os.getenv("APP_LOCAL_CF_PATH", "")
-        self.hs_url = f"https://{os.getenv('APP_HS_HOST', '')}"
-        self.app_config_host = APP_CONFIG_HOST
+        self.hs_url = os.getenv("APP_HS_UPSTREAM", "")
+        self.wg_url = os.getenv("APP_WG_UPSTREAM", "")
 
         self.platform = platform
         self.version = version
@@ -88,15 +117,16 @@ class Loader:
         self.local_data: Dict[str, Any] = {}  # outbounds
         self.remote_data: Dict[str, Any] = {}  # base config
         self.user_data: Dict[str, Any] = {}  # user name and psk
-        self.cf_enabled = False
-        self.cf_data: Dict[str, Any] = {}  # cloudflare warp config
+        self.wg_enabled = False
+        self.wg_data: Dict[str, Any] = {}  # wireguard config
         self.hs_enabled = False
         self.hs_data: Dict[str, Any] = {}  # headscale config
 
         self._load_local_data()
         self._load_remote_data()
-        # self._load_user_data()
-        self._load_cf_data()
+
+        if IS_WG_ENABLED:
+            self._load_wireguard_data()
 
         if self.version >= 12:
             self._fetch_hs_data()
@@ -107,32 +137,6 @@ class Loader:
                 self.local_data = json.load(file)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logging.error("Error loading local outbounds.json: %s", e)
-
-    # def _load_user_data(self):
-    #     try:
-    #         with open(self.users_path, "r", encoding="utf-8") as file:
-    #             # self.user_data => {"users": [{"name": ..., "password": ...}, ...]}
-    #             for user in json.load(file).get("users", []):
-    #                 if user.get("name") == self.user_name:
-    #                     self.user_data = user
-    #                     break
-    #     except (FileNotFoundError, json.JSONDecodeError):
-    #         self.user_data = {}
-
-    def _load_cf_data(self):
-        try:
-            with open(self.cf_path, "r", encoding="utf-8") as file:
-                cf_data = json.load(file)
-                # TODO: `others` will be replaced with individual user configs later
-                self.cf_data = cf_data.get(self.user_name, cf_data.get("others", {}))
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.cf_data = {}
-        finally:
-            self.cf_enabled = len(self.cf_data) > 0
-            # Force override dns_version to 6 when Cloudflare WARP is enabled
-            if self.cf_enabled and self.experimental:
-                logging.info("Cloudflare WARP enabled for user %s", self.user_name)
-                self.dns_version = 6
 
     def _load_remote_data(self):
         try:
@@ -156,6 +160,29 @@ class Loader:
                     self.remote_data = json.load(file)
         except (httpx.HTTPError, json.JSONDecodeError):
             self.remote_data = {}
+
+    def _load_wireguard_data(self):
+        try:
+            auth = httpx.BasicAuth(username=APP_WG_USERNAME, password=APP_WG_PASSWORD)
+            client = httpx.Client(auth=auth)
+            wg_api = f"{self.wg_url}/api/client"
+            response = client.get(wg_api, timeout=5)
+            response.raise_for_status()
+            users: List[Dict[str, Any]] = response.json()
+
+            for u in users:
+                if u.get("username") == self.user_name:
+                    wg_api = wg_api + f"/{u.get('id')}"
+                    response = client.get(wg_api, timeout=5)
+                    response.raise_for_status()
+                    self.wg_data = response.json()
+                    self.wg_enabled = True
+                    # * Force IPv6 when WireGuard is enabled
+                    self.dns_version = 6
+                    break
+        except (httpx.HTTPError, json.JSONDecodeError):
+            self.wg_data = {}
+            self.wg_enabled = False
 
     def _fetch_hs_data(self):
         try:
@@ -258,17 +285,6 @@ class Loader:
         for i in rule_set:
             i.update({"download_detour": self.route_detour})
 
-        # Insert Cloudflare WARP routes if enabled
-        if self.cf_enabled:
-            # IPv6 traffic to Cloudflare WARP
-            rules.insert(
-                1,
-                {
-                    "ip_version": 6,
-                    "outbound": "cf-ep",
-                },
-            )
-
         # Logs monitoring for routing error in client side
         # ws://100.64.0.x/logs, ws://100.64.0.x/connections
         if self.hs_enabled:
@@ -277,6 +293,22 @@ class Loader:
                 {
                     "ip_cidr": ["100.64.0.0/24"],
                     "outbound": "hs-ep",
+                },
+            )
+
+        if self.wg_enabled:
+            rules.insert(
+                3,
+                {
+                    "ip_cidr": ["10.8.0.0/24"],
+                    "outbound": "wg-ep",
+                },
+            )
+            rules.insert(
+                4,
+                {
+                    "ip_version": 6,
+                    "outbound": "wg-ep",
                 },
             )
 
@@ -296,15 +328,8 @@ class Loader:
 
             # Append all proxy outbounds
             outbounds.append(i)
-            tag = i.get("tag")
-            # Globally disabled these outbounds from being tested.
-            if tag not in ["shadowtls", "cf-ep", "hs-ep"]:
-                # Unstable outbounds with exp keyword in tag name
-                if "exp" in tag:
-                    if self.experimental:
-                         outbound_names.append(tag)
-                else:
-                    outbound_names.append(tag)
+            if i.get("tag") not in APP_UNSTABLE_OUTBOUNDS:
+                outbound_names.append(i.get("tag"))
 
         outbounds.append({"type": "direct", "tag": "direct"})
 
@@ -314,8 +339,6 @@ class Loader:
         suffix = ""
         if self.hs_enabled:
             suffix += "-hs"
-        if self.cf_enabled:
-            suffix += "-cf"
 
         # Pullup outbounds
         outbounds.append({
@@ -328,36 +351,22 @@ class Loader:
         })
 
         # Outbounds
-        if self.experimental:
-            outbounds.append({
-                "type": "selector",
-                "tag": "IP-Out",
-                "outbounds": outbound_names,
-                "default": outbound_names[0],
-            })
-            outbounds.append({
-                "type": "selector",
-                "tag": "Out",
-                "outbounds": outbound_names,
-                "default": outbound_names[0],
-            })
-        else:
-            outbounds.append({
-                "type": "urltest",
-                "tag": "IP-Out",
-                "outbounds": outbound_names,
-                "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&version={now}",
-                "interval": "30s",
-                "tolerance": 100,
-            })
-            outbounds.append({
-                "type": "urltest",
-                "tag": "Out",
-                "outbounds": outbound_names,
-                "url": f"https://{self.app_config_host}/generate_204?j={self.user_name}&k={self.user_psk}&version={now}",
-                "interval": "30s",
-                "tolerance": 100,
-            })
+        outbounds.append({
+            "type": "urltest",
+            "tag": "IP-Out",
+            "outbounds": outbound_names,
+            "url": "https://www.gstatic.com/generate_204",
+            "interval": "30s",
+            "tolerance": 100,
+        })
+        outbounds.append({
+            "type": "urltest",
+            "tag": "Out",
+            "outbounds": outbound_names,
+            "url": "https://www.gstatic.com/generate_204",
+            "interval": "30s",
+            "tolerance": 100,
+        })
 
         self.remote_data["outbounds"] = outbounds
 
@@ -370,12 +379,27 @@ class Loader:
         if self.dns_version == 4:
             for i in inbounds:
                 if i.get("tag") == "tun-in":
-                    i.get("address", []).pop()
+                    i.get("address", []).pop(1)  # Remove IPv6 address
 
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
-        if self.cf_enabled:
-            endpoints.append(self.cf_data)
+        if self.wg_enabled:
+            endpoint = WireguardConfig.copy()
+            wg_peer_ip = os.getenv("SERVER_IPv4", "")
+            wg_peer_public_key = os.getenv("APP_WG_PEER_PUBLIC_KEY", "")
+            endpoint["private_key"] = self.wg_data.get("private_key", "")
+            endpoint["address"] = [
+                self.wg_data.get("ipv4Address", "") + "/32",
+                self.wg_data.get("ipv6Address", "") + "/128",
+            ]
+            endpoint["private_key"] = self.wg_data.get("privateKey", "")
+            endpoint["peers"][0]["address"] = wg_peer_ip
+            endpoint["peers"][0]["port"] = os.getenv(
+                "APP_WG_OVERRIDE_PORT", os.getenv("END_PORT")
+            )
+            endpoint["peers"][0]["public_key"] = wg_peer_public_key
+            endpoint["peers"][0]["pre_shared_key"] = self.wg_data.get("preSharedKey")
+            endpoints.append(endpoint)
         if self.hs_enabled:
             endpoint = TailscaleConfig.copy()
             endpoint["auth_key"] = self.hs_data.get("auth_key", "")

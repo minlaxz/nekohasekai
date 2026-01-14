@@ -14,6 +14,20 @@
       }
     },
     {
+      "type": "shadowtls",
+      "tag": "shadowtls",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "detour": "shadowsocks",
+      "version": 3,
+      "users": [],
+      "handshake": {
+        "server": "",
+        "server_port": 443
+      },
+      "strict_mode": true
+    },
+    {
       "type": "trojan",
       "tag": "trojan",
       "listen": "0.0.0.0",
@@ -69,18 +83,29 @@
       "brutal_debug": false
     },
     {
-      "type": "shadowtls",
-      "tag": "shadowtls",
+      "type": "tuic",
+      "tag": "tuic",
       "listen": "0.0.0.0",
       "listen_port": 0,
-      "detour": "shadowsocks",
-      "version": 3,
       "users": [],
-      "handshake": {
-        "server": "",
-        "server_port": 443
-      },
-      "strict_mode": true
+      "congestion_control": "bbr",
+      "auth_timeout": "3s",
+      "zero_rtt_handshake": false,
+      "heartbeat": "10s",
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h3"
+        ],
+        "min_version": "1.3",
+        "key_path": "",
+        "certificate_path": "",
+        "ech": {
+          "enabled": true,
+          "key_path": ""
+        }
+      }
     }
   ]
 }
