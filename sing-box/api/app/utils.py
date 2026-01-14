@@ -328,7 +328,7 @@ class Loader:
 
             # Append all proxy outbounds
             outbounds.append(i)
-            if i.get("tag") not in APP_UNSTABLE_OUTBOUNDS or "exp" not in i.get("tag"):
+            if i.get("tag") not in APP_UNSTABLE_OUTBOUNDS:
                 outbound_names.append(i.get("tag"))
 
         outbounds.append({"type": "direct", "tag": "direct"})
