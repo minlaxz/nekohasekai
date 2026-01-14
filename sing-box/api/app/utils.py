@@ -394,9 +394,9 @@ class Loader:
             ]
             endpoint["private_key"] = self.wg_data.get("privateKey", "")
             endpoint["peers"][0]["address"] = wg_peer_ip
-            endpoint["peers"][0]["port"] = os.getenv(
-                "APP_WG_OVERRIDE_PORT", os.getenv("END_PORT")
-            )
+            endpoint["peers"][0]["port"] = int(os.getenv(
+                "APP_WG_OVERRIDE_PORT", os.getenv("END_PORT", 0)
+            ))
             endpoint["peers"][0]["public_key"] = wg_peer_public_key
             endpoint["peers"][0]["pre_shared_key"] = self.wg_data.get("preSharedKey")
             endpoints.append(endpoint)
