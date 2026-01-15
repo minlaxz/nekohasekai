@@ -178,7 +178,7 @@ class Loader:
                     self.wg_data = response.json()
                     self.wg_enabled = True
                     # * Force IPv6 when WireGuard is enabled
-                    self.dns_version = 6
+                    # self.dns_version = 6
                     break
         except (httpx.HTTPError, json.JSONDecodeError):
             self.wg_data = {}
