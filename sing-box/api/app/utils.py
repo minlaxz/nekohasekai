@@ -385,8 +385,6 @@ class Loader:
         endpoints: list[dict[str, Any]] = []
         if self.wg_enabled:
             endpoint = WireguardConfig.copy()
-            wg_peer_ip = os.getenv("SERVER_IPv4", "")
-            wg_peer_public_key = os.getenv("APP_WG_PEER_PUBLIC_KEY", "")
             endpoint["private_key"] = self.wg_data.get("private_key", "")
             endpoint["address"] = [
                 self.wg_data.get("ipv4Address", "") + "/32",
@@ -395,18 +393,20 @@ class Loader:
             endpoint["private_key"] = self.wg_data.get("privateKey", "")
             endpoint["detour"] = "IP-Out"
             endpoint["peers"][0]["persistent_keepalive_interval"] = 10
-            endpoint["peers"][0]["address"] = wg_peer_ip
-            endpoint["peers"][0]["port"] = int(os.getenv(
-                "APP_WG_OVERRIDE_PORT", os.getenv("END_PORT", 0)
-            ))
-            endpoint["peers"][0]["public_key"] = wg_peer_public_key
+            endpoint["peers"][0]["address"] = os.getenv(
+                "SERVER_IPv4", "https://" + os.getenv("APP_WG_HOST", "")
+            )
+            endpoint["peers"][0]["port"] = int(
+                os.getenv("APP_WG_OVERRIDE_PORT", os.getenv("END_PORT", 0))
+            )
+            endpoint["peers"][0]["public_key"] = os.getenv("APP_WG_PEER_PUBLIC_KEY", "")
             endpoint["peers"][0]["pre_shared_key"] = self.wg_data.get("preSharedKey")
             endpoints.append(endpoint)
         if self.hs_enabled:
             endpoint = TailscaleConfig.copy()
             endpoint["auth_key"] = self.hs_data.get("auth_key", "")
             endpoint["hostname"] = self.hs_data.get("hostname", "")
-            endpoint["control_url"] = self.hs_url
+            endpoint["control_url"] = "https://" + os.getenv("APP_HS_HOST", "")
             endpoints.append(endpoint)
         self.remote_data["endpoints"] = endpoints
 
