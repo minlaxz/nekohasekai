@@ -12,7 +12,7 @@ from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
 import urllib.parse
 
-from .utils import Checker
+from .utils import Reader
 from .routes.ssm import router as ssm_router
 from .routes.ssm_transparent import router as ssm_transparent_router
 
@@ -54,9 +54,9 @@ origins = [
     "http://localhost",
     "http://localhost:8080",
 ]
-app_config_host = os.getenv("APP_CONFIG_HOST")
-if app_config_host:
-    origins.append(app_config_host)
+APP_HOST = os.getenv("APP_HOST")
+if APP_HOST:
+    origins.append(APP_HOST)
 
 app.add_middleware(
     CORSMiddleware,
@@ -94,83 +94,62 @@ def read_help():
     return templates.TemplateResponse("help.html", {"request": {}})
 
 
-# @app.head("/generate_204", response_class=JSONResponse, status_code=200)
-# def health_check(
-#     request: Request,
-#     j: Union[str, None] = None,
-#     k: Union[str, None] = None,
-#     expensive: Union[bool, None] = False,
-# ) -> Response:
-#     if j is None or k is None:
-#         raise RequestValidationError([
-#             {
-#                 "loc": ["query", "j" if j is None else "k"],
-#                 "msg": "field required",
-#                 "type": "value_error.missing",
-#             }
-#         ])
-#     user_id, _ = j, k
-#     logging.info(f"""
-#         Health check for user: {user_id}
-#         Mode: {"expensive" if expensive else "normal"}
-#     """)
-#     return Response(status_code=204)
-
-
 @app.get("/c", response_class=JSONResponse)
 def read_config(
     # Common options
-    p: Union[str, None] = None,  # Required
-    v: Union[int, None] = None,  # Required
-    ll: Union[str, None] = None,
+    p: str = os.getenv("APP_DEFAULT_PLATFORM", "a"),
+    v: int = int(os.getenv("APP_DEFAULT_VERSION", 12)),
+    ll: str = os.getenv("APP_DEFAULT_LOG_LEVEL", "warn"),
     # DNS options
-    # client defined dns_path otherwise server defined dns_path
-    dh: Union[str, None] = None,
-    dp: Union[str, None] = None,
-    dd: Union[str, None] = None,
-    df: Union[str, None] = None,
-    dr: Union[str, None] = None,
-    dv: Union[str, None] = None,
+    dh: str = os.getenv("APP_DEFAULT_DNS_HOST", "https://dns.nextdns.io"),
+    dp: str = os.getenv("APP_DEFAULT_DNS_PATH", "/"),
+    dd: str = os.getenv("APP_DEFAULT_DNS_DETOUR", "Out"),
+    df: str = os.getenv("APP_DEFAULT_DNS_FINAL", "dns-remote"),
+    dr: str = os.getenv("APP_DEFAULT_DNS_RESOLVER", "1.1.1.1"),
+    dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 4)),
     # Route options
-    rd: Union[str, None] = None,
+    rd: str = os.getenv("APP_DEFAULT_ROUTE_DETOUR", "Out"),
     # User authentication
-    j: Union[str, None] = None,  # Required
-    k: Union[str, None] = None,  # Required
-    # Experimental and other misc options
-    mx: Union[bool, None] = False,
-    please: bool = False,  # Humorous parameter to appease the server
-    ex: Union[bool, None] = False,
+    j: str = "",  # Required
+    k: str = "",  # Required
+    # Experimental options
+    mx: bool = os.getenv("APP_DEFAULT_MULTIPLEX_ENABLED") == "true",
+    ex: bool = os.getenv("APP_DEFAULT_EXPERIMENTAL_FEATURES") == "true",
+    # Humorous parameter to appease the server
+    please: bool = False,
 ) -> dict[str, Any]:
-    if j is None or k is None:
+    if not j or not k:
         raise RequestValidationError([
             {
-                "loc": ["query", "j" if j is None else "k"],
+                "loc": ["query", "j" if not j else "k"],
                 "msg": "field required",
                 "type": "value_error.missing",
             }
         ])
-    checker = Checker(
-        platform=p or "a",
-        version=v or 12,
-        log_level=ll or os.getenv("APP_LOG_LEVEL"),
-        dns_host=dh or os.getenv("APP_DNS_HOST"),
-        dns_path=dp or os.getenv("APP_DNS_PATH"),
-        dns_detour=dd or os.getenv("APP_DNS_DETOUR"),
-        dns_final=df or os.getenv("APP_DNS_FINAL"),
-        dns_resolver=dr or os.getenv("APP_DNS_RESOLVER"),
-        dns_version=dv or os.getenv("APP_DNS_VERSION") or 4,
-        route_detour=rd or os.getenv("APP_ROUTE_DETOUR"),
-        username=j,
-        psk=k,
-        multiplex=mx or os.getenv("APP_MULTIPLEX_ENABLED") == "true",
+
+    # Server will assume default value if any parameter is missing
+    reader = Reader(
+        username=j,  # Required
+        psk=k,  # Required
         please=please,
-        experimental=ex or os.getenv("APP_EXPERIMENTAL_FEATURES") == "true",
+        platform=p,
+        version=v,
+        log_level=ll,
+        dns_host=dh,
+        dns_path=dp,
+        dns_detour=dd,
+        dns_final=df,
+        dns_resolver=dr,
+        dns_version=dv,
+        route_detour=rd,
+        multiplex=mx,
+        experimental=ex,
     )
 
-    if not checker.verify_key():
-        raise RequestValidationError([{"message": "Your key is disabled or invalid!"}])
+    # if not checker.verify_key():
+    #     raise RequestValidationError([{"message": "Your key is disabled or invalid!"}])
 
-    return checker.unwarp()
+    return reader.unwarp()
 
 
 @app.exception_handler(RequestValidationError)
@@ -183,7 +162,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.get("/config")
 def read_user(request: Request, p: str = "a", v: int = 12, j: str = "", k: str = ""):
-    url = "https://" + os.getenv("APP_CONFIG_HOST", "") + f"/c?p={p}&v={v}&j={j}&k={k}"
+    url = "https://" + os.getenv("APP_HOST", "") + f"/c?p={p}&v={v}&j={j}&k={k}"
     encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse(

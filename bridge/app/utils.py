@@ -8,16 +8,17 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
-START_PORT: int = int(os.getenv("START_PORT", "1080"))
-END_PORT: int = int(os.getenv("START_PORT", "1090"))
+START_PORT: int = int(os.getenv("START_PORT", "8810"))
+END_PORT: int = int(os.getenv("END_PORT", "8820"))
 APP_UNSTABLE_OUTBOUNDS: List[str] = os.getenv("APP_UNSTABLE_OUTBOUNDS", "").split(",")
-
-# SSM
-SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://nekohasekai:8888")
+APP_IP_OUT_NAME: str = os.getenv("APP_IP_OUT_NAME", "IP-Out")
+APP_OUT_NAME: str = os.getenv("APP_OUT_NAME", "Out")
 
 # Headscale
 APP_HS_ENABLED: bool = os.getenv("APP_HS_ENABLED", "false").lower() == "true"
 APP_HS_API_KEY: str = os.getenv("APP_HS_API_KEY", "")
+APP_HS_CONTROL_URL: str = "https://" + os.getenv("APP_HS_HOST", "")
+APP_HS_ADVERTISE_ROUTES: str = os.getenv("APP_HS_ADVERTISE_ROUTES", "")
 IS_HS_ENABLED = all([
     APP_HS_ENABLED,
     APP_HS_API_KEY,
@@ -26,10 +27,14 @@ IS_HS_ENABLED = all([
 APP_WG_ENABLED: bool = os.getenv("APP_WG_ENABLED", "false").lower() == "true"
 APP_WG_USERNAME: str = os.getenv("APP_WG_USERNAME", "")
 APP_WG_PASSWORD: str = os.getenv("APP_WG_PASSWORD", "")
+APP_WG_PEER_IPv4: str = os.getenv("APP_WG_PEER_IPv4", "")
+APP_WG_PEER_PORT: int = int(os.getenv("APP_WG_PEER_PORT", os.getenv("END_PORT", 0)))
+APP_WG_PEER_PUBLIC_KEY: str = os.getenv("APP_WG_PEER_PUBLIC_KEY", "")
 IS_WG_ENABLED = all([
     APP_WG_ENABLED,
     APP_WG_USERNAME,
     APP_WG_PASSWORD,
+    APP_WG_PEER_IPv4,
 ])
 
 
@@ -41,6 +46,7 @@ TailscaleConfig: Dict[str, Any] = {
     "hostname": "",
     "accept_routes": True,
     "udp_timeout": "5m0s",
+    "advertise_routes": [],
 }
 
 WireguardConfig: Dict[str, Any] = {
@@ -72,31 +78,34 @@ logging.basicConfig(
 )
 
 
-class Loader:
+class Reader:
     def __init__(
         self,
-        platform: str,
+        username: str,
+        psk: str,
+        please: bool,
         version: int,
+        platform: str,
+        log_level: str,
         dns_host: str,
         dns_path: str,
         dns_detour: str,
         dns_final: str,
         dns_resolver: str,
         dns_version: int,
-        log_level: str,
         route_detour: str,
         multiplex: bool,
         experimental: bool,
-        username: str,
-        psk: str,
-        please: bool = False,
     ) -> None:
-        self.remote_url = os.getenv("APP_REMOTE_JSON_URL", "")
-        self.local_path = os.getenv("APP_LOCAL_JSON_PATH", "")
-        # self.users_path = os.getenv("APP_LOCAL_USERS_PATH", "")
-        self.cf_path = os.getenv("APP_LOCAL_CF_PATH", "")
-        self.hs_url = os.getenv("APP_HS_UPSTREAM", "")
-        self.wg_url = os.getenv("APP_WG_UPSTREAM", "")
+        self.template_path = (
+            os.getenv("APP_TEMPLATE_v12_PATH", "")
+            if version >= 12
+            else os.getenv("APP_TEMPLATE_v11_PATH", "")
+        )
+        self.outbounds_path = os.getenv("APP_OUTBOUNDS_PATH", "")
+        self.app_ssm_upstream = os.getenv("APP_SSM_UPSTREAM", "http://nekohasekai:8888")
+        self.app_hs_upstream = os.getenv("APP_HS_UPSTREAM", "http://headscale:8080")
+        self.app_wg_upstream = os.getenv("APP_WG_UPSTREAM", "http://wg-easy:51821")
 
         self.platform = platform
         self.version = version
@@ -114,123 +123,121 @@ class Loader:
         self.multiplex = multiplex
         self.experimental = experimental
 
-        self.local_data: Dict[str, Any] = {}  # outbounds
-        self.remote_data: Dict[str, Any] = {}  # base config
-        self.user_data: Dict[str, Any] = {}  # user name and psk
+        self.outbounds_data: Dict[str, Any] = {}  # outbounds
+        self.template_data: Dict[str, Any] = {}  # base config
+        self.has_critical_error: bool = False
+        self._load_criticals()
+
         self.wg_enabled = False
-        self.wg_data: Dict[str, Any] = {}  # wireguard config
-        self.hs_enabled = False
-        self.hs_data: Dict[str, Any] = {}  # headscale config
-
-        self._load_local_data()
-        self._load_remote_data()
-
-        if IS_WG_ENABLED:
+        self.wg_data: Dict[str, Any] = WireguardConfig.copy()
+        # Server side supports WireGuard integration
+        if IS_WG_ENABLED and self.version >= 11:
+            self.app_wg_peer_ipv4 = APP_WG_PEER_IPv4
+            self.app_wg_peer_port = APP_WG_PEER_PORT
+            self.app_wg_peer_public_key = APP_WG_PEER_PUBLIC_KEY
+            # Load WireGuard data if client exists
             self._load_wireguard_data()
 
-        if self.version >= 12:
-            self._fetch_hs_data()
+        self.hs_enabled = False
+        self.hs_data: Dict[str, Any] = TailscaleConfig.copy()
+        # Server side supports Headscale integration
+        if IS_HS_ENABLED and self.version >= 12:
+            self.app_hs_control_url = APP_HS_CONTROL_URL
+            self.app_hs_advertise_routes = (
+                APP_HS_ADVERTISE_ROUTES.split(",") if APP_HS_ADVERTISE_ROUTES else []
+            )
+            # Load Headscale data if client exists
+            self._load_headscale_data()
 
-    def _load_local_data(self):
+    def _load_criticals(self):
         try:
-            with open(self.local_path, "r", encoding="utf-8") as file:
-                self.local_data = json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            logging.error("Error loading local outbounds.json: %s", e)
-
-    def _load_remote_data(self):
-        try:
-            if self.remote_url.startswith("https://"):
+            if self.template_path.startswith(("https://", "http://")):
                 response = httpx.get(
-                    self.remote_url + f"-v{self.version}"
-                    if self.version == 11
-                    else self.remote_url,
+                    self.template_path,
                     timeout=5,
                 )
                 response.raise_for_status()
-                self.remote_data = response.json()
+                self.template_data = response.json()
             else:
                 with open(
-                    self.remote_url + f"-v{self.version}"
-                    if self.version == 1
-                    else self.remote_url,
+                    self.template_path,
                     "r",
                     encoding="utf-8",
                 ) as file:
-                    self.remote_data = json.load(file)
-        except (httpx.HTTPError, json.JSONDecodeError):
-            self.remote_data = {}
+                    self.template_data = json.load(file)
+
+            with open(self.outbounds_path, "r", encoding="utf-8") as file:
+                self.outbounds_data = json.load(file)
+
+        except Exception as e:
+            logging.error("Error loading data: %s", e)
+            self.has_critical_error = True
+            self.template_data = {}
+            self.outbounds_data = {}
 
     def _load_wireguard_data(self):
         try:
             auth = httpx.BasicAuth(username=APP_WG_USERNAME, password=APP_WG_PASSWORD)
-            client = httpx.Client(auth=auth)
-            wg_api = f"{self.wg_url}/api/client"
-            response = client.get(wg_api, timeout=5)
-            response.raise_for_status()
-            users: List[Dict[str, Any]] = response.json()
-
+            wg_api = f"{self.app_wg_upstream}/api"
+            client = httpx.Client(base_url=wg_api, auth=auth, timeout=5)
+            user_r = client.get("/client")
+            user_r.raise_for_status()
+            users: List[Dict[str, Any]] = user_r.json()
             for u in users:
                 if u.get("name") == self.user_name:
-                    wg_api = wg_api + f"/{u.get('id')}"
-                    response = client.get(wg_api, timeout=5)
-                    response.raise_for_status()
-                    self.wg_data = response.json()
+                    config_r = client.get(f"/client/{u.get('id')}")
+                    config_r.raise_for_status()
+                    config = config_r.json()
+                    self.wg_data["privateKey"] = config.get("privateKey", "")
+                    self.wg_data["address"] = [
+                        config.get("ipv4Address", "") + "/32",
+                        config.get("ipv6Address", "") + "/128",
+                    ]
+                    self.wg_data["peers"][0]["persistent_keepalive_interval"] = 10
+                    self.wg_data["peers"][0]["address"] = self.app_wg_peer_ipv4
+                    self.wg_data["peers"][0]["port"] = self.app_wg_peer_port
+                    self.wg_data["peers"][0]["public_key"] = self.app_wg_peer_public_key
+                    self.wg_data["peers"][0]["pre_shared_key"] = config.get(
+                        "preSharedKey"
+                    )
+                    self.wg_data["detour"] = "IP-Out"
                     self.wg_enabled = True
                     # * Force IPv6 when WireGuard is enabled
                     # self.dns_version = 6
                     break
-        except (httpx.HTTPError, json.JSONDecodeError):
-            self.wg_data = {}
-            self.wg_enabled = False
+        except Exception as e:
+            logging.error(f"WG: error fetching data for {self.user_name}: {e}")
 
-    def _fetch_hs_data(self):
+    def _load_headscale_data(self):
         try:
-            self.hs_data = {}
-            if IS_HS_ENABLED:
-                headers = {
-                    "Authorization": f"Bearer {APP_HS_API_KEY}",
-                }
-                user_response = httpx.get(
-                    f"{self.hs_url}/api/v1/user?name={self.user_name}",
-                    timeout=3,
-                    headers=headers,
-                )
-                user_response.raise_for_status()
-                users = user_response.json().get("users", [])
-                logging.info(f"Headscale: got users: {users}")
-                if len(users) > 0:
-                    user_id = int(users[0].get("id", 0))
-                    response = httpx.get(
-                        f"{self.hs_url}/api/v1/preauthkey?user={user_id}",
-                        timeout=3,
-                        headers=headers,
-                    )
-                    response.raise_for_status()
-                    response.json()
-                    preAuthKeys = response.json().get("preAuthKeys", [])
-                    logging.info(
-                        "Headscale: received %d preAuthKeys for user %s",
-                        len(preAuthKeys),
-                        self.user_name,
-                    )
-                    key = preAuthKeys[-1].get("key", "")
-                    logging.info(
-                        "Headscale: used preAuthKey for user %s", self.user_name
-                    )
-                    self.hs_data = {
-                        "auth_key": key,
-                        "hostname": f"{self.user_name}-ts",
-                    }
-        except (httpx.HTTPError, json.JSONDecodeError):
-            self.hs_data = {}
-        finally:
-            self.hs_enabled = len(self.hs_data) > 0
+            headers = {"Authorization": f"Bearer {APP_HS_API_KEY}"}
+            client = httpx.Client(headers=headers, timeout=5)
+            hs_api = f"{self.app_hs_upstream}/api/v1"
+            user_r = client.get(f"{hs_api}/user?name={self.user_name}")
+            user_r.raise_for_status()
+            users = user_r.json().get("users", [])
+            logging.info(f"HS: got total user(s) for {self.user_name}: {len(users)}")
+            if len(users) > 0:
+                user_id = int(users[0].get("id", 0))
+                key_r = client.get(f"{hs_api}/preauthkey?user={user_id}")
+                key_r.raise_for_status()
+                key_r.json()
+                keys = key_r.json().get("preAuthKeys", [])
+                logging.info(f"HS: got {len(keys)} for user {self.user_name}")
+                self.hs_data["auth_key"] = keys[-1].get("key", "")
+                self.hs_data["hostname"] = self.user_name + "-ts"
+                self.hs_data["control_url"] = self.app_hs_control_url
+                self.hs_data["advertise_routes"] = self.app_hs_advertise_routes
+                self.hs_enabled = True
+            else:
+                logging.warning(f"HS: user {self.user_name} not found")
+        except Exception as e:
+            logging.error(f"HS: error fetching data for {self.user_name}: {e}")
 
     def __inject_dns__(self) -> None:
         # Default: `dns-final` otherwise client provided
         # Values: dns-remote, dns-resolver, [dns-final]
-        dns = self.remote_data.get("dns", {})
+        dns = self.template_data.get("dns", {})
         dns.update({
             "final": self.dns_final,
             "strategy": "ipv4_only" if self.dns_version == 4 else "prefer_ipv4",
@@ -251,7 +258,7 @@ class Loader:
                         else "prefer_ipv4",
                     })
                 elif i.get("tag") == "dns-resolver":
-                    # Client provided `dns_detour` i.e. `dd` for dns-resolver
+                    # Client provided `dns_detour` i.e. `dd` and dns-resolver i.e. `dr`
                     i.update({
                         "address": self.dns_resolver,
                         "detour": self.dns_detour,
@@ -270,14 +277,14 @@ class Loader:
                         },
                     })
                 elif i.get("tag") == "dns-resolver":
-                    # Client provided `dns_detour` i.e. `dd` for dns-resolver
+                    # Client provided `dns_detour` i.e. `dd` and dns-resolver i.e. `dr`
                     i.update({
                         "server": self.dns_resolver,
                         "detour": self.dns_detour or i.get("detour"),
                     })
 
     def __inject_routes__(self) -> None:
-        route: Dict[str, Any] = self.remote_data.get("route", {})
+        route: Dict[str, Any] = self.template_data.get("route", {})
         rule_set: List[Dict[str, Any]] = route.get("rule_set", [])
         rules: List[Dict[str, Any]] = route.get("rules", [])
 
@@ -285,11 +292,17 @@ class Loader:
         for i in rule_set:
             i.update({"download_detour": self.route_detour})
 
+        # Rule 4, 6, 7
+        rules[3]["outbound"] = APP_IP_OUT_NAME
+        rules[6]["outbound"] = APP_OUT_NAME
+        rules[7]["outbound"] = APP_OUT_NAME
+
         # Logs monitoring for routing error in client side
         # ws://100.64.0.x/logs, ws://100.64.0.x/connections
         if self.hs_enabled:
+            # Now rules will become 9 in total.
             rules.insert(
-                2,
+                3,
                 {
                     "ip_cidr": ["100.64.0.0/24"],
                     "outbound": "hs-ep",
@@ -297,17 +310,16 @@ class Loader:
             )
 
         if self.wg_enabled:
-            rules.insert(
-                3,
-                {
-                    "ip_cidr": ["10.8.0.0/24"],
-                    "outbound": "wg-ep",
-                },
-            )
+            # Now rules will become 10 in total if `hs_enabled` 9 otherwise.
             rules.insert(
                 4,
                 {
-                    "ip_version": 6,
+                    "type": "logical",
+                    "mode": "or",
+                    "rules": [
+                        {"ip_cidr": ["10.8.0.0/24"]},
+                        {"ip_version": 6},
+                    ],
                     "outbound": "wg-ep",
                 },
             )
@@ -316,7 +328,7 @@ class Loader:
         outbounds: List[Dict[str, Any]] = []
         outbound_names: List[str] = []
 
-        for i in self.local_data["outbounds"]:
+        for i in self.outbounds_data["outbounds"]:
             # ! Overwrite psk if quota exceeded
             upsk = "invalid_psk_overwritten" if self.disabled else self.user_psk
             i["password"] = upsk
@@ -336,9 +348,11 @@ class Loader:
         utc_now = datetime.now(timezone.utc)
         now = f"rev-{utc_now.year}{utc_now.month:02d}{utc_now.day:02d}"
 
-        suffix = ""
+        suffix = "-"
         if self.hs_enabled:
-            suffix += "-hs"
+            suffix += "hs"
+        if self.wg_enabled:
+            suffix += "wg"
 
         # Pullup outbounds
         outbounds.append({
@@ -353,7 +367,7 @@ class Loader:
         # Outbounds
         outbounds.append({
             "type": "urltest",
-            "tag": "IP-Out",
+            "tag": APP_IP_OUT_NAME,
             "outbounds": outbound_names,
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
@@ -361,74 +375,54 @@ class Loader:
         })
         outbounds.append({
             "type": "urltest",
-            "tag": "Out",
+            "tag": APP_OUT_NAME,
             "outbounds": outbound_names,
             "url": "https://www.gstatic.com/generate_204",
             "interval": "30s",
             "tolerance": 100,
         })
 
-        self.remote_data["outbounds"] = outbounds
+        self.template_data["outbounds"] = outbounds
 
     def __inject_log__(self) -> None:
-        log_level = self.log_level or self.remote_data["log"]["level"]
-        self.remote_data["log"]["level"] = log_level
+        log_level = self.log_level or self.template_data["log"]["level"]
+        self.template_data["log"]["level"] = log_level
 
     def __inject_inbounds__(self) -> None:
-        inbounds: List[Dict[str, Any]] = self.remote_data.get("inbounds", [])
-        if self.dns_version == 4:
-            for i in inbounds:
-                if i.get("tag") == "tun-in":
-                    i.get("address", []).pop(1)  # Remove IPv6 address
+        inbounds: List[Dict[str, Any]] = self.template_data.get("inbounds", [])
+        for i in inbounds:
+            if i.get("tag") == "tun-in":
+                # Add IPv6 address to the template
+                if self.dns_version == 6:
+                    i.get("address", []).append("fd00::1/126")
 
     def __inject_endpoints__(self) -> None:
         endpoints: list[dict[str, Any]] = []
         if self.wg_enabled:
-            endpoint = WireguardConfig.copy()
-            endpoint["private_key"] = self.wg_data.get("private_key", "")
-            endpoint["address"] = [
-                self.wg_data.get("ipv4Address", "") + "/32",
-                self.wg_data.get("ipv6Address", "") + "/128",
-            ]
-            endpoint["private_key"] = self.wg_data.get("privateKey", "")
-            endpoint["detour"] = "IP-Out"
-            endpoint["peers"][0]["persistent_keepalive_interval"] = 10
-            endpoint["peers"][0]["address"] = os.getenv(
-                "SERVER_IPv4", "https://" + os.getenv("APP_WG_HOST", "")
-            )
-            endpoint["peers"][0]["port"] = int(
-                os.getenv("APP_WG_OVERRIDE_PORT", os.getenv("END_PORT", 0))
-            )
-            endpoint["peers"][0]["public_key"] = os.getenv("APP_WG_PEER_PUBLIC_KEY", "")
-            endpoint["peers"][0]["pre_shared_key"] = self.wg_data.get("preSharedKey")
-            endpoints.append(endpoint)
+            endpoints.append(self.wg_data)
         if self.hs_enabled:
-            endpoint = TailscaleConfig.copy()
-            endpoint["auth_key"] = self.hs_data.get("auth_key", "")
-            endpoint["hostname"] = self.hs_data.get("hostname", "")
-            endpoint["control_url"] = "https://" + os.getenv("APP_HS_HOST", "")
-            endpoints.append(endpoint)
-        self.remote_data["endpoints"] = endpoints
+            endpoints.append(self.hs_data)
+        self.template_data["endpoints"] = endpoints
 
     def unwarp(self, disabled: bool = False) -> Dict[str, Any]:
         self.disabled: bool = disabled
         self.__inject_dns__()
         self.__inject_log__()
-        self.__inject_outbounds__()
         self.__inject_inbounds__()
+        self.__inject_outbounds__()
         self.__inject_endpoints__()
         self.__inject_routes__()
-        return json.loads(json.dumps(self.remote_data, ensure_ascii=False, indent=2))
+        return json.loads(json.dumps(self.template_data, ensure_ascii=False, indent=2))
 
 
-class Checker(Loader):
+class Checker(Reader):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def verify_key(self) -> bool:
-        SSM_API = f"{SSM_UPSTREAM}/server/v1/users/{self.user_name}"
+        url = f"{self.app_ssm_upstream}/server/v1/users/{self.user_name}"
         try:
-            response = httpx.get(SSM_API, timeout=5)
+            response = httpx.get(url, timeout=5)
             response.raise_for_status()
             self.data = response.json()
             if self.data.get("uPSK") == self.user_psk:

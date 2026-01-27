@@ -4,24 +4,23 @@
     "servers": [
       {
         "tag": "dns-remote",
-        "address": "",
-        "address_resolver": "dns-resolver",
-        "address_strategy": "prefer_ipv4"
+        "type": "https",
+        "server": "",
+        "path": "",
+        "domain_resolver": {
+          "server": "dns-resolver",
+          "strategy": "ipv4_only"
+        }
       },
       {
         "tag": "dns-resolver",
-        "address": "",
+        "type": "udp",
+        "server": "",
         "detour": ""
       }
     ],
-    "rules": [
-      {
-        "outbound": "any",
-        "server": "dns-remote"
-      }
-    ],
     "independent_cache": false,
-    "strategy": "prefer_ipv4",
+    "strategy": "ipv4_only",
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,
@@ -33,10 +32,9 @@
       "type": "tun",
       "tag": "tun-in",
       "address": [
-        "10.10.10.0/24",
-        "fd00::1/126"
+        "10.10.10.0/24"
       ],
-      "mtu": 1280,
+      "mtu": 1420,
       "auto_route": true,
       "strict_route": true,
       "stack": "mixed"
@@ -234,8 +232,7 @@
             ]
           }
         ],
-        "action": "route",
-        "outbound": "IP-Out"
+        "outbound": ""
       },
       {
         "action": "sniff",
@@ -276,20 +273,22 @@
                 "domain_suffix": [
                   ".engineerforce.io",
                   ".dify.io",
-                  ".nextdns.io"
+                  ".nextdns.io",
+                  ".amnezia.org",
+                  ".tailscale.com"
                 ]
               }
             ]
           }
         ],
-        "action": "route",
-        "outbound": "Out"
+        "outbound": ""
       },
       {
         "clash_mode": "Full",
-        "outbound": "Out"
+        "outbound": ""
       }
     ],
+    "default_domain_resolver": "dns-remote",
     "final": "direct",
     "auto_detect_interface": true
   },
