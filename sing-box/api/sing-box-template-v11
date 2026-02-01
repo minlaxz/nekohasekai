@@ -286,10 +286,6 @@
         ],
         "action": "route",
         "outbound": "Out"
-      },
-      {
-        "clash_mode": "Full",
-        "outbound": "Out"
       }
     ],
     "final": "direct",
