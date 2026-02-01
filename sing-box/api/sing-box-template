@@ -285,10 +285,6 @@
         ],
         "action": "route",
         "outbound": "Out"
-      },
-      {
-        "clash_mode": "Full",
-        "outbound": "Out"
       }
     ],
     "default_domain_resolver": "dns-remote",
