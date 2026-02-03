@@ -276,9 +276,11 @@
                   ".engineerforce.io",
                   ".dify.io",
                   ".nextdns.io",
-                  ".tailscale.com",
-                  ".amnezia.org"
+                  ".tailscale.com"
                 ]
+              },
+              {
+                "domain_keyword": [ "ngrok" ]
               }
             ]
           }
