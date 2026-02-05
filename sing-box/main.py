@@ -4,6 +4,7 @@ from dotenv import load_dotenv, find_dotenv
 import json
 import logging
 import yaml
+import subprocess
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -15,7 +16,7 @@ load_dotenv(find_dotenv("sample.env"))
 
 
 def get_server_ip() -> str:
-    response = os.popen("curl -s https://api.ipify.org").read().strip()
+    response = subprocess.run(["curl", "-s", "https://api.ipify.org"], capture_output=True, text=True).stdout.strip()
     if response:
         return response
     return ""
@@ -53,6 +54,23 @@ def main():
     with open("certs/ech.config", "r") as f:
         ech_config_array = [line.rstrip("\n") for line in f]
     logger.debug("Loaded ECH config array")
+
+    with open("cache/ssm-cache.json", "r") as f:
+        ssm_cache = json.load(f)
+    logger.info("Loaded ssm-cache.json")
+
+    user_with_0 = {user.get("name"): 0 for user in users_wo_uuid}
+    ssm_cache["endpoints"]["/"]["user_uplink"] = user_with_0
+    ssm_cache["endpoints"]["/"]["user_downlink"] = user_with_0
+    ssm_cache["endpoints"]["/"]["user_uplink_packets"] = user_with_0
+    ssm_cache["endpoints"]["/"]["user_downlink_packets"] = user_with_0
+    ssm_cache["endpoints"]["/"]["user_tcp_sessions"] = user_with_0
+    ssm_cache["endpoints"]["/"]["user_udp_sessions"] = user_with_0
+    ssm_cache["endpoints"]["/"]["users"] = {
+        user.get("name"): user.get("password") for user in users_wo_uuid
+    }
+    write({"ssm_cache": ssm_cache}, "cache/ssm-cache.json")
+    logger.info("Updated ssm-cache.json")
 
     for index, i in enumerate(inbounds):
         if i.get("listen_port") is not None:

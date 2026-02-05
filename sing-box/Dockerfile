@@ -20,5 +20,7 @@ RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/rele
     rm -rf /sing-box.tar.gz /var/cache/apk/* && \
     chmod +x /sing-box/init.sh
 
+RUN mkdir -p /sing-box/certs /sing-box/cache /sing-box/configs /sing-box/public
+
 # Generate configs at container runtime
 ENTRYPOINT ["./init.sh"]
