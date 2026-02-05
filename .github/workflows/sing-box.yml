@@ -1,4 +1,4 @@
-name: "Build Sing-box API Image"
+name: "Build Sing-box Image"
 
 on:
   workflow_dispatch:
@@ -6,8 +6,7 @@ on:
     branches:
       - master
     paths:
-      - "bridge/**/*.py"
-      - "bridge/**/*.html"
+      - "sing-box/*"
 
 env:
   REGISTRY: ghcr.io
@@ -42,10 +41,10 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64
-          context: ./bridge
-          file: ./bridge/Dockerfile
+          context: ./sing-box
+          file: ./sing-box/Dockerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ${{ env.IMAGE_NAME }}:sing-box-api
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sing-box-api
+            ${{ env.IMAGE_NAME }}:neko
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:neko

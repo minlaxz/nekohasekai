@@ -54,9 +54,13 @@ origins = [
     "http://localhost",
     "http://localhost:8080",
 ]
-APP_HOST = os.getenv("APP_HOST")
+APP_HOST = os.getenv("APP_HOST", "")
 if APP_HOST:
     origins.append(APP_HOST)
+else:
+    logging.critical("APP_HOST is not set in environment variables!")
+    exit(1)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -101,7 +105,7 @@ def read_config(
     v: int = int(os.getenv("APP_DEFAULT_VERSION", 12)),
     ll: str = os.getenv("APP_DEFAULT_LOG_LEVEL", "warn"),
     # DNS options
-    dh: str = os.getenv("APP_DEFAULT_DNS_HOST", "https://dns.nextdns.io"),
+    dh: str = os.getenv("APP_DEFAULT_DNS_HOST", "dns.nextdns.io"),
     dp: str = os.getenv("APP_DEFAULT_DNS_PATH", "/"),
     dd: str = os.getenv("APP_DEFAULT_DNS_DETOUR", "Out"),
     df: str = os.getenv("APP_DEFAULT_DNS_FINAL", "dns-remote"),
@@ -128,10 +132,9 @@ def read_config(
         ])
 
     # Server will assume default value if any parameter is missing
-    reader = Reader(
+    return Reader(
         username=j,  # Required
         psk=k,  # Required
-        please=please,
         platform=p,
         version=v,
         log_level=ll,
@@ -144,12 +147,7 @@ def read_config(
         route_detour=rd,
         multiplex=mx,
         experimental=ex,
-    )
-
-    # if not checker.verify_key():
-    #     raise RequestValidationError([{"message": "Your key is disabled or invalid!"}])
-
-    return reader.unwarp()
+    ).unwarp()
 
 
 @app.exception_handler(RequestValidationError)
@@ -162,14 +160,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.get("/config")
 def read_user(request: Request, p: str = "a", v: int = 12, j: str = "", k: str = ""):
-    url = "https://" + os.getenv("APP_HOST", "") + f"/c?p={p}&v={v}&j={j}&k={k}"
+    url = "https://" + APP_HOST + f"/c?p={p}&v={v}&j={j}&k={k}"
     encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse(
         "render.html", {"request": request, "j": j, "encoded_url": encoded_url}
     )
-
-
-# @app.get("/users/{name}")
-# def read_user():
-#     return {"user": "name"}

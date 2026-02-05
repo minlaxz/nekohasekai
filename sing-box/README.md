@@ -29,7 +29,6 @@ printf '%s\n' "$REALITY_PRIVATE" > certs/reality_private.key
 printf '%s\n' "$REALITY_PUBLIC" > certs/reality_public.key
 ```
 
-
 Generate ECH keypair:
 
 ```sh
@@ -46,12 +45,6 @@ Add users to users.yaml
 
 - A user must have a unique name, password, and UUID.
 - It's recommended to use a strong password and a randomly generated UUID.
-
-Then run the generator script:
-
-```python
-python3 generator.py
-```
 
 Compose up!
 

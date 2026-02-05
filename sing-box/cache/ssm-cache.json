@@ -1,35 +1,7 @@
 {
   "ssm_cache": {
     "endpoints": {
-      "/": {
-        "global_uplink": 0,
-        "global_downlink": 0,
-        "global_uplink_packets": 0,
-        "global_downlink_packets": 0,
-        "global_tcp_sessions": 0,
-        "global_udp_sessions": 0,
-        "user_uplink": {
-          "user1": 0
-        },
-        "user_downlink": {
-          "user1": 0
-        },
-        "user_uplink_packets": {
-          "user1": 0
-        },
-        "user_downlink_packets": {
-          "user1": 0
-        },
-        "user_tcp_sessions": {
-          "user1": 0
-        },
-        "user_udp_sessions": {
-          "user1": 0
-        },
-        "users": {
-          "user1": "passwordpassword1=="
-        }
-      }
+      "/": {}
     }
   }
 }

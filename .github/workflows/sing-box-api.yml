@@ -6,8 +6,7 @@ on:
     branches:
       - master
     paths:
-      - "sing-box/api/**/*.py"
-      - "sing-box/api/**/*.html"
+      - "bridge/*"
 
 env:
   REGISTRY: ghcr.io
@@ -42,10 +41,10 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64
-          context: ./sing-box/api
-          file: ./sing-box/api/Dockerfile
+          context: ./bridge
+          file: ./bridge/Dockerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ${{ env.IMAGE_NAME }}:sing-box-api
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sing-box-api
+            ${{ env.IMAGE_NAME }}:neko-api
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:neko-api

@@ -12,11 +12,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-load_dotenv(find_dotenv("sample.env"))
+load_dotenv(find_dotenv("sing-box.env"))
 
 
 def get_server_ip() -> str:
-    response = subprocess.run(["curl", "-s", "https://api.ipify.org"], capture_output=True, text=True).stdout.strip()
+    response = subprocess.run(
+        ["curl", "-s", "https://api.ipify.org"], capture_output=True, text=True
+    ).stdout.strip()
     if response:
         return response
     return ""
@@ -28,38 +30,72 @@ def write(data: Dict[str, Any], filename: str):
     logger.info(f"Wrote {filename}")
 
 
+def read(filename: str, as_type: str, debug: bool = False) -> Any:
+    if not debug:
+        with open(filename, "r") as f:
+            if as_type == "json":
+                return json.load(f)
+            elif as_type == "yaml":
+                return yaml.safe_load(f)
+            elif as_type == "lines":
+                return [line.rstrip("\n") for line in f]
+    else:
+        if as_type == "lines":
+            return [
+                "-----BEGIN-----",
+                "...",
+                "-----END-----",
+            ]
+
+
 def main():
-    start_port = int(os.getenv("START_PORT", "8810"))
+    start_port = int(os.getenv("START_PORT", 8820))
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+    if debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
     inbounds = []
     outbounds = []
-    with open("configs/inbounds.json") as f:
-        inbounds = json.load(f).get("inbounds", [])
-    logger.info("Loaded inbounds.json")
+    users_w_uuid = []
+    users_wo_uuid = []
+    ssm_cache = {}
+    certificate_array = []
+    ech_config_array = []
 
-    with open("public/outbounds.json") as f:
-        outbounds = json.load(f).get("outbounds", [])
-    logger.info("Loaded outbounds.json")
+    try:
+        inbounds = read("configs/inbounds.json", "json").get("inbounds", [])
+        logger.info("Loaded inbounds.json")
 
-    with open("users.yaml") as f:
-        users_w_uuid: List[Dict[str, Any]] = yaml.safe_load(f).get("users", [])
+        outbounds = read("public/outbounds.json", "json").get("outbounds", [])
+        logger.info("Loaded outbounds.json")
+
+        users_w_uuid: List[Dict[str, Any]] = read("users.yaml", "yaml").get("users", [])
         users_wo_uuid = [
             {"name": u.get("name"), "password": u.get("password")} for u in users_w_uuid
         ]
-    logger.info("Loaded users.yaml")
+        logger.info("Loaded users.yaml")
 
-    with open("certs/certificate.crt", "r") as f:
-        certificate_array = [line.rstrip("\n") for line in f]
-    logger.debug("Loaded certificate array")
+        certificate_array = read("certs/certificate.crt", "lines", debug=debug)
+        logger.info("Loaded certificate array")
 
-    with open("certs/ech.config", "r") as f:
-        ech_config_array = [line.rstrip("\n") for line in f]
-    logger.debug("Loaded ECH config array")
+        ech_config_array = read("certs/ech.config", "lines", debug=debug)
+        logger.info("Loaded ech.config array")
 
-    with open("cache/ssm-cache.json", "r") as f:
-        ssm_cache = json.load(f)
-    logger.info("Loaded ssm-cache.json")
+        ssm_cache = read("cache/ssm-cache.json", "json").get("ssm_cache", {})
+        logger.info("Loaded ssm-cache.json")
+
+    except FileNotFoundError:
+        logger.error("File not found.")
+        return
 
     user_with_0 = {user.get("name"): 0 for user in users_wo_uuid}
+    ssm_cache["endpoints"]["/"]["global_uplink"] = 0
+    ssm_cache["endpoints"]["/"]["global_downlink"] = 0
+    ssm_cache["endpoints"]["/"]["global_uplink_packets"] = 0
+    ssm_cache["endpoints"]["/"]["global_downlink_packets"] = 0
+    ssm_cache["endpoints"]["/"]["global_tcp_sessions"] = 0
+    ssm_cache["endpoints"]["/"]["global_udp_sessions"] = 0
     ssm_cache["endpoints"]["/"]["user_uplink"] = user_with_0
     ssm_cache["endpoints"]["/"]["user_downlink"] = user_with_0
     ssm_cache["endpoints"]["/"]["user_uplink_packets"] = user_with_0
@@ -69,8 +105,6 @@ def main():
     ssm_cache["endpoints"]["/"]["users"] = {
         user.get("name"): user.get("password") for user in users_wo_uuid
     }
-    write({"ssm_cache": ssm_cache}, "cache/ssm-cache.json")
-    logger.info("Updated ssm-cache.json")
 
     for index, i in enumerate(inbounds):
         if i.get("listen_port") is not None:
@@ -94,8 +128,6 @@ def main():
         if i.get("down_mbps") is not None:
             i["down_mbps"] = int(os.getenv("INBOUND_DOWN_MBPS", 300))
 
-    write({"inbounds": inbounds}, "configs/inbounds.json")
-
     for index, o in enumerate([o for o in outbounds if not o.get("detour")]):
         if o.get("server") is not None:
             o["server"] = get_server_ip()
@@ -114,7 +146,9 @@ def main():
         if o.get("down_mbps") is not None:
             o["down_mbps"] = int(os.getenv("OUTBOUND_DOWN_MBPS", 30))
 
+    write({"inbounds": inbounds}, "configs/inbounds.json")
     write({"outbounds": outbounds}, "public/outbounds.json")
+    write({"ssm_cache": ssm_cache}, "cache/ssm-cache.json")
 
 
 if __name__ == "__main__":

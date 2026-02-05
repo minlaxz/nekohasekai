@@ -7,6 +7,7 @@ ENV ARCH=$TARGETARCH
 
 WORKDIR /sing-box
 
+# Copy all skeleton files
 COPY . .
 
 RUN apt-get update && apt-get install --no-install-recommends -y curl jq
@@ -19,8 +20,6 @@ RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/rele
     tar xz -C /sing-box -f /sing-box.tar.gz --strip-components=1 && \
     rm -rf /sing-box.tar.gz /var/cache/apk/* && \
     chmod +x /sing-box/init.sh
-
-RUN mkdir -p /sing-box/certs /sing-box/cache /sing-box/configs /sing-box/public
 
 # Generate configs at container runtime
 ENTRYPOINT ["./init.sh"]
