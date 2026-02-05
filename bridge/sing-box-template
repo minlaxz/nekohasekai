@@ -282,10 +282,6 @@
           }
         ],
         "outbound": ""
-      },
-      {
-        "clash_mode": "Full",
-        "outbound": ""
       }
     ],
     "default_domain_resolver": "dns-remote",

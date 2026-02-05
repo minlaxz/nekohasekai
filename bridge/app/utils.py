@@ -168,7 +168,6 @@ class Reader(Checker):
         # Rule 4, 6, 7
         rules[3]["outbound"] = APP_IP_OUT_NAME
         rules[6]["outbound"] = APP_OUT_NAME
-        rules[7]["outbound"] = APP_OUT_NAME
 
     def __inject_outbounds__(self) -> None:
         outbounds: List[Dict[str, Any]] = []
@@ -232,8 +231,8 @@ class Reader(Checker):
         inbounds: List[Dict[str, Any]] = self.template_data.get("inbounds", [])
         for i in inbounds:
             if i.get("tag") == "tun-in":
-                # Add IPv6 address to the template
-                if self.dns_version == 6:
+                if self.dns_version != 4:
+                    # Add IPv6 address to the template
                     i.get("address", []).append("fd00::1/126")
 
     def __inject_endpoints__(self) -> None:
