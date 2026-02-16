@@ -41,40 +41,45 @@ class Checker:
             response = httpx.get(url, timeout=5)
             response.raise_for_status()
             self.data = response.json()
-            if self.data.get("uPSK") == self.user_psk:
+            if self.data.get("uPSK") != self.user_psk:
+                logging.error("User or PSK mismatch %s", self.user_name)
+                raise Exception("User or PSK mismatch")
+            else:
                 downlinkBytes = self.data.get("downlinkBytes")
                 uplinkBytes = self.data.get("uplinkBytes")
                 if downlinkBytes + uplinkBytes > 30_000_000_000:
-                    self.user_psk = "psk_quota_exceeded"
-                    raise Exception("PSK quota exceeded")
-                self._load_criticals()
-            else:
-                raise Exception("User verification failed")
-        except (httpx.HTTPError, json.JSONDecodeError, Exception):
-            self.user_psk = "psk_exception_occurred"
+                    logging.error("Quota exceeded %s", self.user_name)
+                    raise Exception("Quota exceeded")
+                else:
+                    logging.info("User %s verified successfully", self.user_name)
+                    self._load_criticals()
 
-    def _load_criticals(self):
-        try:
-            if self.template_path.startswith(("https://", "http://")):
-                response = httpx.get(self.template_path, timeout=5)
-                response.raise_for_status()
-                self.template_data = response.json()
-            else:
-                with open(self.template_path, "r", encoding="utf-8") as file:
-                    self.template_data = json.load(file)
-
-            if self.outbounds_path.startswith(("https://", "http://")):
-                response = httpx.get(self.outbounds_path, timeout=5)
-                response.raise_for_status()
-                self.outbounds_data = response.json()
-            else:
-                with open(self.outbounds_path, "r", encoding="utf-8") as file:
-                    self.outbounds_data = json.load(file)
+        except (httpx.HTTPError, json.JSONDecodeError) as e:
+            logging.error("Error fetching user data: %s", e)
+            raise Exception("User verification failed")
 
         except Exception as e:
-            logging.error("Error loading data: %s", e)
-            self.template_data = {}
-            self.outbounds_data = {}
+            logging.error("Error: %s", e)
+            raise
+
+    def _load_criticals(self):
+        if self.template_path.startswith(("https://", "http://")):
+            response = httpx.get(self.template_path, timeout=5)
+            response.raise_for_status()
+            self.template_data = response.json()
+        else:
+            with open(self.template_path, "r", encoding="utf-8") as file:
+                self.template_data = json.load(file)
+
+        if self.outbounds_path.startswith(("https://", "http://")):
+            response = httpx.get(self.outbounds_path, timeout=5)
+            response.raise_for_status()
+            self.outbounds_data = response.json()
+        else:
+            with open(self.outbounds_path, "r", encoding="utf-8") as file:
+                self.outbounds_data = json.load(file)
+
+        logging.info("Template and outbounds loaded successfully")
 
 
 class Reader(Checker):
@@ -240,10 +245,16 @@ class Reader(Checker):
         self.template_data["endpoints"] = endpoints
 
     def unwarp(self) -> Dict[str, Any]:
+        """
+        Inject critical fields into the template and return the final config.
+        """
+
+        logging.info("Injecting fields into the template for user %s", self.user_name)
         self.__inject_dns__()
         self.__inject_log__()
         self.__inject_inbounds__()
         self.__inject_outbounds__()
         self.__inject_endpoints__()
         self.__inject_routes__()
+        logging.info("Injection completed for user %s", self.user_name)
         return json.loads(json.dumps(self.template_data, ensure_ascii=False, indent=2))
