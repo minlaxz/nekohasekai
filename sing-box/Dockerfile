@@ -10,9 +10,9 @@ WORKDIR /sing-box
 # Copy all skeleton files
 COPY . .
 
-RUN apt-get update && apt-get install --no-install-recommends -y curl jq
+RUN apt-get update && apt-get install --no-install-recommends -y curl jq && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --upgrade pip wheel setuptools cryptography
+RUN pip3 install --upgrade pip wheel setuptools cryptography pyyaml python-dotenv
 
 RUN ONLINE_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .name) && \
     curl -LJ "https://github.com/SagerNet/sing-box/releases/download/v${ONLINE_VERSION}/sing-box-${ONLINE_VERSION}-linux-${ARCH}.tar.gz" \
