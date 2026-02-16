@@ -55,6 +55,18 @@ def main():
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
+    
+    # Validate required environment variables
+    tls_server_name = os.getenv("TLS__SERVER_NAME")
+    if not tls_server_name:
+        logger.error("TLS__SERVER_NAME environment variable is required but not set")
+        return
+    
+    hysteria2_obfs_password = os.getenv("HYSTERIA2__OBFS_PASSWORD")
+    if not hysteria2_obfs_password:
+        logger.error("HYSTERIA2__OBFS_PASSWORD environment variable is required but not set")
+        return
+    
     inbounds = []
     outbounds = []
     users_w_uuid = []
@@ -118,11 +130,11 @@ def main():
                 else:
                     i["users"] = users_wo_uuid
         if i.get("tls", {}).get("server_name") is not None:
-            i["tls"]["server_name"] = os.getenv("TLS__SERVER_NAME")
+            i["tls"]["server_name"] = tls_server_name
         if i.get("handshake", {}).get("server") is not None:
-            i["handshake"]["server"] = os.getenv("TLS__SERVER_NAME")
+            i["handshake"]["server"] = tls_server_name
         if i.get("obfs", {}).get("password") is not None:
-            i["obfs"]["password"] = os.getenv("HYSTERIA2__OBFS_PASSWORD")
+            i["obfs"]["password"] = hysteria2_obfs_password
         if i.get("up_mbps") is not None:
             i["up_mbps"] = int(os.getenv("INBOUND_UP_MBPS", 300))
         if i.get("down_mbps") is not None:
@@ -134,13 +146,13 @@ def main():
         if o.get("server_port") is not None:
             o["server_port"] = start_port + index
         if o.get("tls", {}).get("server_name") is not None:
-            o["tls"]["server_name"] = os.getenv("TLS__SERVER_NAME")
+            o["tls"]["server_name"] = tls_server_name
         if o.get("tls", {}).get("certificate") is not None:
             o["tls"]["certificate"] = certificate_array
         if o.get("tls", {}).get("ech", {}).get("config") is not None:
             o["tls"]["ech"]["config"] = ech_config_array
         if o.get("obfs", {}).get("password") is not None:
-            o["obfs"]["password"] = os.getenv("HYSTERIA2__OBFS_PASSWORD")
+            o["obfs"]["password"] = hysteria2_obfs_password
         if o.get("up_mbps") is not None:
             o["up_mbps"] = int(os.getenv("OUTBOUND_UP_MBPS", 30))
         if o.get("down_mbps") is not None:
