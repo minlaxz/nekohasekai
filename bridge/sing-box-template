@@ -277,6 +277,9 @@
                   ".amnezia.org",
                   ".tailscale.com"
                 ]
+              },
+              {
+                "domain_keyword": [ "ngrok" ]
               }
             ]
           }
