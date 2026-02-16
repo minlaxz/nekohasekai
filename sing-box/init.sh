@@ -31,7 +31,7 @@ main() {
     fi
   done
 
-  if [ ! verify_configs ] then
+  if [ ! verify_configs ]; then
     echo "Configuration files are missing."
     exit 1
   fi
