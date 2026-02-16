@@ -26,14 +26,19 @@ def get_server_ip() -> str:
 
 
 def write(data: Dict[str, Any], filename: str):
-    with open(filename, "w") as f:
+    prefix = "/sing-box/"
+    file_path = prefix + filename
+    with open(file_path, "w") as f:
         json.dump(data, f, indent=2)
-    logger.info(f"Wrote {filename}")
+    logger.info(f"Wrote {file_path}")
 
 
 def read(filename: str, as_type: str, debug: bool = False) -> Any:
     if not debug:
-        with open(filename, "r") as f:
+        prefix = "/sing-box/"
+        file_path = prefix + filename
+        logger.info(f"Reading {file_path}")
+        with open(file_path, "r") as f:
             if as_type == "json":
                 return json.load(f)
             elif as_type == "yaml":
@@ -41,6 +46,7 @@ def read(filename: str, as_type: str, debug: bool = False) -> Any:
             elif as_type == "lines":
                 return [line.rstrip("\n") for line in f]
     else:
+        logger.debug(f"Debug mode: Simulating reading {filename} as {as_type}")
         if as_type == "lines":
             return [
                 "-----BEGIN-----",
@@ -56,18 +62,20 @@ def main():
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-    
+
     # Validate required environment variables
     tls_server_name = os.getenv("TLS__SERVER_NAME")
     if not tls_server_name:
         logger.error("TLS__SERVER_NAME environment variable is required but not set")
         sys.exit(1)
-    
+
     hysteria2_obfs_password = os.getenv("HYSTERIA2__OBFS_PASSWORD")
     if not hysteria2_obfs_password:
-        logger.error("HYSTERIA2__OBFS_PASSWORD environment variable is required but not set")
+        logger.error(
+            "HYSTERIA2__OBFS_PASSWORD environment variable is required but not set"
+        )
         sys.exit(1)
-    
+
     inbounds = []
     outbounds = []
     users_w_uuid = []
