@@ -51,7 +51,7 @@ class Checker:
             else:
                 raise Exception("User verification failed")
         except (httpx.HTTPError, json.JSONDecodeError, Exception):
-            self.user_psk = "psk_expection_occurred"
+            self.user_psk = "psk_exception_occurred"
 
     def _load_criticals(self):
         try:
