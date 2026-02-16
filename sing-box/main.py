@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 import os
+import sys
 from dotenv import load_dotenv, find_dotenv
 import json
 import logging
@@ -60,12 +61,12 @@ def main():
     tls_server_name = os.getenv("TLS__SERVER_NAME")
     if not tls_server_name:
         logger.error("TLS__SERVER_NAME environment variable is required but not set")
-        return
+        sys.exit(1)
     
     hysteria2_obfs_password = os.getenv("HYSTERIA2__OBFS_PASSWORD")
     if not hysteria2_obfs_password:
         logger.error("HYSTERIA2__OBFS_PASSWORD environment variable is required but not set")
-        return
+        sys.exit(1)
     
     inbounds = []
     outbounds = []
