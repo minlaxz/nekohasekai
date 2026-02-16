@@ -10,7 +10,8 @@ WORKDIR /sing-box
 # Copy all skeleton files
 COPY . .
 
-RUN apt-get update && apt-get install --no-install-recommends -y curl jq
+RUN apt-get update && apt-get install --no-install-recommends -y curl jq \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --upgrade pip wheel setuptools cryptography
 
