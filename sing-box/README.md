@@ -51,3 +51,39 @@ Compose up!
 ```sh
 docker compose up -d
 ```
+
+## Updating sing-box Version
+
+The Dockerfile pins the sing-box version for reproducible builds and supply-chain security. To update to a new version:
+
+1. Check the [latest release](https://github.com/SagerNet/sing-box/releases) on GitHub
+
+2. Download the binaries for both architectures and calculate checksums:
+
+```sh
+VERSION=1.12.22  # Replace with new version number
+
+# Download binaries
+curl -LJ "https://github.com/SagerNet/sing-box/releases/download/v${VERSION}/sing-box-${VERSION}-linux-amd64.tar.gz" -o /tmp/sing-box-amd64.tar.gz
+curl -LJ "https://github.com/SagerNet/sing-box/releases/download/v${VERSION}/sing-box-${VERSION}-linux-arm64.tar.gz" -o /tmp/sing-box-arm64.tar.gz
+
+# Calculate checksums
+sha256sum /tmp/sing-box-amd64.tar.gz /tmp/sing-box-arm64.tar.gz
+```
+
+3. Update the Dockerfile with:
+   - New `SING_BOX_VERSION` ARG value
+   - New `CHECKSUM_AMD64` value
+   - New `CHECKSUM_ARM64` value
+   - Update the checksum comment URLs to match the new version
+
+4. Test the build:
+
+```sh
+# Test amd64 build
+docker build --platform linux/amd64 --build-arg TARGETARCH=amd64 -t test-singbox:amd64 ./sing-box
+
+# Test arm64 build
+docker build --platform linux/arm64 --build-arg TARGETARCH=arm64 -t test-singbox:arm64 ./sing-box
+```
+
