@@ -121,6 +121,11 @@ class Reader(Checker):
             "strategy": "ipv4_only" if self.dns_version == 4 else "prefer_ipv4",
         })
 
+        # Mytel users in Myanmar may experience connectivity issues when using NextDNS DNS resolver.
+        if self.version < 12 and self.experimental:
+            dns_rules = dns.get("rules", [])
+            dns_rules[0]["server"] = "dns-bypass"
+
         # Assuming APP_DNS_PATH ends with a trailing slash
         # e.g., /user_name
         # e.g., /custom_path/user_name
@@ -141,6 +146,10 @@ class Reader(Checker):
                         "address": self.dns_resolver,
                         "detour": self.dns_detour,
                     })
+                elif i.get("tag") == "dns-bypass":
+                    i.update({
+                        "address": self.dns_resolver,
+                    })
         else:
             for i in dns_servers:
                 if i.get("tag") == "dns-remote":
@@ -160,6 +169,10 @@ class Reader(Checker):
                         "server": self.dns_resolver,
                         "detour": self.dns_detour or i.get("detour"),
                     })
+                elif i.get("tag") == "dns-bypass":
+                    i.update({
+                        "server": self.dns_resolver,
+                    })
 
     def __inject_routes__(self) -> None:
         route: Dict[str, Any] = self.template_data.get("route", {})
@@ -169,6 +182,10 @@ class Reader(Checker):
         # Client provided `route_detour` i.e. `rd` for route download detour
         for i in rule_set:
             i.update({"download_detour": self.route_detour})
+
+        # Mytel users in Myanmar may experience connectivity issues when using NextDNS DNS resolver.
+        if self.version >= 12 and self.experimental:
+            route["default_domain_resolver"] = "dns-bypass"
 
         # Rule 4, 6, 7
         rules[3]["outbound"] = APP_IP_OUT_NAME

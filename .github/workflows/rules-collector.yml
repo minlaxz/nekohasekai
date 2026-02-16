@@ -3,7 +3,7 @@ name: "Build Sing-box rules from OONI"
 on:
   workflow_dispatch:
   schedule:
-  # Run every day at 6 past 23 UTC
+    # Run every day at 6 past 23 UTC
     - cron: "6 23 * * *"
 
 # env:
@@ -16,11 +16,16 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-      - run: |
+
+      - name: OONI MM rules
+        run: |
           python -m pip install --upgrade pip requests setuptools wheel
           curl -Lo generate-geoip-geosite.tar.gz https://github.com/Dunamis4tw/generate-geoip-geosite/releases/download/v1.3.1/generate-geoip-geosite-1.3.1-linux-amd64.tar.gz
           tar -xzf generate-geoip-geosite.tar.gz && chmod +x generate-geoip-geosite
@@ -29,7 +34,13 @@ jobs:
           sed -i 's/^/*./' rules/route-rules/include-domain-oonimm.lst
       - run: |
           ./generate-geoip-geosite -i ./rules/route-rules -o ./rules/route-rules
-          
+
+      - name: My rules
+        run: |
+          curl -Lo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.12.22/sing-box-1.12.22-android-amd64.tar.gz
+          tar -xzf sing-box.tar.gz && chmod +x sing-box
+          curl -Lo rules.json https://gist.githubusercontent.com/minlaxz/8787d8fb7a486360f4c165a283e6de9a/raw/my-rules.json
+          ./sing-box rule-set compile my-rules.json -o ./rules/route-rules/my-rules.srs
 
       # - name: Convert files to LF (Unix format)
       #   run: |

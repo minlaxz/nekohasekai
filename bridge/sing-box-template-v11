@@ -12,6 +12,10 @@
         "tag": "dns-resolver",
         "address": "",
         "detour": ""
+      },
+      {
+        "tag": "dns-bypass",
+        "address": ""
       }
     ],
     "rules": [
@@ -53,18 +57,34 @@
         "update_interval": "1d"
       },
       {
-        "tag": "geosite-cloudflare",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cloudflare.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
         "tag": "geoip-facebook",
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/facebook.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geoip-twitter",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/twitter.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-myrules",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-rules.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-cloudflare",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cloudflare.srs",
         "download_detour": "",
         "update_interval": "1d"
       },
@@ -97,14 +117,6 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geoip-twitter",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/twitter.srs",
         "download_detour": "",
         "update_interval": "1d"
       },
@@ -257,6 +269,7 @@
               {
                 "rule_set": [
                   "geosite-cloudflare",
+                  "geosite-myrules",
                   "geosite-facebook",
                   "geosite-whatsapp",
                   "geosite-instagram",

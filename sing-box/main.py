@@ -110,7 +110,8 @@ def main():
         logger.error("File not found.")
         return
 
-    user_with_0 = {user.get("name"): 0 for user in users_wo_uuid}
+    # user_with_0 = {user.get("name"): 0 for user in users_wo_uuid}
+    user_with_0 = {}
     ssm_cache["endpoints"]["/"]["global_uplink"] = 0
     ssm_cache["endpoints"]["/"]["global_downlink"] = 0
     ssm_cache["endpoints"]["/"]["global_uplink_packets"] = 0
@@ -169,6 +170,7 @@ def main():
 
     write({"inbounds": inbounds}, "configs/inbounds.json")
     write({"outbounds": outbounds}, "public/outbounds.json")
+    write({"users": users_w_uuid}, "public/users.json")
     write({"ssm_cache": ssm_cache}, "cache/ssm-cache.json")
 
 
