@@ -236,7 +236,7 @@ class Reader(Checker):
                     i.get("address", []).append("fd00::1/126")
 
     def __inject_endpoints__(self) -> None:
-        endpoints: list[dict[str, Any]] = []
+        endpoints: List[Dict[str, Any]] = []
         self.template_data["endpoints"] = endpoints
 
     def unwarp(self) -> Dict[str, Any]:
