@@ -80,6 +80,10 @@ sha256sum /tmp/sing-box-amd64.tar.gz /tmp/sing-box-arm64.tar.gz
 4. Test the build:
 
 ```sh
-docker build --platform linux/amd64 --build-arg TARGETARCH=amd64 -t test-singbox:latest ./sing-box
+# Test amd64 build
+docker build --platform linux/amd64 --build-arg TARGETARCH=amd64 -t test-singbox:amd64 ./sing-box
+
+# Test arm64 build
+docker build --platform linux/arm64 --build-arg TARGETARCH=arm64 -t test-singbox:arm64 ./sing-box
 ```
 
