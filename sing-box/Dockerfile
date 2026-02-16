@@ -45,7 +45,9 @@ RUN DOWNLOAD_URL="https://github.com/SagerNet/sing-box/releases/download/v${SING
     echo "Checksum verification passed: $ACTUAL_CHECKSUM" && \
     tar xz -C /sing-box -f /sing-box.tar.gz --strip-components=1 && \
     rm -rf /sing-box.tar.gz /var/cache/apk/* && \
-    chmod +x /sing-box/init.sh
+    chmod +x /sing-box/init.sh && \
+    mkdir -p /sing-box-skel && \
+    cp -a /sing-box/configs /sing-box/public /sing-box/cache /sing-box-skel/
 
 # Generate configs at container runtime
 ENTRYPOINT ["./init.sh"]

@@ -16,8 +16,7 @@ APP_HOST: str = os.getenv("APP_HOST", "www.gstatic.com")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
-APP_SSM_SERVER: str = os.getenv("APP_SSM_SERVER", "nekohasekai")
-SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
+APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
 
 @router.get(
     "/server/v1",
@@ -26,7 +25,7 @@ SSM_UPSTREAM = f"http://{APP_SSM_SERVER}:{END_PORT}"
 )
 async def proxy_server_info():
     async with httpx.AsyncClient(timeout=5) as client:
-        upstream = f"{SSM_UPSTREAM}/server/v1"
+        upstream = f"{APP_SSM_UPSTREAM}/server/v1"
         try:
             r = await client.get(upstream)
             r.raise_for_status()
@@ -42,7 +41,7 @@ async def proxy_server_info():
 )
 async def proxy_server_stats():
     async with httpx.AsyncClient(timeout=5) as client:
-        stats_upstream = f"{SSM_UPSTREAM}/server/v1/stats"
+        stats_upstream = f"{APP_SSM_UPSTREAM}/server/v1/stats"
         try:
             r = await client.get(stats_upstream)
             r.raise_for_status()
@@ -77,8 +76,8 @@ async def proxy_server_stats():
 )
 async def proxy_server_users():
     async with httpx.AsyncClient(timeout=5) as client:
-        stats_upstream = f"{SSM_UPSTREAM}/server/v1/stats"
-        users_upstream = f"{SSM_UPSTREAM}/server/v1/users"
+        stats_upstream = f"{APP_SSM_UPSTREAM}/server/v1/stats"
+        users_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
         try:
             stats_r = await client.get(stats_upstream)
             users_r = await client.get(users_upstream)
@@ -148,7 +147,7 @@ async def create_user(
     uPSK = create_upsk(custom_upsk)
     # Call upstream to create user
     async with httpx.AsyncClient(timeout=5) as client:
-        create_upstream = f"{SSM_UPSTREAM}/server/v1/users"
+        create_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
         payload = {"username": username, "uPSK": uPSK}
         try:
             r = await client.post(create_upstream, json=payload)

@@ -31,6 +31,14 @@ main() {
     fi
   done
 
+  # Seed bind-mounted directories with skeleton files on first run
+  for dir in configs public cache; do
+    if [ -d "/sing-box-skel/$dir" ] && [ -z "$(ls -A "/sing-box/$dir" 2>/dev/null)" ]; then
+      echo "Seeding /sing-box/$dir from /sing-box-skel/$dir ..."
+      cp -a "/sing-box-skel/$dir/." "/sing-box/$dir/"
+    fi
+  done
+
   if [ ! verify_configs ]; then
     echo "Configuration files are missing."
     exit 1

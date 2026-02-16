@@ -16,9 +16,9 @@ services:
       - "${START_PORT}-${END_PORT}:${START_PORT}-${END_PORT}/udp"
     volumes:
       - ./cache:/sing-box/cache
-      - ./configs:/sing-box/configs:ro
+      - ./configs:/sing-box/configs
+      - ./public:/sing-box/public
       - ./certs:/sing-box/certs:ro
-      - ./public:/sing-box/public:ro
       - ./users.yaml:/sing-box/users.yaml:ro
     logging:
       driver: json-file

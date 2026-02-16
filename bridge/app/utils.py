@@ -22,7 +22,7 @@ logging.basicConfig(
 
 class Checker:
     def __init__(self, j: str, k: str, p: str, v: int) -> None:
-        self.app_ssm_upstream = os.getenv("APP_SSM_UPSTREAM", "http://nekohasekai:8888")
+        self.app_ssm_upstream = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
         self.outbounds_path = os.getenv("APP_OUTBOUNDS_PATH", "outbounds.json")
         self.template_path = (
             os.getenv("APP_TEMPLATE_v12_PATH", "sing-box-template")
