@@ -1,14 +1,14 @@
 services:
-  nekohasekai:
-    image: ghcr.io/sagernet/sing-box:v1.12.14
+  sing-box:
+    image: ghcr.io/minlaxz/nekohasekai:neko
     pull_policy: always
     restart: unless-stopped
-    command: ["run", "-C", "/sing-box/configs"]
+    command: ["/sing-box/sing-box", "run", "-C", "/sing-box/configs"]
     mem_limit: 128m
     mem_reservation: 64m
     memswap_limit: -1 # no swap limit
     env_file:
-      - .env
+      - ./sing-box.env
     networks:
       - nekohasekai-net
     ports:
@@ -19,14 +19,15 @@ services:
       - ./configs:/sing-box/configs:ro
       - ./certs:/sing-box/certs:ro
       - ./public:/sing-box/public:ro
+      - ./users.yaml:/sing-box/users.yaml:ro
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-  nekohasekai-api:
-    image: ghcr.io/minlaxz/nekohasekai:sing-box-api
+  api:
+    image: ghcr.io/minlaxz/nekohasekai:neko-api
     pull_policy: always
     restart: unless-stopped
     # See more options at https://fastapi.tiangolo.com/deployment/docker/
@@ -35,19 +36,22 @@ services:
     mem_limit: 128m
     mem_reservation: 64m
     memswap_limit: -1 # no swap limit
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    env_file:
+      - ./api.env
     depends_on:
-      - nekohasekai
+      - sing-box
     networks:
       - caddy-net
       - nekohasekai-net
     expose:
       - "8000"
-    env_file:
-      - .env
     volumes:
       - ./public:/public:ro
     labels:
-      caddy: ${APP_CONFIG_HOST}
+      caddy: ${APP_HOST}
       caddy.reverse_proxy: "{{upstreams 8000}}"
     logging:
       driver: json-file

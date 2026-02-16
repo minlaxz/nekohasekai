@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-APP_CONFIG_HOST: str = os.getenv("APP_CONFIG_HOST", "www.gstatic.com")
+APP_HOST: str = os.getenv("APP_HOST", "www.gstatic.com")
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
@@ -155,6 +155,6 @@ async def create_user(
             r.raise_for_status()
         except httpx.HTTPError as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
-    url = f"https://{APP_CONFIG_HOST}/config?p={platform}&v={version}&j={username}&k={uPSK}"
+    url = f"https://{APP_HOST}/config?p={platform}&v={version}&j={username}&k={uPSK}"
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse("form.html", {"request": request, "result": url})
