@@ -130,6 +130,40 @@
           "config": []
         }
       }
+    },
+    {
+      "type": "vless",
+      "tag": "vless",
+      "server": "",
+      "server_port": 0,
+      "uuid": "",
+      "flow": "xtls-rprx-vision",
+      "packet_encoding": "xudp",
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h3"
+        ],
+        "min_version": "1.3",
+        "reality": {
+          "enabled": true,
+          "public_key": "",
+          "short_id": ""
+        },
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      },
+      "multiplex": {
+        "protocol": "h2mux",
+        "enabled": true,
+        "padding": false,
+        "max_connections": 2,
+        "min_streams": 4,
+        "max_streams": 8
+      }
     }
   ]
 }

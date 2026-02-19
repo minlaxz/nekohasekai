@@ -109,6 +109,38 @@
           "key_path": "/sing-box/certs/ech.key"
         }
       }
+    },
+    {
+      "type": "vless",
+      "tag": "vless",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "users": [],
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h2",
+          "h3"
+        ],
+        "min_version": "1.3",
+        "reality": {
+          "enabled": false,
+          "handshake": {
+            "server": "",
+            "server_port": 443
+          },
+          "private_key": "",
+          "short_id": [
+            ""
+          ],
+          "max_time_difference": "1m"
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "padding": false
+      }
     }
   ]
 }
