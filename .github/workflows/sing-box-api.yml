@@ -6,7 +6,7 @@ on:
     branches:
       - master
     paths:
-      - "bridge/*"
+      - "api/*"
 
 env:
   REGISTRY: ghcr.io
