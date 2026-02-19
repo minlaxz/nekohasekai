@@ -17,7 +17,7 @@ This repository provides guides to help bypass Myanmar Internet Restrictions usi
 - **[`api/`](./api/)**  
   Client-side configuration generator exposed as an API.
 
-- **[`sing-box/`](./sing-box/)**  
+- **[`generator/`](./generator/)**  
   Server-side sing-box configuration generator.
 
 ### Credits
@@ -84,7 +84,7 @@ sudo sysctl -p
 
 ## Next step
 
-Start with the [sing-box/](./sing-box/README.md) directory to generate and deploy server-side configurations.
+Start with the [generator/](./generator/README.md) directory to generate and deploy server-side configurations.
 
 > There will be a lot of terms like ECH, TUIC, Brutal, etc.  
 > If you are unfamiliar with these, please do research on each of them

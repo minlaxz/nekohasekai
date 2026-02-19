@@ -1,0 +1,146 @@
+{
+  "inbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "method": "xchacha20-ietf-poly1305",
+      "users": [],
+      "managed": true,
+      "multiplex": {
+        "enabled": true,
+        "padding": false
+      }
+    },
+    {
+      "type": "shadowtls",
+      "tag": "shadowtls",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "detour": "shadowsocks",
+      "version": 3,
+      "users": [],
+      "handshake": {
+        "server": "",
+        "server_port": 443
+      },
+      "strict_mode": true
+    },
+    {
+      "type": "trojan",
+      "tag": "trojan",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "users": [],
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h2",
+          "h3"
+        ],
+        "min_version": "1.3",
+        "key_path": "./certs/private.key",
+        "certificate_path": "./certs/certificate.crt",
+        "ech": {
+          "enabled": true,
+          "key_path": "./certs/ech.key"
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "padding": false
+      }
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "up_mbps": 0,
+      "down_mbps": 0,
+      "obfs": {
+        "type": "salamander",
+        "password": ""
+      },
+      "users": [],
+      "ignore_client_bandwidth": true,
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h2",
+          "h3"
+        ],
+        "min_version": "1.3",
+        "key_path": "./certs/private.key",
+        "certificate_path": "./certs/certificate.crt",
+        "ech": {
+          "enabled": true,
+          "key_path": "./certs/ech.key"
+        }
+      },
+      "masquerade": {},
+      "brutal_debug": false
+    },
+    {
+      "type": "tuic",
+      "tag": "tuic",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "users": [],
+      "congestion_control": "bbr",
+      "auth_timeout": "3s",
+      "zero_rtt_handshake": false,
+      "heartbeat": "10s",
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h2",
+          "h3"
+        ],
+        "min_version": "1.3",
+        "key_path": "./certs/private.key",
+        "certificate_path": "./certs/certificate.crt",
+        "ech": {
+          "enabled": true,
+          "key_path": "./certs/ech.key"
+        }
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "vless",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "users": [],
+      "tls": {
+        "enabled": true,
+        "server_name": "",
+        "alpn": [
+          "h2",
+          "h3"
+        ],
+        "min_version": "1.3",
+        "reality": {
+          "enabled": false,
+          "handshake": {
+            "server": "",
+            "server_port": 443
+          },
+          "private_key": "",
+          "short_id": [
+            ""
+          ],
+          "max_time_difference": "1m"
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "padding": false
+      }
+    }
+  ]
+}
