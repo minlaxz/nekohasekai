@@ -30,8 +30,8 @@ Then generate self-signed certificate and private key:
 
 ```sh
 mkdir -p certs && \
-openssl ecparam -genkey -name prime256v1 -out certs/private.key && \
-openssl req -new -x509 -days 36500 -key certs/private.key -out certs/certificate.crt \
+openssl ecparam -genkey -name prime256v1 -out data/certs/private.key && \
+openssl req -new -x509 -days 36500 -key data/certs/private.key -out data/certs/certificate.crt \
 -subj "/CN=${TLS_SERVER_NAME}" \
 -addext "subjectAltName=DNS:${TLS_SERVER_NAME}"
 ```
@@ -44,8 +44,8 @@ AUTO_REALITY_PRIVATE=$(awk '/PrivateKey/{print $NF}' <<< "$REALITY_KEYPAIR")
 AUTO_REALITY_PUBLIC=$(awk '/PublicKey/{print $NF}' <<< "$REALITY_KEYPAIR")
 REALITY_PRIVATE=${CUSTOM_REALITY_PRIVATE:-$AUTO_REALITY_PRIVATE}
 REALITY_PUBLIC=${CUSTOM_REALITY_PUBLIC:-$AUTO_REALITY_PUBLIC}
-printf '%s\n' "$REALITY_PRIVATE" > certs/reality_private.key
-printf '%s\n' "$REALITY_PUBLIC" > certs/reality_public.key
+printf '%s\n' "$REALITY_PRIVATE" > data/certs/reality_private.key
+printf '%s\n' "$REALITY_PUBLIC" > data/certs/reality_public.key
 ```
 
 Generate ECH keypair:
@@ -56,8 +56,8 @@ AUTO_ECH_PUBLIC=$(sed -n '/-----BEGIN ECH CONFIGS-----/,/-----END ECH CONFIGS---
 AUTO_ECH_PRIVATE=$(sed -n '/-----BEGIN ECH KEYS-----/,/-----END ECH KEYS-----/p' <<< "$ECH_KEYPAIR")
 ECH_PRIVATE=${CUSTOM_ECH_PRIVATE:-$AUTO_ECH_PRIVATE}
 ECH_PUBLIC=${CUSTOM_ECH_PUBLIC:-$AUTO_ECH_PUBLIC}
-printf '%s\n' "$ECH_PRIVATE" > certs/ech.key
-printf '%s\n' "$ECH_PUBLIC" > certs/ech.config
+printf '%s\n' "$ECH_PRIVATE" > data/certs/ech.key
+printf '%s\n' "$ECH_PUBLIC" > data/certs/ech.config
 ```
 
 Add users to `users.yaml`

@@ -76,10 +76,10 @@ def generate(
         inbounds_output="inbounds.jsonc",
         outbounds_output="outbounds.jsonc",
         users_output="users.jsonc",
-        certificate_path="./certs/certificate.crt",
-        private_key_path="./certs/private.key",
-        public_key_path="./certs/public.key",
-        ech_config_path="./certs/ech.config",
+        certificate_path="certs/certificate.crt",
+        private_key_path="certs/private.key",
+        public_key_path="certs/public.key",
+        ech_config_path="certs/ech.config",
     )
     typer.echo("✅ Generation completed")
 

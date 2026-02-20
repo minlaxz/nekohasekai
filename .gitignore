@@ -183,8 +183,4 @@ generate-geoip-geosite*
 git-ignored
 .DS_Store
 
-**/data
-data.json
-outs.json
-conf
-certs
+**/test_data/*

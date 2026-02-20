@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 # Constants
 # -----------------------------------------------------------------------------
 
-BASE_DIR = Path(".")
-TEST_DIR = Path("./test")
+BASE_DIR = Path("./data")
+TEST_DIR = Path("./test_data")
 IPIFY_URL = "https://api.ipify.org"
 
 # -----------------------------------------------------------------------------
@@ -206,24 +206,10 @@ def main(
         for u in users
     ]
 
-    cert_chain = read_file(
-        kwargs.get("certificate_path", "certificate.crt"),
-        "lines",
-        local_mode,
-    )
-    ech_config = read_file(
-        kwargs.get("ech_config_path", "ech.config"),
-        "lines",
-        local_mode,
-    )
-    private_key = read_file(
-        kwargs.get("private_key_path", "private.key"),
-        local_mode,
-    )
-    public_key = read_file(
-        kwargs.get("public_key_path", "public.key"),
-        local_mode,
-    )
+    cert_chain = read_file(kwargs.get("certificate_path"), "lines", local_mode)
+    ech_config = read_file(kwargs.get("ech_config_path"), "lines", local_mode)
+    private_key = read_file(kwargs.get("private_key_path"), local_mode)
+    public_key = read_file(kwargs.get("public_key_path"), local_mode)
 
     # -----------------------------
     # Server-side inbounds
@@ -296,20 +282,8 @@ def main(
     # Write output
     # -----------------------------
 
-    write_file(
-        {"inbounds": inbounds},
-        kwargs.get("inbounds_output", "inbounds.jsonc"),
-        local_mode,
-    )
-    write_file(
-        {"outbounds": outbounds},
-        kwargs.get("outbounds_output", "outbounds.jsonc"),
-        local_mode,
-    )
-    write_file(
-        {"users": users},
-        kwargs.get("users_output", "users.jsonc"),
-        local_mode,
-    )
+    write_file({"inbounds": inbounds}, kwargs.get("inbounds_output"), local_mode)
+    write_file({"outbounds": outbounds}, kwargs.get("outbounds_output"), local_mode)
+    write_file({"users": users}, kwargs.get("users_output"), local_mode)
 
     logger.info("Config generation completed successfully")
