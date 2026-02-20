@@ -1,8 +1,10 @@
-# app.py
 import logging
 import typer
 
-from core import main
+try:
+    from .core import main
+except ImportError:
+    from core import main
 
 app = typer.Typer(help="Sing-box config generator")
 
@@ -12,7 +14,7 @@ def generate(
     local: bool = typer.Option(
         False,
         "--local",
-        help="Run in local/test mode (no /sing-box writes)",
+        help="Run in local/test mode (no ./data/ writes)",
     ),
     debug: bool = typer.Option(
         False,
@@ -77,9 +79,9 @@ def generate(
         outbounds_output="outbounds.jsonc",
         users_output="users.jsonc",
         certificate_path="certs/certificate.crt",
+        ech_config_path="certs/ech.config",
         private_key_path="certs/private.key",
         public_key_path="certs/public.key",
-        ech_config_path="certs/ech.config",
     )
     typer.echo("✅ Generation completed")
 

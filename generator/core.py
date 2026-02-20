@@ -58,16 +58,31 @@ def resolve_path(filename: str, local_mode: bool) -> Path:
 
 
 @log_function
-def get_server_ip() -> str:
-    result = subprocess.run(
-        ["curl", "-s", IPIFY_URL],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    ip = result.stdout.strip()
-    logger.info("Detected server IP: %s", ip)
-    return ip
+def get_server_ip(local_mode: bool = False) -> str:
+    if local_mode:
+        ip = read_env("SERVER_IP", default="127.0.0.1", required=False)
+        logger.info("Using local-mode server IP: %s", ip)
+        return ip
+
+    try:
+        result = subprocess.run(
+            ["curl", "-s", IPIFY_URL],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        ip = result.stdout.strip()
+        if not ip:
+            raise ValueError("Detected empty IP")
+        logger.info("Detected server IP: %s", ip)
+        return ip
+    except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+        fallback_ip = read_env("SERVER_IP", default="127.0.0.1", required=False)
+        logger.warning(
+            "Failed to detect server IP automatically. Using fallback: %s",
+            fallback_ip,
+        )
+        return fallback_ip
 
 
 @log_function
@@ -84,7 +99,7 @@ def read_file(filename: str, as_type: str = "", local_mode: bool = False) -> Any
     logger.info("Reading file %s", path)
 
     if local_mode:
-        return _read_test_placeholder(filename, as_type)
+        return _read_test_placeholder(path, as_type)
 
     try:
         with path.open("r", encoding="utf-8") as f:
@@ -98,19 +113,27 @@ def read_file(filename: str, as_type: str = "", local_mode: bool = False) -> Any
                 case _:
                     return f.read()
     except FileNotFoundError:
-        logger.warning("File %s not found. Returning empty data.", path)
+        logger.exception("File %s not found.", path)
+        # Break it.
         raise
 
 
-def _read_test_placeholder(filename: str, as_type: str) -> Any:
-    match as_type:
-        case "json" | "yaml":
-            with open(filename, "r", encoding="utf-8") as f:
-                return json.load(f) if as_type == "json" else yaml.safe_load(f)
-        case "lines":
+def _read_test_placeholder(path: Path, as_type: str) -> Any:
+    if not path.exists():
+        if as_type == "lines":
             return ["...", "...", "..."]
-        case _:
-            return "test-mode-placeholder"
+        return "test-mode-placeholder"
+
+    with path.open("r", encoding="utf-8") as data:
+        match as_type:
+            case "json":
+                return json.load(data)
+            case "yaml":
+                return yaml.safe_load(data)
+            case "lines":
+                return [line.rstrip("\n") for line in data]
+            case _:
+                return data.read()
 
 
 @log_function
@@ -176,12 +199,12 @@ def main(
     **kwargs: Any,
 ) -> None:
     inbounds = read_file(
-        kwargs.get("inbounds_template", "server.template.json"),
+        kwargs.get("inbounds_template"),
         "json",
         local_mode,
     ).get("inbounds", [])
     outbounds = read_file(
-        kwargs.get("outbounds_template", "client.template.json"),
+        kwargs.get("outbounds_template"),
         "json",
         local_mode,
     ).get("outbounds", [])
@@ -208,8 +231,8 @@ def main(
 
     cert_chain = read_file(kwargs.get("certificate_path"), "lines", local_mode)
     ech_config = read_file(kwargs.get("ech_config_path"), "lines", local_mode)
-    private_key = read_file(kwargs.get("private_key_path"), local_mode)
-    public_key = read_file(kwargs.get("public_key_path"), local_mode)
+    private_key = read_file(kwargs.get("private_key_path"), local_mode=local_mode)
+    public_key = read_file(kwargs.get("public_key_path"), local_mode=local_mode)
 
     # -----------------------------
     # Server-side inbounds
@@ -250,7 +273,7 @@ def main(
     # Client-side outbounds
     # -----------------------------
 
-    server_ip = get_server_ip()
+    server_ip = get_server_ip(local_mode=local_mode)
 
     for idx, outbound in enumerate(active_outbounds):
         outbound["server"] = server_ip
@@ -267,7 +290,7 @@ def main(
         if outbound.get("tls", {}).get("ech", {}).get("config") == []:
             outbound["tls"]["ech"]["config"] = ech_config
 
-        if outbound.get("obfs", {}).get("password"):
+        if outbound.get("obfs", {}).get("password") == "":
             outbound["obfs"]["password"] = obfs_password
 
         apply_bandwidth(
