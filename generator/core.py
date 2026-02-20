@@ -115,7 +115,7 @@ def read_file(filename: str, as_type: str = "", local_mode: bool = False) -> Any
     except FileNotFoundError:
         logger.exception("File %s not found.", path)
         # Break it.
-        raise
+        raise FileNotFoundError(f"Required file {path} not found.")
 
 
 def _read_test_placeholder(path: Path, as_type: str) -> Any:

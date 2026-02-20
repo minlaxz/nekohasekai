@@ -1,5 +1,6 @@
 import logging
 import typer
+import os
 
 try:
     from .core import main
@@ -47,12 +48,12 @@ def generate(
         help="Download speed in Mbps for generated configurations",
     ),
     up_mbps_factor: float = typer.Option(
-        .1,
+        0.1,
         "--up-mbps-factor",
         help="Factor to adjust upload speed in generated configurations",
     ),
     down_mbps_factor: float = typer.Option(
-        .1,
+        0.1,
         "--down-mbps-factor",
         help="Factor to adjust download speed in generated configurations",
     ),
@@ -61,8 +62,10 @@ def generate(
     Generate sing-box configuration files.
     """
     logging.getLogger().setLevel(logging.DEBUG if (debug or local) else logging.INFO)
+    if local and not os.path.exists("./test_data/"):
+        raise FileNotFoundError("./test_data/ directory not found.")
 
-    typer.echo("🚀 Sing-Box Config Generation Started")
+    typer.echo("Config generation Started")
     main(
         local_mode=local,
         start_port=start_port,
@@ -83,7 +86,7 @@ def generate(
         private_key_path="certs/private.key",
         public_key_path="certs/public.key",
     )
-    typer.echo("✅ Generation completed")
+    typer.echo("Generation completed.")
 
 
 if __name__ == "__main__":

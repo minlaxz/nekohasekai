@@ -24,6 +24,7 @@ class Checker:
     def __init__(self, j: str, k: str, p: str, v: int) -> None:
         self.app_ssm_upstream = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
         self.outbounds_path = os.getenv("APP_OUTBOUNDS_PATH", "outbounds.json")
+        self.users_data_path = os.getenv("APP_USERS_DATA_PATH", "users.jsonc")
         self.template_path = (
             os.getenv("APP_TEMPLATE_v12_PATH", "sing-box-template")
             if v >= 12
@@ -31,6 +32,7 @@ class Checker:
         )
         self.outbounds_data: Dict[str, Any] = {}  # outbounds
         self.template_data: Dict[str, Any] = {}  # base config
+        self.users_data: Dict[str, Any] = {}  # user data
         self.user_name = j
         self.user_psk = k
         self.version = v
@@ -78,6 +80,14 @@ class Checker:
         else:
             with open(self.outbounds_path, "r", encoding="utf-8") as file:
                 self.outbounds_data = json.load(file)
+
+        if self.users_data_path.startswith(("https://", "http://")):
+            response = httpx.get(self.outbounds_path, timeout=5)
+            response.raise_for_status()
+            self.users_data = response.json()
+        else:
+            with open(self.users_data_path, "r", encoding="utf-8") as file:
+                self.users_data = json.load(file)
 
         logging.info("Template and outbounds loaded successfully")
 
@@ -196,7 +206,18 @@ class Reader(Checker):
         outbound_names: List[str] = []
 
         for i in self.outbounds_data["outbounds"]:
-            i["password"] = self.user_psk
+            if i.get("password") == "":
+                i["password"] = self.user_psk
+
+            if i.get("uuid") == "":
+                i["uuid"] = next(
+                    (
+                        user["uuid"]
+                        for user in self.users_data["users"]
+                        if user["name"] == self.user_name
+                    ),
+                    "00000000-0000-0000-0000-000000000000",
+                )
 
             # Remove multiplex from all outbounds by default
             # can still be enabled from client side with &?mx=true

@@ -71,6 +71,12 @@ UUID=$(uuidgen)
 echo "Generated UUID: $UUID"
 ```
 
+Install dependencies:
+
+```sh
+python3 -m pip install -r requirements.txt
+```
+
 Run generator:
 
 ```sh
@@ -79,4 +85,17 @@ python3 app.py \
     --tls-server-name $TLS_SERVER_NAME \
     --obfs_password "your_obfs_password"
 ```
+
 Check out [app.py](app.py) for more options and details.
+
+Run sing-box with the generated configuration:
+
+```sh
+./sing-box run -c config.jsonc
+```
+
+Run Tests:
+
+```sh
+pytest -vv
+```
