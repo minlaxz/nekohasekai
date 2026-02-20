@@ -6,7 +6,8 @@ on:
     branches:
       - master
     paths:
-      - "api/*"
+      - "api/**/*.py"
+      - "api/**/*.html"
 
 env:
   REGISTRY: ghcr.io
@@ -41,8 +42,8 @@ jobs:
         with:
           push: true
           platforms: linux/amd64, linux/arm64
-          context: ./bridge
-          file: ./bridge/Dockerfile
+          context: ./api
+          file: ./api/Dockerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
