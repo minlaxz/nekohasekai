@@ -35,14 +35,6 @@ jobs:
       - run: |
           ./generate-geoip-geosite -i ./rules/route-rules -o ./rules/route-rules
 
-      - name: My rules
-        run: |
-          mkdir -p tmp && cd tmp
-          curl -Lo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.12.22/sing-box-1.12.22-linux-amd64.tar.gz
-          tar -xzf sing-box.tar.gz && mv sing-box-1.12.22-linux-amd64/sing-box ../sb && chmod +x ../sb && cd ..
-          curl -Lo my-rules.json https://gist.githubusercontent.com/minlaxz/8787d8fb7a486360f4c165a283e6de9a/raw/my-rules.json
-          ./sb rule-set compile my-rules.json -o ./rules/route-rules/my-rules.srs
-
       # - name: Convert files to LF (Unix format)
       #   run: |
       #     sudo apt-get update && sudo apt-get install -y dos2unix

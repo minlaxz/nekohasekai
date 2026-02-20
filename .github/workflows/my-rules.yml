@@ -1,0 +1,35 @@
+name: "Build custom sing-box rules"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "rules/my-rules.json"
+
+env:
+  SING_BOX_VERSION: "1.12.22"
+
+jobs:
+  run-scripts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: My rules
+        run: |
+          curl -Lo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz
+          tar -xz -C . -f sing-box.tar.gz --strip-components=1
+          ./sing-box rule-set compile rules/my-rules.json -o ./rules/route-rules/my-rules.srs
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ github.token }}
+          publish_branch: route-rules
+          publish_dir: rules/route-rules
+          force_orphan: true
