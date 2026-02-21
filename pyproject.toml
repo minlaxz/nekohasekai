@@ -3,8 +3,8 @@ requires = ["setuptools==68.2.2", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sekai-generator"
-version = "0.1.9"
+name = "sekai_generator"
+version = "0.1.10"
 description = "CLI generator for sing-box configuration files"
 readme = "generator/README.md"
 requires-python = ">=3.10"
@@ -27,7 +27,6 @@ Issues = "https://github.com/minlaxz/nekohasekai/issues"
 sekai-generator = "generator.app:app"
 
 [tool.setuptools]
-package-dir = {"" = "."}
 include-package-data = true
 
 [tool.setuptools.packages.find]
