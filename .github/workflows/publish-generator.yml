@@ -4,12 +4,13 @@ on:
   push:
     tags:
       - "sekai-generator/v*"
+      - "v*"
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to publish (e.g. sekai-generator/v0.1.0)"
+        description: "Tag to publish (e.g. sekai-generator/v0.1.0 or v0.1.0)"
         required: false
 
 permissions:
@@ -33,7 +34,7 @@ jobs:
       - name: Install build backend
         run: |
           python -m pip install --upgrade pip
-          python -m pip install build tomli_w
+          python -m pip install build tomli_w tomlkit
 
       - name: Derive version from tag
         id: version
@@ -51,10 +52,11 @@ jobs:
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version $VERSION derived from $TAG_SOURCE"
 
       - name: Inject version into pyproject.toml
-        run: |
-          python -c "import tomllib, tomli_w, pathlib; p=pathlib.Path('pyproject.toml'); d=tomllib.loads(p.read_text()); d['project']['version']='${{ steps.version.outputs.version }}'; p.write_text(tomli_w.dumps(d))"
+        run: >-
+          python -c "import tomlkit, pathlib; p=pathlib.Path('pyproject.toml'); doc=tomlkit.parse(p.read_text()); doc['project']['version']='${{ steps.version.outputs.version }}'; p.write_text(tomlkit.dumps(doc))"
 
       - name: Build distributions
         run: python -m build

@@ -44,3 +44,6 @@ generator = [
   "test_data/*.jsonc",
   "test_data/*.yaml",
 ]
+
+[tool.setuptools.exclude-package-data]
+generator = ["__pycache__", "*.pyc", "*.pyo", "*.pyd"]
