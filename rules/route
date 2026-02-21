@@ -1,0 +1,90 @@
+{
+  "route": {
+    "rule_set": [
+      {
+        "tag": "geoip-myrules",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-ip-rules.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-myrules",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-rules.srs",
+        "download_detour": "",
+        "update_interval": "1d"
+      }
+    ],
+    "rules": [
+      {
+        "port": 53,
+        "action": "hijack-dns"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "network": "tcp",
+            "port": [
+              5222,
+              853
+            ]
+          },
+          {
+            "ip_cidr": [
+              "5.28.195.2/32",
+              "0.0.0.0/32",
+              "::/128"
+            ]
+          }
+        ],
+        "action": "reject",
+        "method": "drop"
+      },
+      {
+        "rule_set": "geoip-mm",
+        "outbound": "direct"
+      },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "clash_mode": "Auto"
+          },
+          {
+            "rule_set": [
+              "geoip-myrules"
+            ]
+          }
+        ],
+        "outbound": ""
+      },
+      {
+        "action": "sniff",
+        "timeout": "100ms"
+      },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "clash_mode": "Auto"
+          },
+          {
+            "rule_set": [
+              "geosite-myrules"
+            ]
+          }
+        ],
+        "outbound": ""
+      }
+    ],
+    "final": "direct",
+    "auto_detect_interface": true
+  }
+}

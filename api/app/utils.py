@@ -26,10 +26,11 @@ class Checker:
         self.outbounds_path = os.getenv("APP_OUTBOUNDS_PATH", "outbounds.json")
         self.users_data_path = os.getenv("APP_USERS_DATA_PATH", "users.jsonc")
         self.template_path = (
-            os.getenv("APP_TEMPLATE_v12_PATH", "sing-box-template")
+            os.getenv("APP_TEMPLATE_v12_PATH", "test-data/sing-box-template")
             if v >= 12
-            else os.getenv("APP_TEMPLATE_v11_PATH", "sing-box-template-v11")
+            else os.getenv("APP_TEMPLATE_v11_PATH", "test-data/sing-box-template-v11")
         )
+        self.route_path = os.getenv("APP_ROUTE_PATH", "test-data/route.json")
         self.outbounds_data: Dict[str, Any] = {}  # outbounds
         self.template_data: Dict[str, Any] = {}  # base config
         self.users_data: Dict[str, Any] = {}  # user data
@@ -72,6 +73,14 @@ class Checker:
         else:
             with open(self.template_path, "r", encoding="utf-8") as file:
                 self.template_data = json.load(file)
+
+        if self.route_path.startswith(("https://", "http://")):
+            response = httpx.get(self.route_path, timeout=5)
+            response.raise_for_status()
+            self.template_data["route"] = response.json()
+        else:
+            with open(self.route_path, "r", encoding="utf-8") as file:
+                self.template_data["route"] = json.load(file)
 
         if self.outbounds_path.startswith(("https://", "http://")):
             response = httpx.get(self.outbounds_path, timeout=5)

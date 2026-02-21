@@ -1,0 +1,68 @@
+{
+  "endpoints": [],
+  "dns": {
+    "servers": [
+      {
+        "tag": "dns-remote",
+        "type": "https",
+        "server": "",
+        "path": "",
+        "domain_resolver": {
+          "server": "dns-resolver",
+          "strategy": "ipv4_only"
+        }
+      },
+      {
+        "tag": "dns-resolver",
+        "type": "udp",
+        "server": "",
+        "detour": ""
+      },
+      {
+        "tag": "dns-bypass",
+        "type": "udp",
+        "server": ""
+      }
+    ],
+    "independent_cache": false,
+    "strategy": "ipv4_only",
+    "disable_cache": false,
+    "disable_expire": false,
+    "cache_capacity": 10240,
+    "reverse_mapping": true,
+    "final": ""
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "address": [
+        "10.10.10.0/24"
+      ],
+      "mtu": 1420,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "mixed"
+    }
+  ],
+  "outbounds": [],
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "127.0.0.1:9090",
+      "access_control_allow_private_network": true,
+      "access_control_allow_origin": "*",
+      "default_mode": "Auto"
+    },
+    "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "store_fakeip": true,
+      "store_rdrc": true,
+      "rdrc_timeout": "1d"
+    }
+  }
+}
