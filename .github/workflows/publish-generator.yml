@@ -54,7 +54,7 @@ jobs:
 
       - name: Inject version into pyproject.toml
         run: |
-          python -c "import tomllib;import tomli_w;from pathlib import Path;from io import StringIO;d=tomllib.loads(Path('pyproject.toml').read_text());d['project']['version']='${{ steps.version.outputs.version }}';buf=StringIO();tomli_w.dump(d,buf);Path('pyproject.toml').write_text(buf.getvalue())"
+          python -c "import tomllib, tomli_w, pathlib; p=pathlib.Path('pyproject.toml'); d=tomllib.loads(p.read_text()); d['project']['version']='${{ steps.version.outputs.version }}'; p.write_text(tomli_w.dumps(d))"
 
       - name: Build distributions
         run: python -m build
