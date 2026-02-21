@@ -245,7 +245,7 @@ class Reader(Checker):
             if ob.get("password") == "":
                 ob["password"] = self.psk
 
-            if not ob.get("uuid"):
+            if ob.get("uuid") == "":
                 ob["uuid"] = next(
                     (
                         u["uuid"]
