@@ -256,9 +256,9 @@ class Reader(Checker):
 
         if len(rules) > 4:
             rules[2]["outbound"] = APP_IP_OUT_NAME
-            rules[2]["rule_set"] = geoip_rule_sets
+            rules[2]["rules"][1]["rule_set"] = geoip_rule_sets
             rules[4]["outbound"] = APP_OUT_NAME
-            rules[4]["rule_set"] = geosite_rule_sets
+            rules[4]["rules"][1]["rule_set"] = geosite_rule_sets
 
     # ------------------------------------------------------------------
 
