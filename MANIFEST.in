@@ -1,0 +1,5 @@
+include LICENSE
+include README.md
+recursive-include generator/data *.json *.jsonc *.yaml
+recursive-include generator/test_data *.json *.jsonc *.yaml
+global-exclude __pycache__ *.py[cod]

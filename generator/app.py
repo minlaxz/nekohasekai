@@ -62,8 +62,6 @@ def generate(
     Generate sing-box configuration files.
     """
     logging.getLogger().setLevel(logging.DEBUG if (debug or local) else logging.INFO)
-    if local and not os.path.exists("./test_data/"):
-        raise FileNotFoundError("./test_data/ directory not found.")
 
     typer.echo("Config generation Started")
     main(

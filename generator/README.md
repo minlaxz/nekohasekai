@@ -1,3 +1,24 @@
+### Quickstart
+
+Install the CLI:
+
+```sh
+pip install sekai-generator
+```
+
+Generate configs (local/test mode uses bundled fixtures):
+
+```sh
+sekai-generator --local --debug --start-port 8820 --tls-server-name mozilla.org --obfs-password password123
+```
+
+Outputs (in test mode):
+- `test_data/inbounds.jsonc`
+- `test_data/outbounds.jsonc`
+- `test_data/users.jsonc`
+
+### Manual usage and prerequisites
+
 Download sing-box binary from GitHub releases
 
 ```sh

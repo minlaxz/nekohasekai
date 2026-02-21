@@ -1,0 +1,75 @@
+name: Publish sekai-generator to PyPI
+
+on:
+  push:
+    tags:
+      - "sekai-generator/v*"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g. sekai-generator/v0.1.0)"
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build tomli_w
+
+      - name: Derive version from tag
+        id: version
+        shell: bash
+        run: |
+          TAG_INPUT="${{ github.event.inputs.tag }}"
+          TAG_REF="${GITHUB_REF##*/}"
+          TAG_SOURCE="${TAG_INPUT:-$TAG_REF}"
+          if [[ "$TAG_SOURCE" =~ ^sekai-generator/v([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "Tag must match sekai-generator/v* (got: $TAG_SOURCE)" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Inject version into pyproject.toml
+        run: |
+          python -c "import tomllib;import tomli_w;from pathlib import Path;from io import StringIO;d=tomllib.loads(Path('pyproject.toml').read_text());d['project']['version']='${{ steps.version.outputs.version }}';buf=StringIO();tomli_w.dump(d,buf);Path('pyproject.toml').write_text(buf.getvalue())"
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Publish to PyPI
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.tag != ''
+        uses: pypa/gh-action-pypi-publish@v1.10.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
+
+      - name: Publish to TestPyPI (manual dispatch only without tag)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag == ''
+        uses: pypa/gh-action-pypi-publish@v1.10.0
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          skip-existing: true

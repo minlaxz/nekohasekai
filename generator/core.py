@@ -9,6 +9,8 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
+import importlib.resources as resources
+
 import yaml
 
 # -----------------------------------------------------------------------------
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = Path("./data")
 TEST_DIR = Path("./test_data")
+PACKAGE_DIR = Path(__file__).resolve().parent
 IPIFY_URL = "https://api.ipify.org"
 
 # -----------------------------------------------------------------------------
@@ -94,6 +97,31 @@ def write_file(data: Dict[str, Any], filename: str, local_mode: bool = False) ->
 
 
 @log_function
+def _load_package_resource(filename: str, as_type: str) -> Any:
+    candidates = [
+        resources.files(__package__).joinpath(filename),
+        resources.files(__package__).joinpath("data").joinpath(filename),
+        resources.files(__package__).joinpath("test_data").joinpath(filename),
+    ]
+
+    for candidate in candidates:
+        try:
+            with candidate.open("r", encoding="utf-8") as f:
+                match as_type:
+                    case "json":
+                        return json.load(f)
+                    case "yaml":
+                        return yaml.safe_load(f)
+                    case "lines":
+                        return [line.rstrip("\n") for line in f]
+                    case _:
+                        return f.read()
+        except FileNotFoundError:
+            continue
+
+    raise FileNotFoundError(filename)
+
+
 def read_file(filename: str, as_type: str = "", local_mode: bool = False) -> Any:
     path = resolve_path(filename, local_mode)
     logger.info("Reading file %s", path)
@@ -113,9 +141,12 @@ def read_file(filename: str, as_type: str = "", local_mode: bool = False) -> Any
                 case _:
                     return f.read()
     except FileNotFoundError:
-        logger.exception("File %s not found.", path)
-        # Break it.
-        raise FileNotFoundError(f"Required file {path} not found.")
+        logger.warning("File %s not found on disk. Falling back to package data.", path)
+        try:
+            return _load_package_resource(filename, as_type)
+        except FileNotFoundError as exc:
+            logger.exception("Required file %s not found.", path)
+            raise FileNotFoundError(f"Required file {path} not found.") from exc
 
 
 def _read_test_placeholder(path: Path, as_type: str) -> Any:
@@ -198,13 +229,28 @@ def main(
     down_mbps_factor: float = 0.1,
     **kwargs: Any,
 ) -> None:
+    inbounds_template = str(kwargs.get("inbounds_template") or "server.template.json")
+    outbounds_template = str(kwargs.get("outbounds_template") or "client.template.json")
+    users_template = str(
+        kwargs.get("users_template")
+        or kwargs.get("uses_template")
+        or "users.yaml"
+    )
+    inbounds_output = str(kwargs.get("inbounds_output") or "inbounds.jsonc")
+    outbounds_output = str(kwargs.get("outbounds_output") or "outbounds.jsonc")
+    users_output = str(kwargs.get("users_output") or "users.jsonc")
+    certificate_path = str(kwargs.get("certificate_path") or "certs/certificate.crt")
+    ech_config_path = str(kwargs.get("ech_config_path") or "certs/ech.config")
+    private_key_path = str(kwargs.get("private_key_path") or "certs/private.key")
+    public_key_path = str(kwargs.get("public_key_path") or "certs/public.key")
+
     inbounds = read_file(
-        kwargs.get("inbounds_template"),
+        inbounds_template,
         "json",
         local_mode,
     ).get("inbounds", [])
     outbounds = read_file(
-        kwargs.get("outbounds_template"),
+        outbounds_template,
         "json",
         local_mode,
     ).get("outbounds", [])
@@ -215,7 +261,7 @@ def main(
         raise ValueError("The number of inbounds and outbounds mismatch")
 
     users = read_file(
-        kwargs.get("uses_template", "users.yaml"),
+        users_template,
         "yaml",
         local_mode,
     ).get("users", [])
@@ -229,10 +275,10 @@ def main(
         for u in users
     ]
 
-    cert_chain = read_file(kwargs.get("certificate_path"), "lines", local_mode)
-    ech_config = read_file(kwargs.get("ech_config_path"), "lines", local_mode)
-    private_key = read_file(kwargs.get("private_key_path"), local_mode=local_mode)
-    public_key = read_file(kwargs.get("public_key_path"), local_mode=local_mode)
+    cert_chain = read_file(certificate_path, "lines", local_mode)
+    ech_config = read_file(ech_config_path, "lines", local_mode)
+    private_key = read_file(private_key_path, local_mode=local_mode)
+    public_key = read_file(public_key_path, local_mode=local_mode)
 
     # -----------------------------
     # Server-side inbounds
@@ -305,8 +351,8 @@ def main(
     # Write output
     # -----------------------------
 
-    write_file({"inbounds": inbounds}, kwargs.get("inbounds_output"), local_mode)
-    write_file({"outbounds": outbounds}, kwargs.get("outbounds_output"), local_mode)
-    write_file({"users": users}, kwargs.get("users_output"), local_mode)
+    write_file({"inbounds": inbounds}, inbounds_output, local_mode)
+    write_file({"outbounds": outbounds}, outbounds_output, local_mode)
+    write_file({"users": users}, users_output, local_mode)
 
     logger.info("Config generation completed successfully")

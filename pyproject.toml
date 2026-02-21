@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sekai-generator"
+version = "0.1.0"
+description = "CLI generator for sing-box configuration files"
+readme = "generator/README.md"
+requires-python = ">=3.10"
+license = "Unlicense"
+authors = [
+  { name = "Min Min Latt", email = "minminlaxz@gmail.com" }
+]
+
+dependencies = [
+  "typer>=0.12.0",
+  "pyyaml>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/minlaxz/nekohasekai"
+Repository = "https://github.com/minlaxz/nekohasekai"
+Issues = "https://github.com/minlaxz/nekohasekai/issues"
+
+[project.scripts]
+sekai-generator = "generator.app:app"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["generator"]
+exclude = ["tests*", "docs*", "examples*", "generator.data*", "generator.test_data*"]
+
+[tool.setuptools.package-data]
+generator = [
+  "data/*.json",
+  "data/*.jsonc",
+  "data/*.yaml",
+  "test_data/*.json",
+  "test_data/*.jsonc",
+  "test_data/*.yaml",
+]
