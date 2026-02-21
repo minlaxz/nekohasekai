@@ -225,7 +225,8 @@ class Reader(Checker):
         for ob in self.outbounds_data.get("outbounds", []):
             ob = ob.copy()
 
-            ob.setdefault("password", self.psk)
+            if ob.get("password") == "":
+                ob["password"] = self.psk
 
             if not ob.get("uuid"):
                 ob["uuid"] = next(
