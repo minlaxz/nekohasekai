@@ -1,4 +1,4 @@
-name: "Build custom sing-box rules"
+name: "Build custom rules"
 
 on:
   workflow_dispatch:
@@ -6,8 +6,7 @@ on:
     branches:
       - master
     paths:
-      - "rules/my-rules.json"
-      - "rules/my-ip-rules.json"
+      - "rules/*.json"
 
 env:
   SING_BOX_VERSION: "1.12.22"
