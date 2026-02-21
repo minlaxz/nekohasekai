@@ -77,10 +77,10 @@ class Checker:
         if self.route_path.startswith(("https://", "http://")):
             response = httpx.get(self.route_path, timeout=5)
             response.raise_for_status()
-            self.template_data["route"] = response.json()
+            self.template_data["route"] = response.json().get("route", {})
         else:
             with open(self.route_path, "r", encoding="utf-8") as file:
-                self.template_data["route"] = json.load(file)
+                self.template_data["route"] = json.load(file).get("route", {})
 
         if self.outbounds_path.startswith(("https://", "http://")):
             response = httpx.get(self.outbounds_path, timeout=5)
