@@ -194,20 +194,24 @@ class Reader(Checker):
                         server.update({
                             "address": self.dns_resolver,
                             "address_strategy": dns["strategy"],
+                            "detour": self.dns_detour,
                         })
                     else:
                         server.update({
                             "server": self.dns_resolver,
                             "strategy": dns["strategy"],
+                            "detour": self.dns_detour,
                         })
                 case "dns-bypass":
                     if self.version == 11:
                         server.update({
                             "address": self.dns_resolver,
+                            "address_strategy": dns["strategy"],
                         })
                     else:
                         server.update({
                             "server": self.dns_resolver,
+                            "strategy": dns["strategy"],
                         })
                 case _:
                     continue
