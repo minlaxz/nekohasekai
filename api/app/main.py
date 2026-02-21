@@ -59,7 +59,7 @@ if APP_HOST:
     origins.append(APP_HOST)
 else:
     logging.critical("APP_HOST is not set in environment variables!")
-    exit(1)
+    # exit(1)
 
 
 app.add_middleware(

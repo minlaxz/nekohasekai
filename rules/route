@@ -46,10 +46,6 @@
         "method": "drop"
       },
       {
-        "rule_set": "geoip-mm",
-        "outbound": "direct"
-      },
-      {
         "type": "logical",
         "mode": "and",
         "rules": [
