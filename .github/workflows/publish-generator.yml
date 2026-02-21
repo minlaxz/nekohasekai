@@ -48,7 +48,7 @@ jobs:
 
       - name: Publish to PyPI
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.tag != ''
-        uses: pypa/gh-action-pypi-publish@v1.10.0
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
@@ -57,7 +57,7 @@ jobs:
 
       - name: Publish to TestPyPI (manual dispatch only without tag)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag == ''
-        uses: pypa/gh-action-pypi-publish@v1.10.0
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           repository-url: https://test.pypi.org/legacy/
           user: __token__
