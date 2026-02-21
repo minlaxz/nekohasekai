@@ -44,8 +44,10 @@ jobs:
           TAG_SOURCE="${TAG_INPUT:-$TAG_REF}"
           if [[ "$TAG_SOURCE" =~ ^sekai-generator/v([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
             VERSION="${BASH_REMATCH[1]}"
+          elif [[ "$TAG_SOURCE" =~ ^v([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
           else
-            echo "Tag must match sekai-generator/v* (got: $TAG_SOURCE)" >&2
+            echo "Tag must match sekai-generator/v* or v* (got: $TAG_SOURCE)" >&2
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
