@@ -54,10 +54,6 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "version $VERSION derived from $TAG_SOURCE"
 
-      - name: Inject version into pyproject.toml
-        run: >-
-          python -c "import tomlkit, pathlib; p=pathlib.Path('pyproject.toml'); doc=tomlkit.parse(p.read_text()); doc['project']['version']='${{ steps.version.outputs.version }}'; p.write_text(tomlkit.dumps(doc))"
-
       - name: Build distributions
         run: python -m build
 
