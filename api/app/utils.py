@@ -193,25 +193,21 @@ class Reader(Checker):
                     if self.version == 11:
                         server.update({
                             "address": self.dns_resolver,
-                            "address_strategy": dns["strategy"],
                             "detour": self.dns_detour,
                         })
                     else:
                         server.update({
                             "server": self.dns_resolver,
-                            "strategy": dns["strategy"],
                             "detour": self.dns_detour,
                         })
                 case "dns-bypass":
                     if self.version == 11:
                         server.update({
                             "address": self.dns_resolver,
-                            "address_strategy": dns["strategy"],
                         })
                     else:
                         server.update({
                             "server": self.dns_resolver,
-                            "strategy": dns["strategy"],
                         })
                 case _:
                     continue
@@ -220,18 +216,49 @@ class Reader(Checker):
 
     def _inject_routes(self) -> None:
         route = self.template_data.get("route", {})
-        rule_sets = route.get("rule_set", [])
         rules = route.get("rules", [])
 
-        for rs in rule_sets:
-            rs["download_detour"] = self.route_detour
+        owner = "minlaxz"
+        repo = "nekohasekai"
+        branch = "route-rules"
+
+        api_url = f"https://api.github.com/repos/{owner}/{repo}/contents?ref={branch}"
+        response = httpx.get(api_url, timeout=HTTP_TIMEOUT)
+        response.raise_for_status()
+
+        files = response.json()
+
+        rule_sets: List[Any] = []
+        geoip_rule_sets: List[Any] = []
+        geosite_rule_sets: List[Any] = []
+
+        for file in files:
+            if file["name"].endswith(".srs"):
+                tag = file["name"].replace(".srs", "")
+
+                rule_sets.append({
+                    "tag": tag,
+                    "type": "remote",
+                    "format": "binary",
+                    "url": f"https://cdn.jsdelivr.net/gh/{owner}/{repo}@{branch}/{file['name']}",
+                    "download_detour": self.route_detour,
+                    "update_interval": "1d",
+                })
+
+                geoip_rule_sets.append(
+                    tag
+                ) if "-ip-" in tag else geosite_rule_sets.append(tag)
+
+        route["rule_set"] = rule_sets
 
         if self.version >= 12 and self.experimental:
             route["default_domain_resolver"] = "dns-bypass"
 
         if len(rules) > 4:
             rules[2]["outbound"] = APP_IP_OUT_NAME
+            rules[2]["rule_set"] = geoip_rule_sets
             rules[4]["outbound"] = APP_OUT_NAME
+            rules[4]["rule_set"] = geosite_rule_sets
 
     # ------------------------------------------------------------------
 

@@ -1,23 +1,6 @@
 {
   "route": {
-    "rule_set": [
-      {
-        "tag": "geoip-myrules",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-ip-rules.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      },
-      {
-        "tag": "geosite-myrules",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-rules.srs",
-        "download_detour": "",
-        "update_interval": "1d"
-      }
-    ],
+    "rule_set": [],
     "rules": [
       {
         "port": 53,
@@ -53,9 +36,7 @@
             "clash_mode": "Auto"
           },
           {
-            "rule_set": [
-              "geoip-myrules"
-            ]
+            "rule_set": []
           }
         ],
         "outbound": ""
@@ -72,9 +53,7 @@
             "clash_mode": "Auto"
           },
           {
-            "rule_set": [
-              "geosite-myrules"
-            ]
+            "rule_set": []
           }
         ],
         "outbound": ""

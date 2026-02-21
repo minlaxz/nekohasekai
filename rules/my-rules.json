@@ -41,7 +41,8 @@
         ".slack.com",
         ".brave.com",
         ".bsky.network",
-        ".bsky.app"
+        ".bsky.app",
+        ".api.github.com"
       ]
     },
     {
@@ -84,7 +85,8 @@
         "slack.com",
         "brave.com",
         "bsky.network",
-        "bsky.app"
+        "bsky.app",
+        "api.github.com"
       ]
     }
   ]

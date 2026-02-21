@@ -26,10 +26,14 @@ jobs:
         run: |
           curl -Lo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz
           tar -xz -C /tmp -f sing-box.tar.gz --strip-components=1
-          /tmp/sing-box rule-set compile rules/my-rules.json -o ./rules/route-rules/my-rules.srs
-          /tmp/sing-box rule-set compile rules/my-ip-rules.json -o ./rules/route-rules/my-ip-rules.srs
-          cp rules/my-rules.json ./rules/route-rules/my-rules.json
-          cp rules/my-ip-rules.json ./rules/route-rules/my-ip-rules.json
+
+          mkdir -p rules/route-rules
+
+          for file in rules/*-rules.json; do
+            name=$(basename "$file" .json)
+            /tmp/sing-box rule-set compile "$file" -o "rules/route-rules/${name}.srs"
+            cp "$file" "rules/route-rules/${name}.json"
+          done
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
