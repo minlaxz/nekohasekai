@@ -251,14 +251,20 @@ class Reader(Checker):
 
         route["rule_set"] = rule_sets
 
-        if self.version >= 12 and self.experimental:
-            route["default_domain_resolver"] = "dns-bypass"
+        if self.version >= 11:
+            # * Skip NextDNS when using experimental features
+            route["default_domain_resolver"] = (
+                "dns-bypass" if self.experimental else "dns-remote"
+            )
 
-        if len(rules) > 4:
-            rules[2]["outbound"] = APP_IP_OUT_NAME
-            rules[2]["rules"][1]["rule_set"] = geoip_rule_sets
-            rules[4]["outbound"] = APP_OUT_NAME
-            rules[4]["rules"][1]["rule_set"] = geosite_rule_sets
+            if self.platform == "a":
+                route["override_android_vpn"] = True
+
+        # *This is a bit hacky, but this is it.
+        rules[2]["outbound"] = APP_IP_OUT_NAME
+        rules[2]["rules"][1]["rule_set"] = geoip_rule_sets
+        rules[4]["outbound"] = APP_OUT_NAME
+        rules[4]["rules"][1]["rule_set"] = geosite_rule_sets
 
     # ------------------------------------------------------------------
 
