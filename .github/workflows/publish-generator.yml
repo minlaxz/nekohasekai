@@ -66,6 +66,7 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
+          verbose: true
 
       - name: Publish to TestPyPI (manual dispatch only without tag)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag == ''
@@ -75,3 +76,4 @@ jobs:
           user: __token__
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           skip-existing: true
+          verbose: true
