@@ -173,31 +173,44 @@ class Reader(Checker):
 
         for server in servers:
             tag = server.get("tag")
-
-            if tag == "dns-remote":
-                if self.version == 11:
-                    server.update({
-                        "address": f"https://{self.dns_host}{dns_path}",
-                        "address_strategy": dns["strategy"],
-                    })
-                else:
-                    server.update({
-                        "server": self.dns_host,
-                        "path": dns_path,
-                        "domain_resolver": {
-                            "server": "dns-resolver",
+            match tag:
+                case "dns-remote":
+                    if self.version == 11:
+                        server.update({
+                            "address": f"https://{self.dns_host}{dns_path}",
+                            "address_strategy": dns["strategy"],
+                        })
+                    else:
+                        server.update({
+                            "server": self.dns_host,
+                            "path": dns_path,
+                            "domain_resolver": {
+                                "server": "dns-resolver",
+                                "strategy": dns["strategy"],
+                            },
+                        })
+                case "dns-resolver":
+                    if self.version == 11:
+                        server.update({
+                            "address": self.dns_resolver,
+                            "address_strategy": dns["strategy"],
+                        })
+                    else:
+                        server.update({
+                            "server": self.dns_resolver,
                             "strategy": dns["strategy"],
-                        },
-                    })
-
-            elif tag == "dns-resolver":
-                server.update({
-                    "server": self.dns_resolver,
-                    "detour": self.dns_detour or server.get("detour"),
-                })
-
-            elif tag == "dns-bypass":
-                server["server"] = self.dns_resolver
+                        })
+                case "dns-bypass":
+                    if self.version == 11:
+                        server.update({
+                            "address": self.dns_resolver,
+                        })
+                    else:
+                        server.update({
+                            "server": self.dns_resolver,
+                        })
+                case _:
+                    continue
 
     # ------------------------------------------------------------------
 

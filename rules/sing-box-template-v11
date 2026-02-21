@@ -6,7 +6,7 @@
         "tag": "dns-remote",
         "address": "",
         "address_resolver": "dns-resolver",
-        "address_strategy": "prefer_ipv4"
+        "address_strategy": "ipv4_only"
       },
       {
         "tag": "dns-resolver",
