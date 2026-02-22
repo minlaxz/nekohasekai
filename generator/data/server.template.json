@@ -1,4 +1,32 @@
 {
+  "dns": {},
+  "endpoints": [],
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct-out"
+    }
+  ],
+  "route": {
+    "final": "direct-out",
+    "auto_detect_interface": true
+  },
+  "services": [
+    {
+      "type": "ssm-api",
+      "tag": "ssm-api",
+      "listen": "127.0.0.1",
+      "listen_port": 9999,
+      "cache_path": "./cache/ssm-cache.json",
+      "servers": {
+        "/": "shadowsocks"
+      }
+    }
+  ],
   "inbounds": [
     {
       "type": "shadowsocks",

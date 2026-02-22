@@ -233,11 +233,11 @@ def main(
     ech_key_path: str = "",
     r_private_key_path: str = "",
     r_public_key_path: str = "",
+    inbounds_template: str = "",
+    outbounds_template: str = "",
+    users_template: str = "",
     **kwargs: Any,
 ) -> None:
-    inbounds_template = kwargs.get("inbounds_template", "")
-    outbounds_template = kwargs.get("outbounds_template", "")
-    users_template = kwargs.get("users_template", "")
 
     inbounds_output = kwargs.get("inbounds_output")
     outbounds_output = kwargs.get("outbounds_output")
