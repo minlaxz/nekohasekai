@@ -227,22 +227,21 @@ def main(
     down_mbps: int = 300,
     up_mbps_factor: float = 0.1,
     down_mbps_factor: float = 0.1,
+    certificate_path: str = "",
+    private_key_path: str = "",
+    ech_config_path: str = "",
+    ech_key_path: str = "",
+    r_private_key_path: str = "",
+    r_public_key_path: str = "",
     **kwargs: Any,
 ) -> None:
-    inbounds_template = str(kwargs.get("inbounds_template") or "server.template.json")
-    outbounds_template = str(kwargs.get("outbounds_template") or "client.template.json")
-    users_template = str(
-        kwargs.get("users_template")
-        or kwargs.get("uses_template")
-        or "users.yaml"
-    )
-    inbounds_output = str(kwargs.get("inbounds_output") or "inbounds.jsonc")
-    outbounds_output = str(kwargs.get("outbounds_output") or "outbounds.jsonc")
-    users_output = str(kwargs.get("users_output") or "users.jsonc")
-    certificate_path = str(kwargs.get("certificate_path") or "certs/certificate.crt")
-    ech_config_path = str(kwargs.get("ech_config_path") or "certs/ech.config")
-    private_key_path = str(kwargs.get("private_key_path") or "certs/private.key")
-    public_key_path = str(kwargs.get("public_key_path") or "certs/public.key")
+    inbounds_template = kwargs.get("inbounds_template", "")
+    outbounds_template = kwargs.get("outbounds_template", "")
+    users_template = kwargs.get("users_template", "")
+
+    inbounds_output = kwargs.get("inbounds_output")
+    outbounds_output = kwargs.get("outbounds_output")
+    users_output = kwargs.get("users_output")
 
     inbounds = read_file(
         inbounds_template,
@@ -277,8 +276,8 @@ def main(
 
     cert_chain = read_file(certificate_path, "lines", local_mode)
     ech_config = read_file(ech_config_path, "lines", local_mode)
-    private_key = read_file(private_key_path, local_mode=local_mode)
-    public_key = read_file(public_key_path, local_mode=local_mode)
+    r_private_key = read_file(r_private_key_path, local_mode=local_mode)
+    r_public_key = read_file(r_public_key_path, local_mode=local_mode)
 
     # -----------------------------
     # Server-side inbounds
@@ -302,7 +301,7 @@ def main(
         update_tls_server_name(inbound, tls_server_name)
 
         if inbound.get("tls", {}).get("reality", {}).get("private_key") == "":
-            inbound["tls"]["reality"]["private_key"] = private_key
+            inbound["tls"]["reality"]["private_key"] = r_private_key
 
         if inbound.get("obfs", {}).get("password") == "":
             inbound["obfs"]["password"] = obfs_password
@@ -331,7 +330,7 @@ def main(
             outbound["tls"]["certificate"] = cert_chain
 
         if outbound.get("tls", {}).get("reality", {}).get("public_key") == "":
-            outbound["tls"]["reality"]["public_key"] = public_key
+            outbound["tls"]["reality"]["public_key"] = r_public_key
 
         if outbound.get("tls", {}).get("ech", {}).get("config") == []:
             outbound["tls"]["ech"]["config"] = ech_config

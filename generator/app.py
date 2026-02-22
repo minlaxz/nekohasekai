@@ -1,6 +1,5 @@
 import logging
 import typer
-import os
 
 try:
     from .core import main
@@ -57,6 +56,36 @@ def generate(
         "--down-mbps-factor",
         help="Factor to adjust download speed in generated configurations",
     ),
+    cert_path: str = typer.Option(
+        "certs/certificate.crt",
+        "--cert-path",
+        help="Path to certificate file",
+    ),
+    private_key_path: str = typer.Option(
+        "certs/private.key",
+        "--private-key-path",
+        help="Path to private key file",
+    ),
+    ech_config_path: str = typer.Option(
+        "certs/ech.config",
+        "--ech-config-path",
+        help="Path to ech config file",
+    ),
+    ech_key_path: str = typer.Option(
+        "certs/ech.key",
+        "--ech-key-path",
+        help="Path to ech key file",
+    ),
+    r_private_key_path: str = typer.Option(
+        "certs/reality_private.key",
+        "--r-private-key-path",
+        help="Path to reality private key file",
+    ),
+    r_public_key_path: str = typer.Option(
+        "certs/reality_public.key",
+        "--r-public-key-path",
+        help="Path to reality public key file",
+    ),
 ):
     """
     Generate sing-box configuration files.
@@ -73,16 +102,18 @@ def generate(
         down_mbps=down_mbps,
         up_mbps_factor=up_mbps_factor,
         down_mbps_factor=down_mbps_factor,
+        certificate_path=cert_path,
+        private_key_path=private_key_path,
+        ech_config_path=ech_config_path,
+        ech_key_path=ech_key_path,
+        r_private_key_path=r_private_key_path,
+        r_public_key_path=r_public_key_path,
         inbounds_template="server.template.json",
         outbounds_template="client.template.json",
         users_template="users.yaml",
         inbounds_output="inbounds.jsonc",
         outbounds_output="outbounds.jsonc",
         users_output="users.jsonc",
-        certificate_path="certs/certificate.crt",
-        ech_config_path="certs/ech.config",
-        private_key_path="certs/private.key",
-        public_key_path="certs/public.key",
     )
     typer.echo("Generation completed.")
 

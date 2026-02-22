@@ -50,7 +50,7 @@ export ECH_DOMAIN=google.com
 Then generate self-signed certificate and private key:
 
 ```sh
-mkdir -p certs && \
+mkdir -p data/certs && \
 openssl ecparam -genkey -name prime256v1 -out data/certs/private.key && \
 openssl req -new -x509 -days 36500 -key data/certs/private.key -out data/certs/certificate.crt \
 -subj "/CN=${TLS_SERVER_NAME}" \
@@ -95,13 +95,13 @@ echo "Generated UUID: $UUID"
 Install dependencies:
 
 ```sh
-python3 -m pip install -r requirements.txt
+python3 -m pip install sekai-generator
 ```
 
 Run generator:
 
 ```sh
-python3 app.py \
+sekai-generator \
     --start-port 8820 \
     --tls-server-name $TLS_SERVER_NAME \
     --obfs_password "your_obfs_password"
