@@ -1,10 +1,10 @@
-name: "Build Sing-box rules from OONI"
+name: "Collect OONI MM rules"
 
 on:
   workflow_dispatch:
-  schedule:
+  # schedule:
     # Run every day at 6 past 23 UTC
-    - cron: "6 23 * * *"
+    # - cron: "6 23 * * *"
 
 # env:
 #   oonimm-output: ooni/oonimm.lst

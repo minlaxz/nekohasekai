@@ -1,4 +1,4 @@
-name: "Build custom rules"
+name: "Collect custom rules"
 
 on:
   workflow_dispatch:

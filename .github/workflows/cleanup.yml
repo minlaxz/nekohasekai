@@ -6,7 +6,7 @@ on:
     - cron: "6 9 * * *"
   workflow_dispatch:
   workflow_run:
-    workflows: ["Build Sing-box API Image", "Build Sing-box Server Image"]
+    workflows: ["Collect custom rules", "Collect OONI MM rules", "Build Sing-box API Image", "Publish sekai-generator to PyPI"]
     types:
       - completed
 
