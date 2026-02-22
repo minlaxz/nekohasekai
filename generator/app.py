@@ -58,7 +58,7 @@ def generate(
     ),
     cert_path: str = typer.Option(
         "certs/certificate.crt",
-        "--cert-path",
+        "--certificate-path",
         help="Path to certificate file",
     ),
     private_key_path: str = typer.Option(
@@ -86,21 +86,6 @@ def generate(
         "--r-public-key-path",
         help="Path to reality public key file",
     ),
-    inbounds_template: str = typer.Option(
-        "server.template.json",
-        "--inbounds-template",
-        help="Path to inbounds template json file",
-    ),
-    outbounds_template: str = typer.Option(
-        "client.template.json",
-        "--outbounds-template",
-        help="Path to outbounds template json file",
-    ),
-    users_template: str = typer.Option(
-        "users.yaml",
-        "--users-template",
-        help="Path to users template yaml file"
-    )
 ):
     """
     Generate sing-box configuration files.
@@ -123,9 +108,9 @@ def generate(
         ech_key_path=ech_key_path,
         r_private_key_path=r_private_key_path,
         r_public_key_path=r_public_key_path,
-        inbounds_template=inbounds_template,
-        outbounds_template=outbounds_template,
-        users_template=users_template,
+        inbounds_template="server-template.json",
+        outbounds_template="client-template.json",
+        users_template="users.yaml",
         inbounds_output="inbounds.jsonc",
         outbounds_output="outbounds.jsonc",
         users_output="users.jsonc",

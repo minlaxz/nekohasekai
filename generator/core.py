@@ -141,7 +141,8 @@ def read_file(filename: str, as_type: str = "", local_mode: bool = False) -> Any
                 case _:
                     return f.read()
     except FileNotFoundError:
-        logger.warning("File %s not found on disk. Falling back to package data.", path)
+        logger.warning("File %s not found on disk 🔎.", path)
+        logger.info("Falling back to package data as default. 👍🏼")
         try:
             return _load_package_resource(filename, as_type)
         except FileNotFoundError as exc:
