@@ -69,11 +69,11 @@
           "h3"
         ],
         "min_version": "1.3",
-        "key_path": "./certs/private.key",
-        "certificate_path": "./certs/certificate.crt",
+        "key_path": "",
+        "certificate_path": "",
         "ech": {
           "enabled": true,
-          "key_path": "./certs/ech.key"
+          "key_path": ""
         }
       },
       "multiplex": {
@@ -102,11 +102,11 @@
           "h3"
         ],
         "min_version": "1.3",
-        "key_path": "./certs/private.key",
-        "certificate_path": "./certs/certificate.crt",
+        "key_path": "",
+        "certificate_path": "",
         "ech": {
           "enabled": true,
-          "key_path": "./certs/ech.key"
+          "key_path": ""
         }
       },
       "masquerade": {},
@@ -130,11 +130,11 @@
           "h3"
         ],
         "min_version": "1.3",
-        "key_path": "./certs/private.key",
-        "certificate_path": "./certs/certificate.crt",
+        "key_path": "",
+        "certificate_path": "",
         "ech": {
           "enabled": true,
-          "key_path": "./certs/ech.key"
+          "key_path": ""
         }
       }
     },

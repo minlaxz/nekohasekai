@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import yaml
 import json
 import logging
 import os
@@ -10,8 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List
 
 import importlib.resources as resources
-
-import yaml
+from helpers import resolve_path, is_file_exists
 
 # -----------------------------------------------------------------------------
 # Logging
@@ -32,8 +32,6 @@ logger = logging.getLogger(__name__)
 # Constants
 # -----------------------------------------------------------------------------
 
-BASE_DIR = Path("./data")
-TEST_DIR = Path("./test_data")
 PACKAGE_DIR = Path(__file__).resolve().parent
 IPIFY_URL = "https://api.ipify.org"
 
@@ -53,11 +51,6 @@ def log_function(func: Callable[..., Any]) -> Callable[..., Any]:
         return result
 
     return wrapper
-
-
-def resolve_path(filename: str, local_mode: bool) -> Path:
-    base = TEST_DIR if local_mode else BASE_DIR
-    return base / filename
 
 
 @log_function
@@ -101,7 +94,6 @@ def _load_package_resource(filename: str, as_type: str) -> Any:
     candidates = [
         resources.files(__package__).joinpath(filename),
         resources.files(__package__).joinpath("data").joinpath(filename),
-        resources.files(__package__).joinpath("test_data").joinpath(filename),
     ]
 
     for candidate in candidates:
@@ -126,9 +118,6 @@ def read_file(filename: str, as_type: str = "", local_mode: bool = False) -> Any
     path = resolve_path(filename, local_mode)
     logger.info("Reading file %s", path)
 
-    if local_mode:
-        return _read_test_placeholder(path, as_type)
-
     try:
         with path.open("r", encoding="utf-8") as f:
             match as_type:
@@ -142,30 +131,12 @@ def read_file(filename: str, as_type: str = "", local_mode: bool = False) -> Any
                     return f.read()
     except FileNotFoundError:
         logger.warning("File %s not found on disk 🔎.", path)
-        logger.info("Falling back to package data as default. 👍🏼")
+        logger.info("Falling back to package data as default. 👍")
         try:
             return _load_package_resource(filename, as_type)
         except FileNotFoundError as exc:
             logger.exception("Required file %s not found.", path)
             raise FileNotFoundError(f"Required file {path} not found.") from exc
-
-
-def _read_test_placeholder(path: Path, as_type: str) -> Any:
-    if not path.exists():
-        if as_type == "lines":
-            return ["...", "...", "..."]
-        return "test-mode-placeholder"
-
-    with path.open("r", encoding="utf-8") as data:
-        match as_type:
-            case "json":
-                return json.load(data)
-            case "yaml":
-                return yaml.safe_load(data)
-            case "lines":
-                return [line.rstrip("\n") for line in data]
-            case _:
-                return data.read()
 
 
 @log_function
@@ -213,6 +184,21 @@ def update_tls_server_name(obj: Dict[str, Any], server_name: str) -> None:
         obj["handshake"]["server"] = server_name
 
 
+def update_certificate_paths(
+    obj: Dict[str, Any],
+    certificate_path: str,
+    private_key_path: str,
+    ech_key_path: str,
+) -> None:
+    if obj.get("tls", {}).get("key_path") == "":
+        obj["tls"]["key_path"] = private_key_path
+    if obj.get("tls", {}).get("certificate_path") == "":
+        obj["tls"]["certificate_path"] = certificate_path
+
+    if obj.get("tls", {}).get("ech", {}).get("key_path") == "":
+        obj["tls"]["ech"]["key_path"] = ech_key_path
+
+
 # -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
@@ -228,17 +214,39 @@ def main(
     down_mbps: int = 300,
     up_mbps_factor: float = 0.1,
     down_mbps_factor: float = 0.1,
-    certificate_path: str = "",
-    private_key_path: str = "",
-    ech_config_path: str = "",
-    ech_key_path: str = "",
-    r_private_key_path: str = "",
-    r_public_key_path: str = "",
+    certs_dir: str = "",
     inbounds_template: str = "",
     outbounds_template: str = "",
     users_template: str = "",
     **kwargs: Any,
 ) -> None:
+    certificate_path = f"{certs_dir}/certificate.crt"
+    private_key_path = f"{certs_dir}/private.key"
+    ech_config_path = f"{certs_dir}/ech.config"
+    ech_key_path = f"{certs_dir}/ech.key"
+    r_private_key_path = f"{certs_dir}/reality_private.key"
+    r_public_key_path = f"{certs_dir}/reality_public.key"
+
+    for path in [
+        certificate_path,
+        private_key_path,
+        ech_config_path,
+        ech_key_path,
+        r_private_key_path,
+        r_public_key_path,
+    ]:
+        if not is_file_exists(path, local_mode):
+            logger.critical(
+                "Required file %s not found. Please run 'init' command first.", path
+            )
+            raise FileNotFoundError(
+                f"Required file {path} not found. Please run 'init' command first."
+            )
+
+    cert_chain = read_file(certificate_path, "lines", local_mode)
+    ech_config = read_file(ech_config_path, "lines", local_mode)
+    r_private_key = read_file(r_private_key_path, local_mode=local_mode)
+    r_public_key = read_file(r_public_key_path, local_mode=local_mode)
 
     inbounds_output = kwargs.get("inbounds_output")
     outbounds_output = kwargs.get("outbounds_output")
@@ -275,11 +283,6 @@ def main(
         for u in users
     ]
 
-    cert_chain = read_file(certificate_path, "lines", local_mode)
-    ech_config = read_file(ech_config_path, "lines", local_mode)
-    r_private_key = read_file(r_private_key_path, local_mode=local_mode)
-    r_public_key = read_file(r_public_key_path, local_mode=local_mode)
-
     # -----------------------------
     # Server-side inbounds
     # -----------------------------
@@ -300,6 +303,9 @@ def main(
                         inbound["users"] = users_with_password
 
         update_tls_server_name(inbound, tls_server_name)
+        update_certificate_paths(
+            inbound, certificate_path, private_key_path, ech_key_path
+        )
 
         if inbound.get("tls", {}).get("reality", {}).get("private_key") == "":
             inbound["tls"]["reality"]["private_key"] = r_private_key

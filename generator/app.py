@@ -6,7 +6,26 @@ try:
 except ImportError:
     from core import main
 
-app = typer.Typer(help="Sing-box config generator")
+app = typer.Typer(
+    help="Sing-box config generator",
+    invoke_without_command=True,
+)
+
+
+@app.callback()
+def main_callback(ctx: typer.Context):
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+
+
+@app.command()
+def init() -> None:
+    """
+    Download sing-box binary and create template files if they don't exist.
+    """
+    typer.echo("Initialization Started")
+    typer.echo("Downloading sing-box binary...")
 
 
 @app.command()
@@ -56,35 +75,10 @@ def generate(
         "--down-mbps-factor",
         help="Factor to adjust download speed in generated configurations",
     ),
-    cert_path: str = typer.Option(
-        "certs/certificate.crt",
-        "--certificate-path",
-        help="Path to certificate file",
-    ),
-    private_key_path: str = typer.Option(
-        "certs/private.key",
-        "--private-key-path",
-        help="Path to private key file",
-    ),
-    ech_config_path: str = typer.Option(
-        "certs/ech.config",
-        "--ech-config-path",
-        help="Path to ech config file",
-    ),
-    ech_key_path: str = typer.Option(
-        "certs/ech.key",
-        "--ech-key-path",
-        help="Path to ech key file",
-    ),
-    r_private_key_path: str = typer.Option(
-        "certs/reality_private.key",
-        "--r-private-key-path",
-        help="Path to reality private key file",
-    ),
-    r_public_key_path: str = typer.Option(
-        "certs/reality_public.key",
-        "--r-public-key-path",
-        help="Path to reality public key file",
+    certs_dir: str = typer.Option(
+        "certs",
+        "--certs-dir",
+        help="Directory to store generated certificates and keys",
     ),
 ):
     """
@@ -102,14 +96,9 @@ def generate(
         down_mbps=down_mbps,
         up_mbps_factor=up_mbps_factor,
         down_mbps_factor=down_mbps_factor,
-        certificate_path=cert_path,
-        private_key_path=private_key_path,
-        ech_config_path=ech_config_path,
-        ech_key_path=ech_key_path,
-        r_private_key_path=r_private_key_path,
-        r_public_key_path=r_public_key_path,
-        inbounds_template="server-template.json",
-        outbounds_template="client-template.json",
+        certs_dir=certs_dir,
+        inbounds_template="server.template.json",
+        outbounds_template="client.template.json",
         users_template="users.yaml",
         inbounds_output="inbounds.jsonc",
         outbounds_output="outbounds.jsonc",
