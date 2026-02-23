@@ -17,11 +17,11 @@ fi
 mkdir -p "$HOME/.sekai-generator"
 
 SING_BOX_URL="https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-${SING_BOX_ARCH}.tar.gz"
-SING_BOX_PATH="$HOME/.sekai-generator/sing-box"
+SING_BOX_PATH="$HOME/.sekai-generator"
 
 curl -sL -o /tmp/sing-box.tar.gz "$SING_BOX_URL"
-tar -xzf /tmp/sing-box.tar.gz --strip-components=1
-rm /tmp/sing-box.tar.gz LICENSE && mv sing-box $SING_BOX_PATH
+tar -xzf /tmp/sing-box.tar.gz --strip-components=1 -C "$SING_BOX_PATH"
+rm /tmp/sing-box.tar.gz
 # Optional
 chmod +x $SING_BOX_PATH
 
