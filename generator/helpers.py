@@ -28,6 +28,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def error_handler(eobj: Exception, extra_message: str = "") -> None:
+    logger.error(f"Error: {eobj}")
+    if extra_message:
+        logger.error(extra_message)
+    raise typer.Exit(code=1)
+
+
 def run_bash(filename: str, argument: str, local_mode: bool = False) -> None:
     """
     Runs a bash script with a given argument.
@@ -42,19 +49,19 @@ def run_bash(filename: str, argument: str, local_mode: bool = False) -> None:
     try:
         # Run the script using subprocess.run
         # We pass the command and its argument as a list
-        result = subprocess.run(
+        _ = subprocess.run(
             [script_path, argument],
             check=True,
         )
-        logger.info(f"Bash script output:\n{result.stdout}")
+        # logger.info(f"Bash script output:\n{result.stdout}")
         typer.echo(f"{filename} executed successfully.")
 
     except subprocess.CalledProcessError as e:
-        logger.error(f"Error executing bash script: {e}")
+        # logger.error(f"Error executing bash script: {e}")
         typer.echo(f"Error executing {filename}: {e}", err=True)
         raise typer.Exit(code=1)
     except FileNotFoundError:
-        logger.error(f"Error: The script file was not found at {script_path}")
+        # logger.error(f"Error: The script file was not found at {script_path}")
         typer.echo(f"Error: The script file was not found at {script_path}", err=True)
         typer.echo(
             "Please make sure the script exists and has executable permissions (chmod +x).",

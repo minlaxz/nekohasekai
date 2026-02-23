@@ -7,9 +7,9 @@ except ImportError:
     from core import main
 
 try:
-    from .helpers import run_bash, logger
+    from .helpers import run_bash, logger, error_handler
 except ImportError:
-    from helpers import run_bash, logger
+    from helpers import run_bash, logger, error_handler
 
 
 app = typer.Typer(
@@ -32,11 +32,75 @@ def init(
         "--local",
         help="Run in local/test mode (no ./data/ writes and read package resources)",
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Enable debug logging",
+    ),
+    download: bool = typer.Option(
+        False,
+        "--download/--no-download",
+        help="Whether to download the sing-box binary",
+    ),
+    generate_certs: bool = typer.Option(
+        False,
+        "--generate-certs/--no-generate-certs",
+        help="Whether to generate TLS certificates and keys",
+    ),
+    tls_server_name: str = typer.Option(
+        "",
+        "--tls-server-name",
+        help="Server name for TLS configurations, skip if empty",
+    ),
+    ech_server_name: str = typer.Option(
+        "",
+        "--ech-server-name",
+        help="Server name for ECH configurations, skip if empty",
+    ),
 ) -> None:
     """
     Download sing-box binary and create template files if they don't exist.
     """
-    run_bash("download-sing-box.sh", "", local_mode=local)
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
+
+    typer.echo("Initialization Started")
+
+    try:
+        if download:
+            run_bash("download-sing-box.sh", "", local_mode=local)
+
+        if generate_certs:
+            if not tls_server_name:
+                raise ValueError(
+                    "--tls-server-name must be provided when --generate-certs is enabled."
+                )
+            if not ech_server_name:
+                raise ValueError(
+                    "--ech-server-name must be provided when --generate-certs is enabled."
+                )
+
+            run_bash(
+                "generate-tls-keypair.sh",
+                f"{tls_server_name}",
+                local_mode=local,
+            )
+
+            run_bash(
+                "generate-ech-keypair.sh",
+                f"{ech_server_name}",
+                local_mode=local,
+            )
+
+            run_bash(
+                "generate-reality-keypair.sh",
+                "",
+                local_mode=local,
+            )
+
+    except ValueError as e:
+        error_handler(e, "In local mode, ensure that --local flag is also set.")
+
+    typer.echo("Initialization completed.")
 
 
 @app.command()
@@ -95,7 +159,7 @@ def generate(
     """
     Generate sing-box configuration files.
     """
-    logger.setLevel(logging.DEBUG if (debug or local) else logging.INFO)
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
     typer.echo("Config generation Started")
     main(
