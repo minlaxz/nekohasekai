@@ -1,5 +1,5 @@
-import logging
 import typer
+import logging
 
 try:
     from .core import main
@@ -7,9 +7,10 @@ except ImportError:
     from core import main
 
 try:
-    from .helpers import run_bash
+    from .helpers import run_bash, logger
 except ImportError:
-    from helpers import run_bash
+    from helpers import run_bash, logger
+
 
 app = typer.Typer(
     help="Sing-box config generator",
@@ -94,7 +95,7 @@ def generate(
     """
     Generate sing-box configuration files.
     """
-    logging.getLogger().setLevel(logging.DEBUG if (debug or local) else logging.INFO)
+    logger.setLevel(logging.DEBUG if (debug or local) else logging.INFO)
 
     typer.echo("Config generation Started")
     main(

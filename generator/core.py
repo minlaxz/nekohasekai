@@ -2,34 +2,18 @@ from __future__ import annotations
 
 import yaml
 import json
-import logging
 import os
 import subprocess
-import sys
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
 import importlib.resources as resources
+
 try:
-    from .helpers import resolve_path, is_file_exists
+    from .helpers import resolve_path, is_file_exists, logger
 except ImportError:
-    from helpers import resolve_path, is_file_exists
-
-# -----------------------------------------------------------------------------
-# Logging
-# -----------------------------------------------------------------------------
-
-LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-
-logging.basicConfig(
-    level=logging.INFO,
-    format=LOG_FORMAT,
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-
-logger = logging.getLogger(__name__)
+    from helpers import resolve_path, is_file_exists, logger
 
 # -----------------------------------------------------------------------------
 # Constants

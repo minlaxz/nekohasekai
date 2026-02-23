@@ -1,4 +1,6 @@
 from typing import Dict, Tuple
+import logging
+import sys
 import subprocess
 from pathlib import Path
 import base64
@@ -9,6 +11,21 @@ import importlib.resources as resources
 
 BASE_DIR = Path("./data")
 TEST_DIR = Path("./test_data")
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format=LOG_FORMAT,
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+
+logger = logging.getLogger(__name__)
 
 
 def run_bash(filename: str, argument: str, local_mode: bool = False) -> None:
@@ -29,14 +46,15 @@ def run_bash(filename: str, argument: str, local_mode: bool = False) -> None:
             [script_path, argument],
             check=True,
         )
-        typer.echo(f"Bash script output:\n{result.stdout}")
-        typer.echo("Bash script executed successfully.")
+        logger.info(f"Bash script output:\n{result.stdout}")
+        typer.echo(f"{filename} executed successfully.")
 
     except subprocess.CalledProcessError as e:
-        typer.echo(f"Error executing bash script: {e}", err=True)
-        # Exit with a non-zero code to indicate failure in the CLI
+        logger.error(f"Error executing bash script: {e}")
+        typer.echo(f"Error executing {filename}: {e}", err=True)
         raise typer.Exit(code=1)
     except FileNotFoundError:
+        logger.error(f"Error: The script file was not found at {script_path}")
         typer.echo(f"Error: The script file was not found at {script_path}", err=True)
         typer.echo(
             "Please make sure the script exists and has executable permissions (chmod +x).",
