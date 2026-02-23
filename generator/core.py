@@ -11,7 +11,10 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List
 
 import importlib.resources as resources
-from helpers import resolve_path, is_file_exists
+try:
+    from .helpers import resolve_path, is_file_exists
+except ImportError:
+    from helpers import resolve_path, is_file_exists
 
 # -----------------------------------------------------------------------------
 # Logging
