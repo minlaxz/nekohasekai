@@ -39,7 +39,8 @@ exclude = ["tests*", "docs*", "examples*"]
 generator = [
   "data/*.json",
   "data/*.jsonc",
-  "data/*.yaml"
+  "data/*.yaml",
+  "scripts/*.sh"
 ]
 
 [tool.setuptools.exclude-package-data]

@@ -6,6 +6,11 @@ try:
 except ImportError:
     from core import main
 
+try:
+    from .helpers import run_bash
+except ImportError:
+    from helpers import run_bash
+
 app = typer.Typer(
     help="Sing-box config generator",
     invoke_without_command=True,
@@ -20,12 +25,17 @@ def main_callback(ctx: typer.Context):
 
 
 @app.command()
-def init() -> None:
+def init(
+    local: bool = typer.Option(
+        False,
+        "--local",
+        help="Run in local/test mode (no ./data/ writes and read package resources)",
+    ),
+) -> None:
     """
     Download sing-box binary and create template files if they don't exist.
     """
-    typer.echo("Initialization Started")
-    typer.echo("Downloading sing-box binary...")
+    run_bash("download-sing-box.sh", "", local_mode=local)
 
 
 @app.command()

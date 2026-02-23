@@ -4,9 +4,45 @@ from pathlib import Path
 import base64
 from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives import serialization
+import typer
+import importlib.resources as resources
 
 BASE_DIR = Path("./data")
 TEST_DIR = Path("./test_data")
+
+
+def run_bash(filename: str, argument: str, local_mode: bool = False) -> None:
+    """
+    Runs a bash script with a given argument.
+    """
+    if local_mode:
+        script_path = "./scripts/" + filename
+    else:
+        script_path = str(
+            resources.files(__package__).joinpath("scripts").joinpath(filename)
+        )
+
+    try:
+        # Run the script using subprocess.run
+        # We pass the command and its argument as a list
+        result = subprocess.run(
+            [script_path, argument],
+            check=True,
+        )
+        typer.echo(f"Bash script output:\n{result.stdout}")
+        typer.echo("Bash script executed successfully.")
+
+    except subprocess.CalledProcessError as e:
+        typer.echo(f"Error executing bash script: {e}", err=True)
+        # Exit with a non-zero code to indicate failure in the CLI
+        raise typer.Exit(code=1)
+    except FileNotFoundError:
+        typer.echo(f"Error: The script file was not found at {script_path}", err=True)
+        typer.echo(
+            "Please make sure the script exists and has executable permissions (chmod +x).",
+            err=True,
+        )
+        raise typer.Exit(code=1)
 
 
 def resolve_path(filename: str, local_mode: bool) -> Path:
