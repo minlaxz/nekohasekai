@@ -17,11 +17,7 @@ fi
 SING_BOX_URL="https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-${SING_BOX_ARCH}.tar.gz"
 
 curl -sL -o /tmp/sing-box.tar.gz "$SING_BOX_URL"
-# tar -xzf /tmp/sing-box.tar.gz -C /usr/local/bin --strip-components=1
-# chmod +x /usr/local/bin/sing-box
-tar -xzf /tmp/sing-box.tar.gz --strip-components=1
-mv sing-box-${SING_BOX_VERSION}-linux-${SING_BOX_ARCH}/sing-box-linux-${SING_BOX_ARCH} sing-box
-chmod +x sing-box
-rm /tmp/sing-box.tar.gz
+# tar -xzf /tmp/sing-box.tar.gz -C /usr/local/bin --strip-components=1 && rm /tmp/sing-box.tar.gz LICENSE
+tar -xzf /tmp/sing-box.tar.gz --strip-components=1 && rm /tmp/sing-box.tar.gz LICENSE
 
 echo "Sing-Box version ${SING_BOX_VERSION} has been installed successfully."

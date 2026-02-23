@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sekai_generator"
-version = "1.3.1"
+version = "1.3.2"
 description = "CLI generator for sing-box configuration files"
 readme = "generator/README.md"
 requires-python = ">=3.10"
