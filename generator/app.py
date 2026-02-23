@@ -143,7 +143,7 @@ def generate(
         help="Factor to adjust download speed in generated configurations",
     ),
     certs_dir: str = typer.Option(
-        "certs",
+        "~/.sekai-generator/certs",
         "--certs-dir",
         help="Directory to store generated certificates and keys",
     ),
@@ -167,9 +167,9 @@ def generate(
         inbounds_template="server.template.json",
         outbounds_template="client.template.json",
         users_template="users.yaml",
-        inbounds_output="inbounds.jsonc",
-        outbounds_output="outbounds.jsonc",
-        users_output="users.jsonc",
+        inbounds_output="~/.sekai-generator/configs/inbounds.json",
+        outbounds_output="~/.sekai-generator/public/outbounds.json",
+        users_output="~/.sekai-generator/public/users.json",
     )
     typer.echo("Generation completed.")
 

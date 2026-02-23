@@ -1,0 +1,14 @@
+{
+  "services": [
+    {
+      "type": "ssm-api",
+      "tag": "ssm-api",
+      "listen": "0.0.0.0",
+      "listen_port": 8888,
+      "cache_path": "/sing-box/cache/ssm-cache.json",
+      "servers": {
+        "/": "shadowsocks"
+      }
+    }
+  ]
+}

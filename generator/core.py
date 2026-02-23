@@ -69,8 +69,8 @@ def get_server_ip(local_mode: bool = False) -> str:
 
 
 @log_function
-def write_file(data: Dict[str, Any], filename: str, local_mode: bool = False) -> None:
-    path = resolve_path(filename, local_mode)
+def write_file(data: Dict[str, Any], filename: str, local_mode: bool = False, no_resolve: bool = False) -> None:
+    path = resolve_path(filename, local_mode, no_resolve=no_resolve)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
@@ -344,8 +344,8 @@ def main(
     # Write output
     # -----------------------------
 
-    write_file({"inbounds": inbounds}, inbounds_output, local_mode)
-    write_file({"outbounds": outbounds}, outbounds_output, local_mode)
-    write_file({"users": users}, users_output, local_mode)
+    write_file({"inbounds": inbounds}, inbounds_output, local_mode, no_resolve=True)
+    write_file({"outbounds": outbounds}, outbounds_output, local_mode, no_resolve=True)
+    write_file({"users": users}, users_output, local_mode, no_resolve=True)
 
     logger.info("Config generation completed successfully")
