@@ -69,8 +69,8 @@ def get_server_ip(local_mode: bool = False) -> str:
 
 
 @log_function
-def write_file(data: Dict[str, Any], filename: str, local_mode: bool = False, no_resolve: bool = False) -> None:
-    path = resolve_path(filename, local_mode, no_resolve=no_resolve)
+def write_file(data: Dict[str, Any], filename: str, local_mode: bool = False) -> None:
+    path = Path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
@@ -235,9 +235,9 @@ def main(
     r_private_key = read_file(r_private_key_path, local_mode=local_mode)
     r_public_key = read_file(r_public_key_path, local_mode=local_mode)
 
-    inbounds_output = kwargs.get("inbounds_output")
-    outbounds_output = kwargs.get("outbounds_output")
-    users_output = kwargs.get("users_output")
+    inbounds_output = kwargs.get("inbounds_output", ".")
+    outbounds_output = kwargs.get("outbounds_output", ".")
+    users_output = kwargs.get("users_output", ".")
 
     inbounds = read_file(
         inbounds_template,
@@ -344,8 +344,8 @@ def main(
     # Write output
     # -----------------------------
 
-    write_file({"inbounds": inbounds}, inbounds_output, local_mode, no_resolve=True)
-    write_file({"outbounds": outbounds}, outbounds_output, local_mode, no_resolve=True)
-    write_file({"users": users}, users_output, local_mode, no_resolve=True)
+    write_file({"inbounds": inbounds}, inbounds_output, local_mode)
+    write_file({"outbounds": outbounds}, outbounds_output, local_mode)
+    write_file({"users": users}, users_output, local_mode)
 
     logger.info("Config generation completed successfully")

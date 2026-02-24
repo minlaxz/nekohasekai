@@ -67,9 +67,7 @@ def run_shell(filename: str, argument: str, local_mode: bool = False) -> None:
         raise typer.Exit(code=1)
 
 
-def resolve_path(filename: str, local_mode: bool, no_resolve: bool = False) -> Path:
-    if no_resolve:
-        return Path(filename)
+def resolve_path(filename: str, local_mode: bool) -> Path:
     base = TEST_DIR if local_mode else BASE_DIR
     return base / filename
 
