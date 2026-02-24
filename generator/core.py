@@ -201,12 +201,12 @@ def main(
     down_mbps: int = 300,
     up_mbps_factor: float = 0.1,
     down_mbps_factor: float = 0.1,
-    certs_dir: str = "",
-    inbounds_template: str = "",
-    outbounds_template: str = "",
-    users_template: str = "",
+    inbounds_template: str = "server.template.json",
+    outbounds_template: str = "client.template.json",
+    users_template: str = "users.yaml",
     **kwargs: Any,
 ) -> None:
+    certs_dir = Path.home() / ".sekai-generator" / "certs"
     certificate_path = f"{certs_dir}/certificate.crt"
     private_key_path = f"{certs_dir}/private.key"
     ech_config_path = f"{certs_dir}/ech.config"
@@ -235,9 +235,9 @@ def main(
     r_private_key = read_file(r_private_key_path, local_mode=local_mode)
     r_public_key = read_file(r_public_key_path, local_mode=local_mode)
 
-    inbounds_output = kwargs.get("inbounds_output", ".")
-    outbounds_output = kwargs.get("outbounds_output", ".")
-    users_output = kwargs.get("users_output", ".")
+    inbounds_output = Path.home() / ".sekai-generator" / "configs" / "inbounds.json"
+    outbounds_output = Path.home() / ".sekai-generator" / "public" / "outbounds.json"
+    users_output = Path.home() / ".sekai-generator" / "public" / "users.json"
 
     inbounds = read_file(
         inbounds_template,

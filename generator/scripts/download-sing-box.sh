@@ -4,6 +4,15 @@ set -euo pipefail
 
 SING_BOX_VERSION=1.12.22
 
+SING_BOX="$HOME/.sekai-generator/sing-box"
+
+if [[ -x "$SING_BOX" ]]; then
+    echo "sing-box already installed. Skipping installation."
+    exit 0
+fi
+
+# Check the architecture
+
 ARCH=$(uname -m)
 if [[ "$ARCH" == "x86_64" ]]; then
     SING_BOX_ARCH=amd64

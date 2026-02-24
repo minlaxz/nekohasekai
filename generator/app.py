@@ -57,11 +57,6 @@ def init(
         "--ech-server-name",
         help="Server name for ECH configurations, skip if empty",
     ),
-    copy_skeleton: bool = typer.Option(
-        False,
-        "--copy-skeleton/--no-copy-skeleton",
-        help="Whether to copy skeleton configuration files to the data directory",
-    ),
 ) -> None:
     """
     Download sing-box binary and create template files if they don't exist.
@@ -142,11 +137,6 @@ def generate(
         "--down-mbps-factor",
         help="Factor to adjust download speed in generated configurations",
     ),
-    certs_dir: str = typer.Option(
-        "~/.sekai-generator/certs",
-        "--certs-dir",
-        help="Directory to store generated certificates and keys",
-    ),
 ):
     """
     Generate sing-box configuration files.
@@ -163,13 +153,6 @@ def generate(
         down_mbps=down_mbps,
         up_mbps_factor=up_mbps_factor,
         down_mbps_factor=down_mbps_factor,
-        certs_dir=certs_dir,
-        inbounds_template="server.template.json",
-        outbounds_template="client.template.json",
-        users_template="users.yaml",
-        inbounds_output="~/.sekai-generator/configs/inbounds.json",
-        outbounds_output="~/.sekai-generator/public/outbounds.json",
-        users_output="~/.sekai-generator/public/users.json",
     )
     typer.echo("Generation completed.")
 

@@ -4,10 +4,21 @@ set -euo pipefail
 
 SING_BOX="$HOME/.sekai-generator/sing-box"
 
+# Check if sing-box is installed
+
 if [[ ! -x "$SING_BOX" ]]; then
-    echo "sing-box not installed. Run init --download"
+    echo "sing-box not installed. Run init command with --download first."
     exit 1
 fi
+
+# If certificate.crt and private.key already exist, skip generation
+
+if [[ -f "$HOME/.sekai-generator/certs/certificate.crt" && -f "$HOME/.sekai-generator/certs/private.key" ]]; then
+    echo "TLS key pair already exists. Skipping generation."
+    exit 0
+fi
+
+# Generate TLS key pair for the given server name
 
 TLS_SERVER_NAME=$1
 if [[ -z "$TLS_SERVER_NAME" ]]; then
