@@ -46,7 +46,10 @@
         ".exa.ai",
         ".unstoppabledomains.com",
         ".stripe.com",
-        ".code.jquery.com"
+        ".code.jquery.com",
+        "anthropic.com",
+        "claude.com",
+        "claude.ai"
       ]
     },
     {
@@ -94,7 +97,10 @@
         "exa.ai",
         "unstoppabledomains.com",
         "stripe.com",
-        "code.jquery.com"
+        "code.jquery.com",
+        "anthropic.com",
+        "claude.com",
+        "claude.ai"
       ]
     }
   ]
