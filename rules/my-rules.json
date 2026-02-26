@@ -42,7 +42,11 @@
         ".brave.com",
         ".bsky.network",
         ".bsky.app",
-        ".api.github.com"
+        ".api.github.com",
+        ".exa.ai",
+        ".unstoppabledomains.com",
+        ".stripe.com",
+        ".code.jquery.com"
       ]
     },
     {
@@ -86,7 +90,11 @@
         "brave.com",
         "bsky.network",
         "bsky.app",
-        "api.github.com"
+        "api.github.com",
+        "exa.ai",
+        "unstoppabledomains.com",
+        "stripe.com",
+        "code.jquery.com"
       ]
     }
   ]
