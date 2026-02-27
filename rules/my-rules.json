@@ -47,9 +47,10 @@
         ".unstoppabledomains.com",
         ".stripe.com",
         ".code.jquery.com",
-        "anthropic.com",
-        "claude.com",
-        "claude.ai"
+        ".anthropic.com",
+        ".claude.com",
+        ".claude.ai",
+        ".trycloudflare.com"
       ]
     },
     {
@@ -100,7 +101,8 @@
         "code.jquery.com",
         "anthropic.com",
         "claude.com",
-        "claude.ai"
+        "claude.ai",
+        "trycloudflare.com"
       ]
     }
   ]
