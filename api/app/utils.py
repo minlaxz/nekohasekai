@@ -251,14 +251,15 @@ class Reader(Checker):
 
         route["rule_set"] = rule_sets
 
-        if self.version >= 11:
+        if self.platform == "a":
+            route["override_android_vpn"] = True
+
+        if self.version > 11:
             # * Skip NextDNS when using experimental features
             route["default_domain_resolver"] = (
                 "dns-bypass" if self.experimental else "dns-remote"
             )
 
-            if self.platform == "a":
-                route["override_android_vpn"] = True
 
         # *This is a bit hacky, but this is it.
         rules[2]["outbound"] = APP_IP_OUT_NAME
