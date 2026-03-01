@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "rules": [
+    {
+      "domain_suffix": [
+        ".twitter.com",
+        ".twimg.com"
+      ]
+    },
+    {
+      "domain": [
+        "twitter.com",
+        "twimg.com"
+      ]
+    }
+  ]
+}
