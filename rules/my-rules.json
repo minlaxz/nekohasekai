@@ -50,8 +50,7 @@
         ".anthropic.com",
         ".claude.com",
         ".claude.ai",
-        ".trycloudflare.com",
-        ".twimg.com"
+        ".trycloudflare.com"
       ]
     },
     {
@@ -103,8 +102,7 @@
         "anthropic.com",
         "claude.com",
         "claude.ai",
-        "trycloudflare.com",
-        "twimg.com"
+        "trycloudflare.com"
       ]
     }
   ]
