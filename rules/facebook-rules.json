@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "rules": [
+    {
+      "domain_suffix": [
+        ".facebook.com",
+        ".fbcdn.net",
+        ".instagram.com",
+        ".threads.com",
+        ".cdninstagram.com",
+        ".whatsapp.com",
+        ".messenger.com",
+        ".m.me"
+      ]
+    },
+    {
+      "domain": [
+        "facebook.com",
+        "fbcdn.net",
+        "instagram.com",
+        "threads.com",
+        "cdninstagram.com",
+        "whatsapp.com",
+        "messenger.com",
+        "m.me"
+      ]
+    }
+  ]
+}

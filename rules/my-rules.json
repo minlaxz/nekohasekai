@@ -27,8 +27,6 @@
         ".trafficmanager.net",
         ".awsstatic.com",
         ".media-amazon.com",
-        ".facebook.com",
-        ".fbcdn.net",
         ".sentry.io",
         ".googleusercontent.com",
         ".cdn.viber.com",
@@ -50,7 +48,8 @@
         ".anthropic.com",
         ".claude.com",
         ".claude.ai",
-        ".trycloudflare.com"
+        ".trycloudflare.com",
+        ".artifacthub.io"
       ]
     },
     {
@@ -79,14 +78,9 @@
         "trafficmanager.net",
         "awsstatic.com",
         "media-amazon.com",
-        "facebook.com",
-        "fbcdn.net",
         "sentry.io",
         "googleusercontent.com",
         "cdn.viber.com",
-        "instagram.com",
-        "threads.com",
-        "cdninstagram.com",
         "cloudfront.net",
         "discuss.kotlinlang.org",
         "homietv.com",
@@ -102,7 +96,8 @@
         "anthropic.com",
         "claude.com",
         "claude.ai",
-        "trycloudflare.com"
+        "trycloudflare.com",
+        "artifacthub.io"
       ]
     }
   ]
