@@ -4,7 +4,8 @@ from typing import Any, Dict, List, Optional
 import os
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -299,10 +300,10 @@ class Reader(Checker):
 
         result.append({"type": "direct", "tag": "direct"})
 
-        now = datetime.now(timezone.utc).strftime("rev-%Y%m%d")
+        now = datetime.now(ZoneInfo("Asia/Yangon")).strftime("%Y%m%d%H%M%S")
 
         for tag, targets in [
-            (f"{now}.-.", stable_tags + ["direct"]),
+            (f"{now}", stable_tags + ["direct"]),
             (APP_IP_OUT_NAME, stable_tags),
             (APP_OUT_NAME, stable_tags),
         ]:
