@@ -300,7 +300,7 @@ class Reader(Checker):
 
         result.append({"type": "direct", "tag": "direct"})
 
-        now = datetime.now(ZoneInfo("Asia/Yangon")).strftime("%Y%m%d%H%M%S")
+        now = datetime.now(ZoneInfo("Asia/Yangon")).strftime("→ %Y-%m-%d %H:%M:%S")
 
         for tag, targets in [
             (f"{now}", stable_tags + ["direct"]),
