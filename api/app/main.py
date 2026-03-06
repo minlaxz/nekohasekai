@@ -14,7 +14,7 @@ from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
 import urllib.parse
 
-from .utils import Reader  # , get_stats
+from .utils import Reader, get_stats
 from .routes.ssm import router as ssm_router
 from .routes.ssm_transparent import router as ssm_transparent_router
 
@@ -52,9 +52,12 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
 
 async def check_quota_exceeded_task() -> None:
     """Pretend this function notify via Telegram when quota is exceeded"""
-    # stats = await get_stats()
-    # users = stats.get("users", [])
-    logging.info("Quota checked.")
+    stats = await get_stats()
+    users = stats.get("users", [])
+    if len(users) > 10:  # Arbitrary threshold for demonstration
+        logging.info(f"Top 5 users: {users[:5]}")
+    else:
+        logging.info("Quota check omitted.")
 
 
 @asynccontextmanager
