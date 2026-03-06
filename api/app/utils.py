@@ -300,12 +300,13 @@ class Reader(Checker):
 
             result.append(ob)
 
-            if ob.get("tag") not in APP_UNSTABLE_OUTBOUNDS:
-                stable_tags.append(ob["tag"])
-                if "tcp" in ob["tag"] or "uot" in ob["tag"]:
-                    tcp_tags.append(ob["tag"])
-                if "udp" in ob["tag"] or "uot" in ob["tag"]:
-                    udp_tags.append(ob["tag"])
+            tag = ob.get("tag")
+            if tag not in APP_UNSTABLE_OUTBOUNDS:
+                stable_tags.append(tag)
+                if any(x in tag for x in ("tcp", "uot")):
+                    tcp_tags.append(tag)
+                if any(x in tag for x in ("udp", "uot")):
+                    udp_tags.append(tag)
 
         result.append({"type": "direct", "tag": "direct"})
 
