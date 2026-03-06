@@ -27,6 +27,8 @@
         ".trafficmanager.net",
         ".awsstatic.com",
         ".media-amazon.com",
+        ".awsapps.com",
+        ".aws.amazon.com",
         ".sentry.io",
         ".googleusercontent.com",
         ".cdn.viber.com",
@@ -49,7 +51,11 @@
         ".claude.com",
         ".claude.ai",
         ".trycloudflare.com",
-        ".artifacthub.io"
+        ".artifacthub.io",
+        ".notion.so",
+        ".notionusercontent.com",
+        ".sectools.org",
+        ".cloudcode-pa.googleapis.com"
       ]
     },
     {
@@ -78,6 +84,8 @@
         "trafficmanager.net",
         "awsstatic.com",
         "media-amazon.com",
+        "awsapps.com",
+        "aws.amazon.com",
         "sentry.io",
         "googleusercontent.com",
         "cdn.viber.com",
@@ -97,7 +105,11 @@
         "claude.com",
         "claude.ai",
         "trycloudflare.com",
-        "artifacthub.io"
+        "artifacthub.io",
+        "notion.so",
+        "notionusercontent.com",
+        "sectools.org",
+        "cloudcode-pa.googleapis.com"
       ]
     }
   ]
