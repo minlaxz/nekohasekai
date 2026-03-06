@@ -29,16 +29,7 @@
         "method": "drop"
       },
       {
-        "type": "logical",
-        "mode": "and",
-        "rules": [
-          {
-            "clash_mode": "Auto"
-          },
-          {
-            "rule_set": []
-          }
-        ],
+        "rule_set": [],
         "outbound": ""
       },
       {
@@ -50,7 +41,20 @@
         "mode": "and",
         "rules": [
           {
-            "clash_mode": "Auto"
+            "network": "tcp"
+          },
+          {
+            "rule_set": []
+          }
+        ],
+        "outbound": ""
+      },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "network": "udp"
           },
           {
             "rule_set": []
