@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, cast, Optional
 import os
 import json
 import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from fastapi import HTTPException
 
 import httpx
 
@@ -16,8 +17,9 @@ import httpx
 APP_UNSTABLE_OUTBOUNDS: List[str] = [
     x for x in os.getenv("APP_UNSTABLE_OUTBOUNDS", "").split(",") if x
 ]
-APP_IP_OUT_NAME = os.getenv("APP_IP_OUT_NAME", "IP-Out")
-APP_OUT_NAME = os.getenv("APP_OUT_NAME", "Out")
+APP_TCP_OUT_NAME = os.getenv("APP_TCP_OUT_NAME", "TCP-Out")
+APP_UDP_OUT_NAME = os.getenv("APP_UDP_OUT_NAME", "UDP-Out")
+APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
 
 DEFAULT_QUOTA_BYTES = 30_000_000_000
 HTTP_TIMEOUT = 5
@@ -261,18 +263,21 @@ class Reader(Checker):
                 "dns-bypass" if self.experimental else "dns-remote"
             )
 
-
         # *This is a bit hacky, but this is it.
-        rules[2]["outbound"] = APP_IP_OUT_NAME
-        rules[2]["rules"][1]["rule_set"] = geoip_rule_sets
-        rules[4]["outbound"] = APP_OUT_NAME
+        rules[2]["outbound"] = APP_TCP_OUT_NAME
+        rules[2]["rule_set"] = geoip_rule_sets
+        rules[4]["outbound"] = APP_TCP_OUT_NAME
         rules[4]["rules"][1]["rule_set"] = geosite_rule_sets
+        rules[5]["outbound"] = APP_UDP_OUT_NAME
+        rules[5]["rules"][1]["rule_set"] = geosite_rule_sets
 
     # ------------------------------------------------------------------
 
     def _inject_outbounds(self) -> None:
         result: List[Dict[str, Any]] = []
         stable_tags: List[str] = []
+        tcp_tags: List[str] = []
+        udp_tags: List[str] = []
 
         for ob in self.outbounds_data.get("outbounds", []):
             ob = ob.copy()
@@ -297,6 +302,10 @@ class Reader(Checker):
 
             if ob.get("tag") not in APP_UNSTABLE_OUTBOUNDS:
                 stable_tags.append(ob["tag"])
+                if "tcp" or "uot" in ob["tag"]:
+                    tcp_tags.append(ob["tag"])
+                if "udp" or "uot" in ob["tag"]:
+                    udp_tags.append(ob["tag"])
 
         result.append({"type": "direct", "tag": "direct"})
 
@@ -304,8 +313,8 @@ class Reader(Checker):
 
         for tag, targets in [
             (f"{now}", stable_tags + ["direct"]),
-            (APP_IP_OUT_NAME, stable_tags),
-            (APP_OUT_NAME, stable_tags),
+            (APP_TCP_OUT_NAME, tcp_tags),
+            (APP_UDP_OUT_NAME, udp_tags),
         ]:
             result.append({
                 "type": "urltest",
@@ -350,3 +359,51 @@ class Reader(Checker):
         self._inject_routes()
 
         return json.loads(json.dumps(self.template_data, ensure_ascii=False, indent=2))
+
+
+async def get_stats():
+    async with httpx.AsyncClient(timeout=5) as client:
+        stats_upstream = f"{APP_SSM_UPSTREAM}/server/v1/stats"
+        users_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
+        try:
+            stats_r = await client.get(stats_upstream)
+            users_r = await client.get(users_upstream)
+            users_r.raise_for_status()
+            stats_r.raise_for_status()
+            stats_data_raw = stats_r.json()["users"]
+            stats_data: List[Dict[str, Any]] = cast(
+                List[Dict[str, Any]], stats_data_raw
+            )
+            users_data_raw = users_r.json()["users"]
+            users_data: List[Dict[str, int]] = cast(
+                List[Dict[str, Any]], users_data_raw
+            )
+            # inject uPSK from users_data into stats_data based on matching username
+            users_dict = {user["username"]: user for user in users_data}
+            for stat in stats_data:
+                username = stat["username"]
+                if username in users_dict:
+                    stat["uPSK"] = users_dict[username].get("uPSK", None)
+            # sort by most downlinkBytes used
+            stats_data.sort(key=lambda x: int(x.get("downlinkBytes", 0)), reverse=True)
+            for i in stats_data:
+                for k, v in i.items():
+                    if k.endswith("Bytes"):
+                        if v >= 1 << 30:
+                            i[k] = f"{v / (1 << 30):.2f} GB"
+                        elif v >= 1 << 20:
+                            i[k] = f"{v / (1 << 20):.2f} MB"
+                        elif v >= 1 << 10:
+                            i[k] = f"{v / (1 << 10):.2f} KB"
+                        else:
+                            i[k] = f"{v} B"
+                    elif k.endswith("Packets"):
+                        if v >= 1_000_000:
+                            i[k] = f"{v / 1_000_000:.2f} M"
+                        elif v >= 1_000:
+                            i[k] = f"{v / 1_000:.2f} K"
+                        else:
+                            i[k] = f"{v}"
+            return {"users": stats_data}
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")

@@ -1,14 +1,17 @@
-from typing import Any, Dict, List, cast, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 import secrets
 import string
 import os
+import json
 
 from fastapi import APIRouter, HTTPException, Form
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
+
+from api.app.utils import get_stats
 
 router = APIRouter()
 
@@ -17,6 +20,7 @@ START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
 APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
+
 
 @router.get(
     "/server/v1",
@@ -75,51 +79,7 @@ async def proxy_server_stats():
     response_class=JSONResponse,
 )
 async def proxy_server_users():
-    async with httpx.AsyncClient(timeout=5) as client:
-        stats_upstream = f"{APP_SSM_UPSTREAM}/server/v1/stats"
-        users_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
-        try:
-            stats_r = await client.get(stats_upstream)
-            users_r = await client.get(users_upstream)
-            users_r.raise_for_status()
-            stats_r.raise_for_status()
-            stats_data_raw = stats_r.json()["users"]
-            stats_data: List[Dict[str, Any]] = cast(
-                List[Dict[str, Any]], stats_data_raw
-            )
-            users_data_raw = users_r.json()["users"]
-            users_data: List[Dict[str, int]] = cast(
-                List[Dict[str, Any]], users_data_raw
-            )
-            # inject uPSK from users_data into stats_data based on matching username
-            users_dict = {user["username"]: user for user in users_data}
-            for stat in stats_data:
-                username = stat["username"]
-                if username in users_dict:
-                    stat["uPSK"] = users_dict[username].get("uPSK", None)
-            # sort by most downlinkBytes used
-            stats_data.sort(key=lambda x: int(x.get("downlinkBytes", 0)), reverse=True)
-            for i in stats_data:
-                for k, v in i.items():
-                    if k.endswith("Bytes"):
-                        if v >= 1 << 30:
-                            i[k] = f"{v / (1 << 30):.2f} GB"
-                        elif v >= 1 << 20:
-                            i[k] = f"{v / (1 << 20):.2f} MB"
-                        elif v >= 1 << 10:
-                            i[k] = f"{v / (1 << 10):.2f} KB"
-                        else:
-                            i[k] = f"{v} B"
-                    elif k.endswith("Packets"):
-                        if v >= 1_000_000:
-                            i[k] = f"{v / 1_000_000:.2f} M"
-                        elif v >= 1_000:
-                            i[k] = f"{v / 1_000:.2f} K"
-                        else:
-                            i[k] = f"{v}"
-            return {"users": stats_data}
-        except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+    return await get_stats()
 
 
 def create_upsk(custom_upsk: str | None):
@@ -152,6 +112,21 @@ async def create_user(
         try:
             r = await client.post(create_upstream, json=payload)
             r.raise_for_status()
+
+            with open("/public/users.json", "r") as f:
+                users = json.load(f)
+            with open("/configs/inbounds.json", "r") as f:
+                inbounds = json.load(f)
+
+            users["users"].append({"username": username, "uPSK": uPSK})
+            inbounds["inbounds"][1]["users"] = users["users"]
+
+            with open("/configs/inbounds.json", "w") as f:
+                json.dump(inbounds, f, indent=2)
+
+            with open("/public/users.json", "w") as f:
+                json.dump(users, f, indent=2)
+
         except httpx.HTTPError as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
     url = f"https://{APP_HOST}/config?p={platform}&v={version}&j={username}&k={uPSK}"

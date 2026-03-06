@@ -1,4 +1,6 @@
 from typing import Union, Callable, Type, Any, Dict
+from contextlib import asynccontextmanager
+from fastapi_utils.tasks import repeat_every
 
 import os
 import logging
@@ -12,7 +14,7 @@ from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
 import urllib.parse
 
-from .utils import Reader
+from .utils import Reader  # , get_stats
 from .routes.ssm import router as ssm_router
 from .routes.ssm_transparent import router as ssm_transparent_router
 
@@ -44,7 +46,31 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
     Exception: internal_error,
 }
 
-app = FastAPI(exception_handlers=exceptions)
+
+@repeat_every(
+    seconds=60 * 60,
+    wait_first=True,
+    logger=logging.getLogger(__name__),
+)  # 1 hour
+async def check_quota_exceeded_task() -> None:
+    """Pretend this function notify via Telegram when quota is exceeded"""
+    # stats = await get_stats()
+    # users = stats.get("users", [])
+    logging.warning(f"Quota exceeded for user: {None}")
+    return
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Run once at startup
+    _ = check_quota_exceeded_task()
+
+    yield  # App runs here
+
+    # App tearsdown: cleanup logic on shutdown and so on
+
+
+app = FastAPI(exception_handlers=exceptions, lifespan=lifespan)
 # Both ssm and ssm-transparent routes should be protected by some authentication
 app.include_router(ssm_router, prefix="/ssm")
 app.include_router(ssm_transparent_router, prefix="/ssm-transparent")
