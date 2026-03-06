@@ -1,11 +1,11 @@
 from typing import Union, Callable, Type, Any, Dict
 from contextlib import asynccontextmanager
-from fastapi_utils.tasks import repeat_every
 
 import os
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
 
 # from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
@@ -17,6 +17,9 @@ import urllib.parse
 from .utils import Reader  # , get_stats
 from .routes.ssm import router as ssm_router
 from .routes.ssm_transparent import router as ssm_transparent_router
+
+
+scheduler = AsyncIOScheduler()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,26 +50,27 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
 }
 
 
-@repeat_every(
-    seconds=60,
-    wait_first=True,
-)  # 1 hour
 async def check_quota_exceeded_task() -> None:
     """Pretend this function notify via Telegram when quota is exceeded"""
     # stats = await get_stats()
     # users = stats.get("users", [])
     logging.info("Quota checked.")
-    return
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run once at startup
-    _ = check_quota_exceeded_task()
+    scheduler.add_job(  # type: ignore
+        check_quota_exceeded_task,
+        "interval",
+        seconds=60,
+    )
+    scheduler.start()
 
     yield  # App runs here
 
     # App tearsdown: cleanup logic on shutdown and so on
+    scheduler.shutdown()
 
 
 app = FastAPI(exception_handlers=exceptions, lifespan=lifespan)
