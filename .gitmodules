@@ -1,3 +1,6 @@
 [submodule "sbx"]
 	path = sbx
 	url = git@github.com:minlaxz/sbx.git
+[submodule "sbr"]
+	path = sbr
+	url = git@github.com:minlaxz/sbr.git
