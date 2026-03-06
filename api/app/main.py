@@ -48,15 +48,14 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
 
 
 @repeat_every(
-    seconds=60 * 60,
+    seconds=60,
     wait_first=True,
-    logger=logging.getLogger(__name__),
 )  # 1 hour
 async def check_quota_exceeded_task() -> None:
     """Pretend this function notify via Telegram when quota is exceeded"""
     # stats = await get_stats()
     # users = stats.get("users", [])
-    logging.warning(f"Quota exceeded for user: {None}")
+    logging.info("Quota checked.")
     return
 
 
