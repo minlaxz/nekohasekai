@@ -81,12 +81,16 @@ async def proxy_server_stats():
 async def proxy_server_users(
     request: Request,
     raw: Optional[bool] = False,
-    # bar: Optional[bool] = False,
+    bar: Optional[bool] = False,
 ):
     stats: List[Dict[str, Any]] = await get_stats(raw=raw)  # type: ignore
     if raw:
         return stats
     templates = Jinja2Templates(directory="templates")
+    if bar:
+        return templates.TemplateResponse(
+            "users-bar.html", {"request": request, "users": stats}
+        )
     return templates.TemplateResponse(
         "users.html", {"request": request, "users": stats}
     )

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Usage</title>
+    <style>
+      .mono {
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 0.9rem;
+      }
+
+      .traffic-cell {
+        min-width: 180px;
+      }
+
+      .traffic-bar-bg {
+        width: 100%;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        margin-top: 4px;
+      }
+
+      .traffic-bar {
+        height: 8px;
+        background: #3b82f6;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>User Usage</h2>
+
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Download</th>
+          <th>Upload</th>
+          <th>TCP</th>
+          <th>UDP</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td class="mono">{{ user.username }}</td>
+
+          <td class="traffic-cell">
+            <div class="mono">{{ user.downlinkBytes }}</div>
+            <div class="traffic-bar-bg">
+              <div
+                class="traffic-bar"
+                style="width: {{ loop.index * 20 }}%"
+              ></div>
+            </div>
+          </td>
+
+          <td class="traffic-cell">
+            <div class="mono">{{ user.uplinkBytes }}</div>
+            <div class="traffic-bar-bg">
+              <div
+                class="traffic-bar"
+                style="width: {{ loop.index * 10 }}%"
+              ></div>
+            </div>
+          </td>
+
+          <td class="mono">{{ user.tcpSessions }}</td>
+          <td class="mono">{{ user.udpSessions }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </body>
+</html>
