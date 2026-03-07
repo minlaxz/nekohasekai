@@ -403,9 +403,12 @@ async def get_stats() -> List[Dict[str, Any]]:
                 username = stat["username"]
                 if username in users_dict:
                     stat["uPSK"] = users_dict[username].get("uPSK")
+                    stat["downlinkBytesHuman"] = 0
+                    stat["uplinkBytesHuman"] = 0
 
             # sort by raw bytes
             stats_data.sort(key=lambda x: x.get("downlinkBytes", 0), reverse=True)  # type: ignore
+
 
             for row in stats_data:
                 for k, v in row.items():
