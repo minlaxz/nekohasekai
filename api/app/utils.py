@@ -362,7 +362,7 @@ class Reader(Checker):
         return json.loads(json.dumps(self.template_data, ensure_ascii=False, indent=2))
 
 
-async def get_stats():
+async def get_stats() -> List[Dict[str, Any]]:
     async with httpx.AsyncClient(timeout=5) as client:
         stats_upstream = f"{APP_SSM_UPSTREAM}/server/v1/stats"
         users_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
@@ -405,6 +405,6 @@ async def get_stats():
                             i[k] = f"{v / 1_000:.2f} K"
                         else:
                             i[k] = f"{v}"
-            return {"users": stats_data}
+            return stats_data
         except httpx.HTTPError as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")

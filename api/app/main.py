@@ -53,9 +53,8 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
 async def check_quota_exceeded_task() -> None:
     """Pretend this function notify via Telegram when quota is exceeded"""
     stats = await get_stats()
-    users = stats.get("users", [])
-    if len(users) > 10:  # Arbitrary threshold for demonstration
-        logging.info(f"Top 5 users: {users[:5]}")
+    if len(stats) > 10:  # Arbitrary threshold for demonstration
+        logging.info(f"Top 5 users: {stats[:5]}")
     else:
         logging.info("Quota check omitted.")
 
