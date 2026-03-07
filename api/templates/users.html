@@ -1,36 +1,62 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>User Usage</title>
-</head>
-<body>
+    <style>
+      .mono {
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 0.9rem;
+        letter-spacing: 0.02em;
+      }
 
-<h2>User Usage</h2>
+      .psk {
+        font-family: ui-monospace, monospace;
+        background: #f4f4f4;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
 
-<table border="1">
-    <thead>
+      .username {
+        max-width: 200px;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      .username::-webkit-scrollbar {
+        height: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>User Usage</h2>
+
+    <table border="1">
+      <thead>
         <tr>
-            <th>Username</th>
-            <th>Download</th>
-            <th>Upload</th>
-            <th>TCP Sessions</th>
-            <th>UDP Sessions</th>
+          <th>Username</th>
+          <th>PSK</th>
+          <th>Download</th>
+          <th>Upload</th>
+          <th>TCP Sessions</th>
+          <th>UDP Sessions</th>
         </tr>
-    </thead>
-    <tbody>
+      </thead>
+      <tbody>
         {% for user in users %}
         <tr>
-            <td>{{ user.username }}</td>
-            <td>{{ user.downlinkBytes }}</td>
-            <td>{{ user.uplinkBytes }}</td>
-            <td>{{ user.tcpSessions }}</td>
-            <td>{{ user.udpSessions }}</td>
+          <td class="mono username">{{ user.username }}</td>
+          <td class="psk">{{ user.uPSK }}</td>
+          <td class="mono">{{ user.downlinkBytes }}</td>
+          <td class="mono">{{ user.uplinkBytes }}</td>
+          <td class="mono">{{ user.tcpSessions }}</td>
+          <td class="mono">{{ user.udpSessions }}</td>
         </tr>
         {% endfor %}
-    </tbody>
-</table>
-
-</body>
+      </tbody>
+    </table>
+  </body>
 </html>
