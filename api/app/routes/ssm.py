@@ -9,7 +9,8 @@ import json
 from fastapi import APIRouter, HTTPException, Form
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+
 
 from app.utils import get_stats
 
@@ -76,7 +77,7 @@ async def proxy_server_stats():
 @router.get(
     "/server/v1/users",
     response_model=Dict[str, List[Dict[str, Any]]],
-    response_class=JSONResponse,
+    response_class=HTMLResponse,
 )
 async def proxy_server_users(
     request: Request,
@@ -88,6 +89,10 @@ async def proxy_server_users(
         return stats
     templates = Jinja2Templates(directory="templates")
     if bar:
+        max_down = max(u["downlinkBytes"] for u in stats)
+        for u in stats:
+            u["down_pct"] = u["downlinkBytes"] / max_down * 100
+            u["up_pct"] = u["uplinkBytes"] / max_down * 100
         return templates.TemplateResponse(
             "users-bar.html", {"request": request, "users": stats}
         )
