@@ -33,21 +33,20 @@ async def proxy_server_users(
     raw: Optional[bool] = False,
     bar: Optional[bool] = False,
 ):
-    if raw:
-        stats: List[Dict[str, Any]] = await get_stats(raw=raw)  # type: ignore
-        return stats
-
     stats: List[Dict[str, Any]] = await get_stats()
+    if raw:
+        return {"stats": stats}
+
     templates = Jinja2Templates(directory="templates")
     if bar:
         # max_down = max(u["downlinkBytes"] for u in stats) or 1
-        max_down = 30_000_000_000
+        max_bytes = 30_000_000_000
         for u in stats:
-            u["down_pct"] = int(u["downlinkBytes"]) / max_down * 100
-            u["up_pct"] = int(u["uplinkBytes"]) / max_down * 100
+            u["pct"] = (u["downlinkBytes"] + u["uplinkBytes"]) / max_bytes * 100
         return templates.TemplateResponse(
             "users-bar.html", {"request": request, "users": stats}
         )
+
     return templates.TemplateResponse(
         "users.html", {"request": request, "users": stats}
     )

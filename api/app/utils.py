@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from fastapi import HTTPException
+import asyncio
 
 import httpx
 
@@ -380,15 +381,16 @@ def format_packets(v: int) -> str:
     return str(v)
 
 
-async def get_stats(raw: bool = True) -> List[Dict[str, Any]]:
+async def get_stats() -> List[Dict[str, Any]]:
     async with httpx.AsyncClient(timeout=5) as client:
         stats_upstream = f"{APP_SSM_UPSTREAM}/server/v1/stats"
         users_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
 
         try:
-            stats_r = await client.get(stats_upstream)
-            users_r = await client.get(users_upstream)
-
+            stats_r, users_r = await asyncio.gather(
+                client.get(stats_upstream),
+                client.get(users_upstream),
+            )
             stats_r.raise_for_status()
             users_r.raise_for_status()
 
@@ -405,13 +407,12 @@ async def get_stats(raw: bool = True) -> List[Dict[str, Any]]:
             # sort by raw bytes
             stats_data.sort(key=lambda x: x.get("downlinkBytes", 0), reverse=True)  # type: ignore
 
-            if not raw:
-                for row in stats_data:
-                    for k, v in row.items():
-                        if k.endswith("Bytes"):
-                            row[k] = format_bytes(v)
-                        elif k.endswith("Packets"):
-                            row[k] = format_packets(v)
+            for row in stats_data:
+                for k, v in row.items():
+                    if k.endswith("Bytes"):
+                        row[k+"Human"] = format_bytes(v)
+                    elif k.endswith("Packets"):
+                        row[k+"Human"] = format_packets(v)
 
             return stats_data
 

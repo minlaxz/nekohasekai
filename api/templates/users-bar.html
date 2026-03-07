@@ -40,6 +40,7 @@
           <th>Username</th>
           <th>Download</th>
           <th>Upload</th>
+          <th>Total</th>
           <th>TCP</th>
           <th>UDP</th>
         </tr>
@@ -51,16 +52,16 @@
           <td class="mono">{{ user.username }}</td>
 
           <td class="traffic-cell">
-            <div class="mono">{{ user.downlinkBytes }}</div>
-            <div class="traffic-bar-bg">
-              <div class="traffic-bar" style="width: {{ user.down_pct }}%"></div>
-            </div>
+            <div class="mono">{{ user.downlinkBytesHuman }}</div>
           </td>
 
           <td class="traffic-cell">
-            <div class="mono">{{ user.uplinkBytes }}</div>
+            <div class="mono">{{ user.uplinkBytesHuman }}</div>
+          </td>
+
+          <td class="traffic-cell">
             <div class="traffic-bar-bg">
-              <div class="traffic-bar" style="width: {{ user.up_pct }}%"></div>
+              <div class="traffic-bar" style="width: {{ user.pct }}%"></div>
             </div>
           </td>
 
