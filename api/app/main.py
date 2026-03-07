@@ -119,17 +119,6 @@ def read_root():
     return templates.TemplateResponse("index.html", {"request": {}})
 
 
-@app.get("/help")
-def read_help():
-    """_Help_
-
-    Returns:
-        _TemplateResponse: _help_
-    """
-    templates = Jinja2Templates(directory="templates")
-    return templates.TemplateResponse("help.html", {"request": {}})
-
-
 @app.get("/c", response_class=JSONResponse)
 def read_config(
     # Common options

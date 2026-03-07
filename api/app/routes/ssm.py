@@ -78,8 +78,17 @@ async def proxy_server_stats():
     response_model=Dict[str, List[Dict[str, Any]]],
     response_class=JSONResponse,
 )
-async def proxy_server_users():
-    return await get_stats()
+async def proxy_server_users(
+    request: Request,
+    raw: Optional[bool] = False,
+):
+    users = await get_stats()
+    if raw:
+        return users
+    templates = Jinja2Templates(directory="templates")
+    return templates.TemplateResponse(
+        "users.html", {"request": request, "users": users}
+    )
 
 
 def create_upsk(custom_upsk: str | None):
