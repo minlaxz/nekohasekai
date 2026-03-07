@@ -40,7 +40,8 @@ async def proxy_server_users(
     stats: List[Dict[str, Any]] = await get_stats()
     templates = Jinja2Templates(directory="templates")
     if bar:
-        max_down = max(int(u["downlinkBytes"]) for u in stats)
+        # max_down = max(u["downlinkBytes"] for u in stats) or 1
+        max_down = 30_000_000_000
         for u in stats:
             u["down_pct"] = int(u["downlinkBytes"]) / max_down * 100
             u["up_pct"] = int(u["uplinkBytes"]) / max_down * 100
