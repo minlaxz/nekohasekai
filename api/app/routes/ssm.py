@@ -89,10 +89,10 @@ async def proxy_server_users(
         return stats
     templates = Jinja2Templates(directory="templates")
     if bar:
-        max_down = max(u["downlinkBytes"] for u in stats)
+        max_down = max(int(u["downlinkBytes"]) for u in stats)
         for u in stats:
-            u["down_pct"] = u["downlinkBytes"] / max_down * 100
-            u["up_pct"] = u["uplinkBytes"] / max_down * 100
+            u["down_pct"] = int(u["downlinkBytes"]) / max_down * 100
+            u["up_pct"] = int(u["uplinkBytes"]) / max_down * 100
         return templates.TemplateResponse(
             "users-bar.html", {"request": request, "users": stats}
         )
