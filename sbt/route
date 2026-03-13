@@ -29,10 +29,6 @@
         "method": "drop"
       },
       {
-        "rule_set": [],
-        "outbound": ""
-      },
-      {
         "action": "sniff",
         "timeout": "100ms"
       },
@@ -44,7 +40,23 @@
             "network": "tcp"
           },
           {
-            "rule_set": []
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "rule_set": []
+              },
+              {
+                "domain": [
+                  "gstatic.com"
+                ]
+              },
+              {
+                "domain_suffix": [
+                  ".gstatic.com"
+                ]
+              }
+            ]
           }
         ],
         "outbound": ""
@@ -57,7 +69,23 @@
             "network": "udp"
           },
           {
-            "rule_set": []
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "rule_set": []
+              },
+              {
+                "domain": [
+                  "gstatic.com"
+                ]
+              },
+              {
+                "domain_suffix": [
+                  ".gstatic.com"
+                ]
+              }
+            ]
           }
         ],
         "outbound": ""

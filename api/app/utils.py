@@ -22,7 +22,7 @@ APP_TCP_OUT_NAME = os.getenv("APP_TCP_OUT_NAME", "TCP-Out")
 APP_UDP_OUT_NAME = os.getenv("APP_UDP_OUT_NAME", "UDP-Out")
 APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
 
-DEFAULT_QUOTA_BYTES = 30_000_000_000
+APP_DEFAULT_QUOTA_IN_BYTES = int(os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "30000000000"))
 HTTP_TIMEOUT = 5
 
 # -------------------------------------------------------------------
@@ -102,7 +102,7 @@ class Checker:
                 raise ValueError("User or PSK mismatch")
 
             used_bytes = data.get("uplinkBytes", 0) + data.get("downlinkBytes", 0)
-            if used_bytes > DEFAULT_QUOTA_BYTES:
+            if used_bytes > APP_DEFAULT_QUOTA_IN_BYTES:
                 raise ValueError("Quota exceeded")
 
             logger.info("User %s verified successfully", self.username)
@@ -233,7 +233,6 @@ class Reader(Checker):
         files = response.json()
 
         rule_sets: List[Any] = []
-        geoip_rule_sets: List[Any] = []
         geosite_rule_sets: List[Any] = []
 
         for file in files:
@@ -249,9 +248,8 @@ class Reader(Checker):
                     "update_interval": "1d",
                 })
 
-                geoip_rule_sets.append(
-                    tag
-                ) if "-ip-" in tag else geosite_rule_sets.append(tag)
+                if "-ip-" not in tag:
+                    geosite_rule_sets.append(tag)
 
         route["rule_set"] = rule_sets
 
@@ -265,12 +263,10 @@ class Reader(Checker):
             )
 
         # *This is a bit hacky, but this is it.
-        rules[2]["outbound"] = APP_TCP_OUT_NAME
-        rules[2]["rule_set"] = geoip_rule_sets
-        rules[4]["outbound"] = APP_TCP_OUT_NAME
-        rules[4]["rules"][1]["rule_set"] = geosite_rule_sets
-        rules[5]["outbound"] = APP_UDP_OUT_NAME
-        rules[5]["rules"][1]["rule_set"] = geosite_rule_sets
+        rules[3]["outbound"] = APP_TCP_OUT_NAME
+        rules[3]["rules"][1]["rules"][0]["rule_set"] = geosite_rule_sets
+        rules[4]["outbound"] = APP_UDP_OUT_NAME
+        rules[4]["rules"][1]["rules"][0]["rule_set"] = geosite_rule_sets
 
     # ------------------------------------------------------------------
 
@@ -311,7 +307,9 @@ class Reader(Checker):
 
         result.append({"type": "direct", "tag": "direct"})
 
-        now = datetime.now(ZoneInfo("Asia/Yangon")).strftime("→ %Y-%m-%d %H:%M:%S")
+        now = datetime.now(ZoneInfo("Asia/Yangon")).strftime(
+            "→ %Y-%m-%d %H:%M:%S NO-IP"
+        )
 
         for tag, targets in [
             (f"{now}", stable_tags + ["direct"]),

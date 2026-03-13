@@ -40,7 +40,7 @@ async def proxy_server_users(
     templates = Jinja2Templates(directory="templates")
     if bar:
         # max_down = max(u["downlinkBytes"] for u in stats) or 1
-        max_bytes = 30_000_000_000
+        max_bytes = os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "30000000000")
         for u in stats:
             u["pct"] = (u["downlinkBytes"] + u["uplinkBytes"]) / max_bytes * 100
         return templates.TemplateResponse(

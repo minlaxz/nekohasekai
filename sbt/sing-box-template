@@ -51,7 +51,11 @@
     "timestamp": true
   },
   "experimental": {
-    "clash_api": {},
+    "clash_api": {
+      "external_controller": "127.0.0.1:9090",
+      "access_control_allow_private_network": true,
+      "access_control_allow_origin": "*"
+    },
     "cache_file": {
       "enabled": true,
       "path": "cache.db",
