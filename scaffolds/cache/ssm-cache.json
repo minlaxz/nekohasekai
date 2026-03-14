@@ -1,0 +1,19 @@
+{
+  "endpoints": {
+    "/": {
+      "global_uplink": 0,
+      "global_downlink": 0,
+      "global_uplink_packets": 0,
+      "global_downlink_packets": 0,
+      "global_tcp_sessions": 0,
+      "global_udp_sessions": 0,
+      "user_uplink": {},
+      "user_downlink": {},
+      "user_uplink_packets": {},
+      "user_downlink_packets": {},
+      "user_tcp_sessions": {},
+      "user_udp_sessions": {},
+      "users": {}
+    }
+  }
+}

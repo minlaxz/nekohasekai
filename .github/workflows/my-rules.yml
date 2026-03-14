@@ -1,0 +1,38 @@
+name: "Collect custom rules"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "rules/*.json"
+
+env:
+  SING_BOX_VERSION: "1.12.22"
+
+jobs:
+  run-scripts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          curl -Lo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz
+          tar -xz -C /tmp -f sing-box.tar.gz --strip-components=1
+
+          mkdir -p rules/route-rules
+
+          for file in rules/*-rules.json; do
+            name=$(basename "$file" .json)
+            /tmp/sing-box rule-set compile "$file" -o "rules/route-rules/${name}.srs"
+            cp "$file" "rules/route-rules/${name}.json"
+          done
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          publish_branch: route-rules
+          publish_dir: rules/route-rules
+          force_orphan: true

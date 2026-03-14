@@ -1,0 +1,31 @@
+{
+  "inbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "method": "xchacha20-ietf-poly1305",
+      "users": [],
+      "managed": true,
+      "multiplex": {
+        "enabled": true,
+        "padding": false
+      }
+    },
+    {
+      "type": "shadowtls",
+      "tag": "shadowtls",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "detour": "shadowsocks",
+      "version": 3,
+      "users": [],
+      "handshake": {
+        "server": "mozilla.org", // Server Name Indication (SNI) for TLS handshake (should match the domain with public/outbounds.json)
+        "server_port": 443
+      },
+      "strict_mode": true
+    }
+  ]
+}

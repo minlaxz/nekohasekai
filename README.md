@@ -84,7 +84,7 @@ sudo sysctl -p
 
 ## Next step
 
-Start with the [generator/](./generator/README.md) directory to generate and deploy server-side configurations.
-
-> There will be a lot of terms like ECH, TUIC, Brutal, etc.  
-> If you are unfamiliar with these, please do research on each of them
+Clone the repository and start checking out the 
+1. [Makefile](./Makefile)
+2. [scaffolds/setup.sh](./scaffolds/setup.sh)
+3. [scaffolds/docker-compose.yml](./scaffolds/docker-compose.yml)

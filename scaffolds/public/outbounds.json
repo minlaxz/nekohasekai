@@ -1,0 +1,48 @@
+{
+  "outbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks-tcp",
+      "detour": "shadowtls",
+      "method": "xchacha20-ietf-poly1305",
+      "password": "",
+      "network": "tcp"
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks-udp",
+      "server": "",
+      "server_port": 0,
+      "method": "xchacha20-ietf-poly1305",
+      "password": "",
+      "network": "udp"
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "shadowsocks-uot",
+      "detour": "shadowtls",
+      "method": "xchacha20-ietf-poly1305",
+      "password": "",
+      "udp_over_tcp": {
+        "enabled": true,
+        "version": 2
+      }
+    },
+    {
+      "type": "shadowtls",
+      "tag": "shadowtls",
+      "server": "",
+      "server_port": 0,
+      "version": 3,
+      "password": "",
+      "tls": {
+        "enabled": true,
+        "server_name": "mozilla.org",  // Server Name Indication (SNI) for TLS handshake (should match the domain with configs/inbounds.json)
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      }
+    }
+  ]
+}
