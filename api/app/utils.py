@@ -247,9 +247,21 @@ class Reader(Checker):
                     "download_detour": self.route_detour,
                     "update_interval": "1d",
                 })
+                geosite_rule_sets.append(tag)
 
-                if "-ip-" not in tag:
-                    geosite_rule_sets.append(tag)
+        other_rule_sets = os.getenv("APP_DEFAULT_OTHER_RULE_SETS", "").split(",")
+        for rule_set in other_rule_sets:
+            rule_set = rule_set.strip()
+            if rule_set and rule_set not in geosite_rule_sets:
+                rule_sets.append({
+                    "tag": rule_set,
+                    "type": "remote",
+                    "format": "binary",
+                    "url": f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs",
+                    "download_detour": self.route_detour,
+                    "update_interval": "1d",
+                })
+                geosite_rule_sets.append(rule_set)
 
         route["rule_set"] = rule_sets
 
