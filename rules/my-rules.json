@@ -45,7 +45,11 @@
         ".moonshot.cn",
         ".buttondown.com",
         ".exa.ai",
-        ".dev.to"
+        ".dev.to",
+        ".packagist.org",
+        ".vercel-storage.com",
+        ".shopify.dev",
+        ".shopify.com"
         ]
     },
     {
@@ -89,7 +93,11 @@
         "moonshot.cn",
         "buttondown.com",
         "exa.ai",
-        "dev.to"
+        "dev.to",
+        "packagist.org",
+        "vercel-storage.com",
+        "shopify.dev",
+        "shopify.com"
       ]
     }
   ]
