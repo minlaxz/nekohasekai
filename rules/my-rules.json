@@ -50,8 +50,9 @@
         ".vercel-storage.com",
         ".shopify.dev",
         ".shopify.com",
-        ".fontshare.com"
-        ]
+        ".fontshare.com",
+        ".shortcutfoo.com"
+      ]
     },
     {
       "domain": [
@@ -99,7 +100,8 @@
         "vercel-storage.com",
         "shopify.dev",
         "shopify.com",
-        "fontshare.com"
+        "fontshare.com",
+        "shortcutfoo.com"
       ]
     }
   ]
