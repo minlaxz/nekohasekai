@@ -51,7 +51,8 @@
         ".shopify.dev",
         ".shopify.com",
         ".fontshare.com",
-        ".shortcutfoo.com"
+        ".shortcutfoo.com",
+        ".signaler-pa.googleapis.com"
       ]
     },
     {
@@ -101,7 +102,8 @@
         "shopify.dev",
         "shopify.com",
         "fontshare.com",
-        "shortcutfoo.com"
+        "shortcutfoo.com",
+        "signaler-pa.googleapis.com"
       ]
     }
   ]
