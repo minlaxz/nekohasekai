@@ -87,4 +87,4 @@ sudo sysctl -p
 Clone the repository and start checking out the 
 1. [Makefile](./Makefile)
 2. [scaffolds/setup.sh](./scaffolds/setup.sh)
-3. [scaffolds/docker-compose.yml](./scaffolds/docker-compose.yml)
+3. [scaffolds/docker-compose.yaml](./scaffolds/docker-compose.yaml)
