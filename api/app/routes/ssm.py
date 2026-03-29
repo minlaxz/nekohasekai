@@ -1,18 +1,15 @@
+import json
+import os
+import secrets
+import string
 from typing import Any, Dict, List, Optional
 
 import httpx
-import secrets
-import string
-import os
-import json
-
-from fastapi import APIRouter, HTTPException, Form
-from fastapi.requests import Request
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-
-
 from app.utils import get_stats
+from fastapi import APIRouter, Form, HTTPException
+from fastapi.requests import Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
 
@@ -88,7 +85,7 @@ async def create_user(
             with open("/configs/inbounds.json", "r") as f:
                 inbounds = json.load(f)
 
-            users["users"].append({"username": username, "uPSK": uPSK})
+            users["users"].append({"name": username, "password": uPSK})
             inbounds["inbounds"][1]["users"] = users["users"]
 
             with open("/configs/inbounds.json", "w") as f:

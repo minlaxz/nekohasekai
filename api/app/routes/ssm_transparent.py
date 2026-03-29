@@ -1,6 +1,7 @@
-import httpx
 import os
-from fastapi import Request, Response, APIRouter
+
+import httpx
+from fastapi import APIRouter, Request, Response
 
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
