@@ -1,23 +1,22 @@
-from typing import Union, Callable, Type, Any, Dict
-from contextlib import asynccontextmanager
-
-import os
 import logging
+import os
+import urllib.parse
+from contextlib import asynccontextmanager
+from typing import Any, Callable, Dict, Type, Union
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
+from fastapi.requests import Request
+from fastapi.responses import JSONResponse, Response
 
 # from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse, Response
-from fastapi.requests import Request
-from fastapi.exceptions import RequestValidationError
-import urllib.parse
 
-from .utils import Reader, get_stats
 from .routes.ssm import router as ssm_router
 from .routes.ssm_transparent import router as ssm_transparent_router
-
+from .utils import Reader, get_stats
 
 scheduler = AsyncIOScheduler()
 
@@ -62,7 +61,7 @@ async def check_quota_exceeded_task() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run once at startup
-    scheduler.add_job(  # type: ignore
+    scheduler.add_job(
         check_quota_exceeded_task,
         "interval",
         seconds=60,
@@ -143,13 +142,15 @@ def read_config(
     please: bool = False,
 ) -> dict[str, Any]:
     if not j or not k:
-        raise RequestValidationError([
-            {
-                "loc": ["query", "j" if not j else "k"],
-                "msg": "field required",
-                "type": "value_error.missing",
-            }
-        ])
+        raise RequestValidationError(
+            [
+                {
+                    "loc": ["query", "j" if not j else "k"],
+                    "msg": "field required",
+                    "type": "value_error.missing",
+                }
+            ]
+        )
 
     # Server will assume default value if any parameter is missing
     return Reader(

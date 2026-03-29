@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-import os
+import asyncio
 import json
 import logging
+import os
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
-from fastapi import HTTPException
-import asyncio
 
 import httpx
+from fastapi import HTTPException
 
 # -------------------------------------------------------------------
 # Environment & Constants
@@ -180,39 +180,51 @@ class Reader(Checker):
             match tag:
                 case "dns-remote":
                     if self.version == 11:
-                        server.update({
-                            "address": f"https://{self.dns_host}{dns_path}",
-                            "address_strategy": dns["strategy"],
-                        })
+                        server.update(
+                            {
+                                "address": f"https://{self.dns_host}{dns_path}",
+                                "address_strategy": dns["strategy"],
+                            }
+                        )
                     else:
-                        server.update({
-                            "server": self.dns_host,
-                            "path": dns_path,
-                            "domain_resolver": {
-                                "server": "dns-resolver",
-                                "strategy": dns["strategy"],
-                            },
-                        })
+                        server.update(
+                            {
+                                "server": self.dns_host,
+                                "path": dns_path,
+                                "domain_resolver": {
+                                    "server": "dns-resolver",
+                                    "strategy": dns["strategy"],
+                                },
+                            }
+                        )
                 case "dns-resolver":
                     if self.version == 11:
-                        server.update({
-                            "address": self.dns_resolver,
-                            "detour": self.dns_detour,
-                        })
+                        server.update(
+                            {
+                                "address": self.dns_resolver,
+                                "detour": self.dns_detour,
+                            }
+                        )
                     else:
-                        server.update({
-                            "server": self.dns_resolver,
-                            "detour": self.dns_detour,
-                        })
+                        server.update(
+                            {
+                                "server": self.dns_resolver,
+                                "detour": self.dns_detour,
+                            }
+                        )
                 case "dns-bypass":
                     if self.version == 11:
-                        server.update({
-                            "address": self.dns_resolver,
-                        })
+                        server.update(
+                            {
+                                "address": self.dns_resolver,
+                            }
+                        )
                     else:
-                        server.update({
-                            "server": self.dns_resolver,
-                        })
+                        server.update(
+                            {
+                                "server": self.dns_resolver,
+                            }
+                        )
                 case _:
                     continue
 
@@ -239,28 +251,32 @@ class Reader(Checker):
             if file["name"].endswith(".srs"):
                 tag = file["name"].replace(".srs", "")
 
-                rule_sets.append({
-                    "tag": tag,
-                    "type": "remote",
-                    "format": "binary",
-                    "url": f"https://cdn.jsdelivr.net/gh/{owner}/{repo}@{branch}/{file['name']}",
-                    "download_detour": self.route_detour,
-                    "update_interval": "1d",
-                })
+                rule_sets.append(
+                    {
+                        "tag": tag,
+                        "type": "remote",
+                        "format": "binary",
+                        "url": f"https://cdn.jsdelivr.net/gh/{owner}/{repo}@{branch}/{file['name']}",
+                        "download_detour": self.route_detour,
+                        "update_interval": "1d",
+                    }
+                )
                 geosite_rule_sets.append(tag)
 
         other_rule_sets = os.getenv("APP_DEFAULT_OTHER_RULE_SETS", "").split(",")
         for rule_set in other_rule_sets:
             rule_set = rule_set.strip()
             if rule_set and rule_set not in geosite_rule_sets:
-                rule_sets.append({
-                    "tag": rule_set,
-                    "type": "remote",
-                    "format": "binary",
-                    "url": f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs",
-                    "download_detour": self.route_detour,
-                    "update_interval": "1d",
-                })
+                rule_sets.append(
+                    {
+                        "tag": rule_set,
+                        "type": "remote",
+                        "format": "binary",
+                        "url": f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs",
+                        "download_detour": self.route_detour,
+                        "update_interval": "1d",
+                    }
+                )
                 geosite_rule_sets.append(rule_set)
 
         route["rule_set"] = rule_sets
@@ -328,14 +344,16 @@ class Reader(Checker):
             (APP_TCP_OUT_NAME, tcp_tags),
             (APP_UDP_OUT_NAME, udp_tags),
         ]:
-            result.append({
-                "type": "urltest",
-                "tag": tag,
-                "outbounds": targets,
-                "url": "https://www.gstatic.com/generate_204",
-                "interval": "30s",
-                "tolerance": 100,
-            })
+            result.append(
+                {
+                    "type": "urltest",
+                    "tag": tag,
+                    "outbounds": targets,
+                    "url": "https://www.gstatic.com/generate_204",
+                    "interval": "30s",
+                    "tolerance": 100,
+                }
+            )
 
         self.template_data["outbounds"] = result
 
@@ -415,7 +433,7 @@ async def get_stats() -> List[Dict[str, Any]]:
                     stat["uPSK"] = users_dict[username].get("uPSK")
 
             # sort by raw bytes
-            stats_data.sort(key=lambda x: x.get("downlinkBytes", 0), reverse=True)  # type: ignore
+            stats_data.sort(key=lambda x: x.get("downlinkBytes", 0), reverse=True)
 
             for row in stats_data:
                 extra = {}
