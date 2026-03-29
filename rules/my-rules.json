@@ -54,7 +54,17 @@
         ".shortcutfoo.com",
         ".tiny.cloud",
         ".stitch.withgoogle.com",
-        ".gemini.google.com"
+        ".gemini.google.com",
+        ".signaler-pa.googleapis.com",
+        ".drivefrontend-pa.clients6.google.com",
+        ".api.ray.so",
+        ".meshy.ai",
+        ".itunes.apple.com",
+        ".gateway.icloud.com",
+        ".steamstatic.com",
+        ".tavily.com",
+        ".composio.dev",
+        ".steamstatic.com"
       ]
     },
     {
@@ -107,7 +117,16 @@
         "shortcutfoo.com",
         "tiny.cloud",
         "stitch.withgoogle.com",
-        "gemini.google.com"
+        "gemini.google.com",
+        "signaler-pa.googleapis.com",
+        "drivefrontend-pa.clients6.google.com",
+        "api.ray.so",
+        "meshy.ai",
+        "itunes.apple.com",
+        "gateway.icloud.com",
+        "steamstatic.com",
+        "tavily.com",
+        "composio.dev"
       ]
     }
   ]
