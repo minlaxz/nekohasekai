@@ -1,9 +1,10 @@
 import json
-import subprocess
 import logging
-from typing import Any
-import typer
+import subprocess
 import time
+from typing import Any
+
+import typer
 
 logging.basicConfig(
     level=logging.NOTSET, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -121,34 +122,42 @@ def generate(
     for i in inbounds:
         match i.get("type"):
             case "shadowtls":
-                i.update({
-                    "users": users,
-                    "listen_port": port,
-                    "handshake": {
-                        "server": tls_server_name,
-                        "server_port": tls_server_port,
-                    },
-                })
+                i.update(
+                    {
+                        "users": users,
+                        "listen_port": port,
+                        "handshake": {
+                            "server": tls_server_name,
+                            "server_port": tls_server_port,
+                        },
+                    }
+                )
             case "shadowsocks":
-                i.update({
-                    "listen_port": port - 1,
-                })
+                i.update(
+                    {
+                        "listen_port": port - 1,
+                    }
+                )
             case _:
                 pass
 
     for o in outbounds:
         match o.get("tag"):
             case "shadowsocks-udp":
-                o.update({
-                    "server": ip,
-                    "server_port": port - 1,
-                })
+                o.update(
+                    {
+                        "server": ip,
+                        "server_port": port - 1,
+                    }
+                )
             case "shadowtls":
-                o.update({
-                    "server": ip,
-                    "server_port": port,
-                    "tls": {"server_name": tls_server_name},
-                })
+                o.update(
+                    {
+                        "server": ip,
+                        "server_port": port,
+                        "tls": {"server_name": tls_server_name},
+                    }
+                )
             case _:
                 pass
 
