@@ -64,7 +64,9 @@
         ".steamstatic.com",
         ".tavily.com",
         ".composio.dev",
-        ".steamstatic.com"
+        ".steamstatic.com",
+        ".cerebras.ai",
+        ".nousresearch.com"
       ]
     },
     {
@@ -126,7 +128,9 @@
         "gateway.icloud.com",
         "steamstatic.com",
         "tavily.com",
-        "composio.dev"
+        "composio.dev",
+        "cerebras.ai",
+        "nousresearch.com"
       ]
     }
   ]
