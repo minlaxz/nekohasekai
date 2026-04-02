@@ -19,6 +19,8 @@ END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
 APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
 
+templates = Jinja2Templates(directory="templates")
+
 
 @router.get(
     "/server/v1/users",
@@ -34,7 +36,6 @@ async def proxy_server_users(
     if raw:
         return {"stats": stats}
 
-    templates = Jinja2Templates(directory="templates")
     if bar:
         # max_down = max(u["downlinkBytes"] for u in stats) or 1
         max_bytes = os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "30000000000")
@@ -59,7 +60,6 @@ def create_upsk(custom_upsk: str | None):
 
 @router.get("/form")
 async def get_form(request: Request):
-    templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse("form.html", {"request": request})
 
 
@@ -97,5 +97,4 @@ async def create_user(
         except httpx.HTTPError as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
     url = f"https://{APP_HOST}/config?p={platform}&v={version}&j={username}&k={uPSK}"
-    templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse("form.html", {"request": request, "result": url})

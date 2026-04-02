@@ -105,16 +105,16 @@ app.add_middleware(
 #     j: str
 #     k: str
 
+templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
-def read_root():
+def read_root(request: Request):
     """_Nginx Default Page_
 
     Returns:
         _TemplateResponse: _nginx default page_
     """
-    templates = Jinja2Templates(directory="templates")
-    return templates.TemplateResponse("index.html", {"request": {}})
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/c", response_class=JSONResponse)
@@ -183,7 +183,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 def read_user(request: Request, p: str = "a", v: int = 12, j: str = "", k: str = ""):
     url = "https://" + APP_HOST + f"/c?p={p}&v={v}&j={j}&k={k}"
     encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"
-    templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse(
         "render.html", {"request": request, "j": j, "encoded_url": encoded_url}
     )
