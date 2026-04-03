@@ -66,7 +66,10 @@
         ".composio.dev",
         ".steamstatic.com",
         ".cerebras.ai",
-        ".nousresearch.com"
+        ".nousresearch.com",
+        ".iflow.cn",
+        ".raycast.com",
+        ".dbreunig.com"
       ]
     },
     {
@@ -130,7 +133,10 @@
         "tavily.com",
         "composio.dev",
         "cerebras.ai",
-        "nousresearch.com"
+        "nousresearch.com",
+        "iflow.cn",
+        "raycast.com",
+        "dbreunig.com"
       ]
     }
   ]
