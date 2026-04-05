@@ -147,9 +147,10 @@ class Reader(Checker):
         dns_final: str,
         dns_resolver: str,
         dns_version: int,
+        default_domain_resolver: str,
         route_detour: str,
         multiplex: bool,
-        experimental: bool,
+        admin_password: str,
     ) -> None:
         super().__init__(username, psk, platform, version)
 
@@ -160,9 +161,10 @@ class Reader(Checker):
         self.dns_final = dns_final
         self.dns_resolver = dns_resolver
         self.dns_version = dns_version
+        self.default_domain_resolver = default_domain_resolver
         self.route_detour = route_detour
         self.multiplex = multiplex
-        self.experimental = experimental
+        self.admin_mode = admin_password == os.getenv("APP_DEFAULT_ADMIN_PASSWORD")
 
     # ------------------------------------------------------------------
 
@@ -285,16 +287,34 @@ class Reader(Checker):
             route["override_android_vpn"] = True
 
         if self.version > 11:
-            # * Skip NextDNS when using experimental features
-            route["default_domain_resolver"] = (
-                "dns-bypass" if self.experimental else "dns-remote"
-            )
+            # Version 11 doesn't support this option
+            # * Override default domain resolver if provided
+            # Defaults to `dns-remote` to resovle jsdelivr CDN domains
+            route["default_domain_resolver"] = self.default_domain_resolver
 
         # *This is a bit hacky, but this is it.
         rules[3]["outbound"] = APP_TCP_OUT_NAME
         rules[3]["rules"][1]["rules"][0]["rule_set"] = geosite_rule_sets
         rules[4]["outbound"] = APP_UDP_OUT_NAME
         rules[4]["rules"][1]["rules"][0]["rule_set"] = geosite_rule_sets
+
+        if self.admin_mode:
+            rules.extend(
+                [
+                    {
+                        "type": "logical",
+                        "mode": "and",
+                        "rules": [{"clash_mode": "Full"}, {"network": "tcp"}],
+                        "outbound": APP_TCP_OUT_NAME,
+                    },
+                    {
+                        "type": "logical",
+                        "mode": "and",
+                        "rules": [{"clash_mode": "Full"}, {"network": "udp"}],
+                        "outbound": APP_UDP_OUT_NAME,
+                    },
+                ]
+            )
 
     # ------------------------------------------------------------------
 

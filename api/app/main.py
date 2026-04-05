@@ -107,6 +107,7 @@ app.add_middleware(
 
 templates = Jinja2Templates(directory="templates")
 
+
 @app.get("/")
 def read_root(request: Request):
     """_Nginx Default Page_
@@ -130,6 +131,7 @@ def read_config(
     df: str = os.getenv("APP_DEFAULT_DNS_FINAL", "dns-remote"),
     dr: str = os.getenv("APP_DEFAULT_DNS_RESOLVER", "1.1.1.1"),
     dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 4)),
+    ddr: str = os.getenv("APP_DEFAULT_DEFAULT_DOMAIN_RESOLVER", "dns-remote"),
     # Route options
     rd: str = os.getenv("APP_DEFAULT_ROUTE_DETOUR", "Out"),
     # User authentication
@@ -137,9 +139,9 @@ def read_config(
     k: str = "",  # Required
     # Experimental options
     mx: bool = os.getenv("APP_DEFAULT_MULTIPLEX_ENABLED") == "true",
-    ex: bool = os.getenv("APP_DEFAULT_EXPERIMENTAL_FEATURES") == "true",
-    # Humorous parameter to appease the server
+    ap: str = "",  # Admin password for experimental features
     please: bool = False,
+    # Humorous parameter to appease the server
 ) -> dict[str, Any]:
     if not j or not k:
         raise RequestValidationError(
@@ -165,9 +167,10 @@ def read_config(
         dns_final=df,
         dns_resolver=dr,
         dns_version=dv,
+        default_domain_resolver=ddr,
         route_detour=rd,
         multiplex=mx,
-        experimental=ex,
+        admin_password=ap,
     ).unwarp()
 
 

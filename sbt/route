@@ -57,6 +57,9 @@
                 ]
               }
             ]
+          },
+          {
+            "clash_mode": "Partial"
           }
         ],
         "outbound": ""
@@ -86,6 +89,9 @@
                 ]
               }
             ]
+          },
+          {
+            "clash_mode": "Partial"
           }
         ],
         "outbound": ""
