@@ -68,7 +68,6 @@ class Checker:
         psk: str,
         platform: str,
         version: int,
-        admin_mode_requested: bool,
     ) -> None:
         self.username = username
         self.psk = psk
@@ -95,13 +94,15 @@ class Checker:
 
         self._verify_user()
         self._load_criticals()
-        if admin_mode_requested:
-            for user in self.users_data.get("users", []):
-                if user.get("name") == self.username:
-                    # Default to False if "admin" key is missing or not a boolean
-                    if user.get("admin", False):
-                        logger.info("Admin mode enabled for user %s", self.username)
-                        self.admin_mode = True
+
+        self.admin_mode = next(
+            (
+                u.get("admin", False)
+                for u in self.users_data.get("users", [])
+                if u.get("name") == self.username
+            ),
+            False,
+        )
 
     # ------------------------------------------------------------------
 
@@ -165,9 +166,8 @@ class Reader(Checker):
         default_domain_resolver: str,
         route_detour: str,
         multiplex: bool,
-        admin_mode_request: bool,
     ) -> None:
-        super().__init__(username, psk, platform, version, admin_mode_request)
+        super().__init__(username, psk, platform, version)
 
         self.log_level = log_level
         self.dns_host = dns_host
@@ -313,6 +313,7 @@ class Reader(Checker):
         rules[4]["rules"][1]["rules"][0]["rule_set"] = geosite_rule_sets
 
         if self.admin_mode:
+            logger.info("Injecting additional rules for admin user %s", self.username)
             rules.extend(
                 [
                     {

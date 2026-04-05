@@ -139,7 +139,6 @@ def read_config(
     k: str = "",  # Required
     # Experimental options
     mx: bool = os.getenv("APP_DEFAULT_MULTIPLEX_ENABLED") == "true",
-    amr: bool = False,  # Admin mode
     please: bool = False,
     # Humorous parameter to appease the server
 ) -> dict[str, Any]:
@@ -170,7 +169,6 @@ def read_config(
         default_domain_resolver=ddr,
         route_detour=rd,
         multiplex=mx,
-        admin_mode_request=amr,
     ).unwarp()
 
 
