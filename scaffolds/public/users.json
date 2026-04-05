@@ -2,7 +2,13 @@
   "users": [
     {
       "name": "user",
-      "password": "password123=="
+      "password": "insecureduser123==",
+      "admin": false
+    },
+    {
+      "name": "admin",
+      "password": "insecuredadmin123==",
+      "admin": true
     }
   ]
 }

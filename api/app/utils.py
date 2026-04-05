@@ -62,11 +62,19 @@ def load_json(source: str) -> Dict[str, Any]:
 
 
 class Checker:
-    def __init__(self, username: str, psk: str, platform: str, version: int) -> None:
+    def __init__(
+        self,
+        username: str,
+        psk: str,
+        platform: str,
+        version: int,
+        admin_mode_requested: bool,
+    ) -> None:
         self.username = username
         self.psk = psk
         self.platform = platform
         self.version = version
+        self.admin_mode = False
 
         self.app_ssm_upstream = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
         self.outbounds_path = os.getenv(
@@ -87,6 +95,13 @@ class Checker:
 
         self._verify_user()
         self._load_criticals()
+        if admin_mode_requested:
+            for user in self.users_data.get("users", []):
+                if user.get("name") == self.username:
+                    # Default to False if "admin" key is missing or not a boolean
+                    if user.get("admin", False):
+                        logger.info("Admin mode enabled for user %s", self.username)
+                        self.admin_mode = True
 
     # ------------------------------------------------------------------
 
@@ -150,9 +165,9 @@ class Reader(Checker):
         default_domain_resolver: str,
         route_detour: str,
         multiplex: bool,
-        admin_password: str,
+        admin_mode_request: bool,
     ) -> None:
-        super().__init__(username, psk, platform, version)
+        super().__init__(username, psk, platform, version, admin_mode_request)
 
         self.log_level = log_level
         self.dns_host = dns_host
@@ -164,7 +179,6 @@ class Reader(Checker):
         self.default_domain_resolver = default_domain_resolver
         self.route_detour = route_detour
         self.multiplex = multiplex
-        self.admin_mode = admin_password == os.getenv("APP_DEFAULT_ADMIN_PASSWORD")
 
     # ------------------------------------------------------------------
 
