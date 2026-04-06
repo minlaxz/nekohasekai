@@ -1,0 +1,23 @@
+{
+    "version": 3,
+    "rules": [
+        {
+            "domain_suffix": [
+                ".awsstatic.com",
+                ".awsapps.com",
+                ".aws.amazon.com",
+                ".media-amazon.com",
+                ".amazonaws.com"
+            ]
+        },
+        {
+            "domain": [
+                "awsstatic.com",
+                "awsapps.com",
+                "aws.amazon.com",
+                "media-amazon.com",
+                "amazonaws.com"
+            ]
+        }
+    ]
+}
