@@ -8,7 +8,7 @@
     <title>Create SSM User</title>
   </head>
   <body>
-    {% if not result %}
+    {% if not config_url or not import_url %}
     <h2>Create SSM User</h2>
 
     <form method="POST" action="/ssm/create">
@@ -38,8 +38,8 @@
     <h2>SSM User Created Successfully!</h2>
     <hr />
     <h3>Generated Link:</h3>
-    <pre>{{ result }}</pre>
-    <a href="{{ result }}">Redirected Link</a>
+    <pre>{{ config_url }}</pre>
+    <a href="{{ import_url }}">Redirect to import link</a>
     {% endif %}
   </body>
 </html>

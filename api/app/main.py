@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, HTMLResponse
 
 # from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
@@ -42,10 +42,18 @@ async def internal_error(request: Request, exc: Exception) -> Response:
         content={"message": "Nice! server error occurred."},
     )
 
+async def validation_error(request: Request, exc: RequestValidationError) -> Response:
+    logging.info(f"400 Error: {exc}")
+    return JSONResponse(
+        status_code=400,
+        content={"message": "Bad request"},
+    )
+
 
 exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
     404: not_found,
     Exception: internal_error,
+    RequestValidationError: validation_error,
 }
 
 
@@ -172,15 +180,7 @@ def read_config(
     ).unwarp()
 
 
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    return JSONResponse(
-        status_code=400,
-        content={"message": "Bad request"},
-    )
-
-
-@app.get("/config")
+@app.get("/i", response_class=HTMLResponse)
 def read_user(request: Request, p: str = "a", v: int = 12, j: str = "", k: str = ""):
     url = "https://" + APP_HOST + f"/c?p={p}&v={v}&j={j}&k={k}"
     encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"

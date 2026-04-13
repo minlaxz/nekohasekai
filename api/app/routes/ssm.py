@@ -27,24 +27,8 @@ templates = Jinja2Templates(directory="templates")
     response_model=Dict[str, List[Dict[str, Any]]],
     response_class=HTMLResponse,
 )
-async def proxy_server_users(
-    request: Request,
-    raw: Optional[bool] = False,
-    bar: Optional[bool] = False,
-):
+async def proxy_server_users(request: Request):
     stats: List[Dict[str, Any]] = await get_stats()
-    if raw:
-        return {"stats": stats}
-
-    if bar:
-        # max_down = max(u["downlinkBytes"] for u in stats) or 1
-        max_bytes = os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "30000000000")
-        for u in stats:
-            u["pct"] = (u["downlinkBytes"] + u["uplinkBytes"]) / max_bytes * 100
-        return templates.TemplateResponse(
-            "users-bar.html", {"request": request, "users": stats}
-        )
-
     return templates.TemplateResponse(
         "users.html", {"request": request, "users": stats}
     )
@@ -56,6 +40,32 @@ def create_upsk(custom_upsk: str | None):
             return custom_upsk
     alphabet = string.ascii_lowercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(20)) + "=="
+
+
+async def create_user_in_memory(username: str, uPSK: str):
+    async with httpx.AsyncClient(timeout=5) as client:
+        create_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
+        payload = {"username": username, "uPSK": uPSK}
+        try:
+            r = await client.post(create_upstream, json=payload)
+            r.raise_for_status()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+
+
+async def create_user_in_file(username: str, uPSK: str):
+    with open("/public/users.json", "r") as f:
+        users = json.load(f)
+    with open("/configs/inbounds.json", "r") as f:
+        inbounds = json.load(f)
+    users["users"].append({"name": username, "password": uPSK})
+    inbounds["inbounds"][-1]["users"] = [
+        {"name": u["name"], "password": u["password"]} for u in users["users"]
+    ]
+    with open("/public/users.json", "w") as f:
+        json.dump(users, f, indent=2)
+    with open("/configs/inbounds.json", "w") as f:
+        json.dump(inbounds, f, indent=2)
 
 
 @router.get("/form")
@@ -72,29 +82,13 @@ async def create_user(
     version: str = Form(...),
 ):
     uPSK = create_upsk(custom_upsk)
-    # Call upstream to create user
-    async with httpx.AsyncClient(timeout=5) as client:
-        create_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
-        payload = {"username": username, "uPSK": uPSK}
-        try:
-            r = await client.post(create_upstream, json=payload)
-            r.raise_for_status()
 
-            with open("/public/users.json", "r") as f:
-                users = json.load(f)
-            with open("/configs/inbounds.json", "r") as f:
-                inbounds = json.load(f)
+    await create_user_in_memory(username, uPSK)
+    await create_user_in_file(username, uPSK)
 
-            users["users"].append({"name": username, "password": uPSK})
-            inbounds["inbounds"][1]["users"] = users["users"]
-
-            with open("/configs/inbounds.json", "w") as f:
-                json.dump(inbounds, f, indent=2)
-
-            with open("/public/users.json", "w") as f:
-                json.dump(users, f, indent=2)
-
-        except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
-    url = f"https://{APP_HOST}/config?p={platform}&v={version}&j={username}&k={uPSK}"
-    return templates.TemplateResponse("form.html", {"request": request, "result": url})
+    import_url = f"https://{APP_HOST}/i?p={platform}&v={version}&j={username}&k={uPSK}"
+    config_url = f"https://{APP_HOST}/c?p={platform}&v={version}&j={username}&k={uPSK}"
+    return templates.TemplateResponse(
+        "form.html",
+        {"request": request, "import_url": import_url, "config_url": config_url},
+    )
