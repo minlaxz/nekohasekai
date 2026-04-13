@@ -64,7 +64,10 @@
         ".nousresearch.com",
         ".iflow.cn",
         ".raycast.com",
-        ".dbreunig.com"
+        ".dbreunig.com",
+        ".composio.dev",
+        ".langchain.com",
+        ".litellm.ai"
       ]
     },
     {
@@ -125,7 +128,10 @@
         "nousresearch.com",
         "iflow.cn",
         "raycast.com",
-        "dbreunig.com"
+        "dbreunig.com",
+        "composio.dev",
+        "langchain.com",
+        "litellm.ai"
       ]
     }
   ]
