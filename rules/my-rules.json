@@ -131,7 +131,12 @@
         "dbreunig.com",
         "composio.dev",
         "langchain.com",
-        "litellm.ai"
+        "litellm.ai",
+        "registry.npmjs.org",
+        "grok.com",
+        "railway.app",
+        "cohere.com",
+        "zilliz.com"
       ]
     }
   ]
