@@ -56,6 +56,40 @@ def load_json(source: str) -> Dict[str, Any]:
         return json.load(f)
 
 
+def head_and_fetch(
+    rule_set: str,
+    rule_sets: List[Any] = [],
+    geoip_rule_sets: List[Any] = [],
+    geosite_rule_sets: List[Any] = [],
+    route_detour: Optional[str] = None,
+) -> None:
+    """
+    Check if a remote rule set exists by sending a HEAD request.
+    """
+    rule_set = rule_set.strip().lower()
+    url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs"
+    if "-ip" in rule_set:
+        url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/{rule_set.replace('ip-', '')}.srs"
+
+    try:
+        response = httpx.head(url, timeout=HTTP_TIMEOUT)
+        if response.status_code == 200:
+            rule_sets.append({
+                "tag": rule_set,
+                "type": "remote",
+                "format": "binary",
+                "url": url,
+                "download_detour": route_detour or "Out",
+                "update_interval": "1d",
+            })
+            if "-ip" in rule_set:
+                geoip_rule_sets.append(rule_set)
+            else:
+                geosite_rule_sets.append(rule_set)
+    except httpx.HTTPError as e:
+        logger.warning(f"Failed to check rule set {rule_set}: {e}")
+
+
 # -------------------------------------------------------------------
 # Checker
 # -------------------------------------------------------------------
@@ -267,56 +301,15 @@ class Reader(Checker):
                 })
                 geosite_rule_sets.append(tag)
 
+        # App default rule sets from environment variable
         other_rule_sets = os.getenv("APP_DEFAULT_OTHER_RULE_SETS", "").split(",")
         for rule_set in other_rule_sets:
-            rule_set = rule_set.strip()
-            if rule_set and rule_set not in geosite_rule_sets:
-                rule_sets.append({
-                    "tag": rule_set,
-                    "type": "remote",
-                    "format": "binary",
-                    "url": f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs",
-                    "download_detour": self.route_detour,
-                    "update_interval": "1d",
-                })
-                geosite_rule_sets.append(rule_set)
+            head_and_fetch(rule_set, rule_sets, geoip_rule_sets, geosite_rule_sets, self.route_detour)
 
+        # Custom rule sets from query parameter
         custom_rule_sets = self.custom_rule_sets.split(",")
         for rule_set in custom_rule_sets:
-            rule_set = rule_set.strip().lower()
-            if "ip-" in rule_set:
-                if rule_set not in geoip_rule_sets:
-                    _rule_set = rule_set.replace("ip-", "")
-                    response = httpx.head(
-                        f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/{_rule_set}.srs",
-                        timeout=HTTP_TIMEOUT,
-                    )
-                    if response.status_code == 200:
-                        rule_sets.append({
-                            "tag": rule_set,
-                            "type": "remote",
-                            "format": "binary",
-                            "url": f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/{_rule_set}.srs",
-                            "download_detour": self.route_detour,
-                            "update_interval": "1d",
-                        })
-                    geoip_rule_sets.append(rule_set)
-            else:
-                if rule_set and rule_set not in geosite_rule_sets:
-                    response = httpx.head(
-                        f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs",
-                        timeout=HTTP_TIMEOUT,
-                    )
-                    if response.status_code == 200:
-                        rule_sets.append({
-                            "tag": rule_set,
-                            "type": "remote",
-                            "format": "binary",
-                            "url": f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs",
-                            "download_detour": self.route_detour,
-                            "update_interval": "1d",
-                        })
-                    geosite_rule_sets.append(rule_set)
+            head_and_fetch(rule_set, rule_sets, geoip_rule_sets, geosite_rule_sets, self.route_detour)
 
         route["rule_set"] = rule_sets
 
