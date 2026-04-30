@@ -62,18 +62,18 @@ def head_and_fetch(
     geoip_rule_sets: List[Any] = [],
     geosite_rule_sets: List[Any] = [],
     route_detour: Optional[str] = None,
+    skip_head: bool = False,
 ) -> None:
     """
     Check if a remote rule set exists by sending a HEAD request.
     """
     rule_set = rule_set.strip().lower()
     url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs"
-    if "-ip" in rule_set:
+    if "ip-" in rule_set:
         url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/{rule_set.replace('ip-', '')}.srs"
 
     try:
-        response = httpx.head(url, timeout=HTTP_TIMEOUT)
-        if response.status_code == 200:
+        if skip_head:
             rule_sets.append({
                 "tag": rule_set,
                 "type": "remote",
@@ -82,7 +82,22 @@ def head_and_fetch(
                 "download_detour": route_detour or "Out",
                 "update_interval": "1d",
             })
-            if "-ip" in rule_set:
+            if "ip-" in rule_set:
+                geoip_rule_sets.append(rule_set)
+            else:
+                geosite_rule_sets.append(rule_set)
+        else:
+            response = httpx.head(url, timeout=HTTP_TIMEOUT)
+            if response.status_code == 200:
+                rule_sets.append({
+                    "tag": rule_set,
+                    "type": "remote",
+                    "format": "binary",
+                    "url": url,
+                    "download_detour": route_detour or "Out",
+                    "update_interval": "1d",
+                })
+            if "ip-" in rule_set:
                 geoip_rule_sets.append(rule_set)
             else:
                 geosite_rule_sets.append(rule_set)
@@ -304,12 +319,26 @@ class Reader(Checker):
         # App default rule sets from environment variable
         other_rule_sets = os.getenv("APP_DEFAULT_OTHER_RULE_SETS", "").split(",")
         for rule_set in other_rule_sets:
-            head_and_fetch(rule_set, rule_sets, geoip_rule_sets, geosite_rule_sets, self.route_detour)
+            head_and_fetch(
+                rule_set,
+                rule_sets,
+                geoip_rule_sets,
+                geosite_rule_sets,
+                self.route_detour,
+                skip_head=True,
+            )
 
         # Custom rule sets from query parameter
         custom_rule_sets = self.custom_rule_sets.split(",")
         for rule_set in custom_rule_sets:
-            head_and_fetch(rule_set, rule_sets, geoip_rule_sets, geosite_rule_sets, self.route_detour)
+            head_and_fetch(
+                rule_set,
+                rule_sets,
+                geoip_rule_sets,
+                geosite_rule_sets,
+                self.route_detour,
+                skip_head=False,
+            )
 
         route["rule_set"] = rule_sets
 
