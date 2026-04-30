@@ -154,6 +154,9 @@ def read_config(
     # Humorous parameter to appease the server
 ) -> dict[str, Any]:
     client_info: dict[str, Any] = {
+        "real_ip": request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        or request.headers.get("x-real-ip")
+        or (request.client.host if request.client else None),
         "ip": request.client.host if request.client else None,
         "port": request.client.port if request.client else None,
         "headers": dict(request.headers),
