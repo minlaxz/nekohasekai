@@ -18,7 +18,7 @@ from .routes.ssm import router as ssm_router
 from .routes.ssm_transparent import router as ssm_transparent_router
 from .utils import Reader, get_stats
 
-scheduler = AsyncIOScheduler()
+scheduler: AsyncIOScheduler = AsyncIOScheduler()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,6 +41,7 @@ async def internal_error(request: Request, exc: Exception) -> Response:
         status_code=500,
         content={"message": "Nice! server error occurred."},
     )
+
 
 async def validation_error(request: Request, exc: RequestValidationError) -> Response:
     logging.info(f"400 Error: {exc}")
@@ -69,17 +70,17 @@ async def check_quota_exceeded_task() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run once at startup
-    scheduler.add_job(
+    scheduler.add_job(  # type: ignore
         check_quota_exceeded_task,
         "interval",
         seconds=60,
     )
-    scheduler.start()
+    scheduler.start()  # type: ignore
 
     yield  # App runs here
 
     # App tearsdown: cleanup logic on shutdown and so on
-    scheduler.shutdown()
+    scheduler.shutdown()  # type: ignore
 
 
 app = FastAPI(exception_handlers=exceptions, lifespan=lifespan)
@@ -128,6 +129,7 @@ def read_root(request: Request):
 
 @app.get("/c", response_class=JSONResponse)
 def read_config(
+    request: Request,
     # Common options
     p: str = os.getenv("APP_DEFAULT_PLATFORM", "a"),
     v: int = int(os.getenv("APP_DEFAULT_VERSION", 12)),
@@ -142,6 +144,7 @@ def read_config(
     ddr: str = os.getenv("APP_DEFAULT_DEFAULT_DOMAIN_RESOLVER", "dns-remote"),
     # Route options
     rd: str = os.getenv("APP_DEFAULT_ROUTE_DETOUR", "Out"),
+    crs: str = "",  # Custom Rule Set, APP_DEFAULT_OTHER_RULE_SETS has higher priority
     # User authentication
     j: str = "",  # Required
     k: str = "",  # Required
@@ -150,16 +153,25 @@ def read_config(
     please: bool = False,
     # Humorous parameter to appease the server
 ) -> dict[str, Any]:
+    client_info: dict[str, Any] = {
+        "ip": request.client.host if request.client else None,
+        "port": request.client.port if request.client else None,
+        "headers": dict(request.headers),
+        "user_agent": request.headers.get("user-agent"),
+        "method": request.method,
+        "url": str(request.url),
+        "query_params": dict(request.query_params),
+    }
+    logging.info(f"Received request: {client_info}")
+
     if not j or not k:
-        raise RequestValidationError(
-            [
-                {
-                    "loc": ["query", "j" if not j else "k"],
-                    "msg": "field required",
-                    "type": "value_error.missing",
-                }
-            ]
-        )
+        raise RequestValidationError([
+            {
+                "loc": ["query", "j" if not j else "k"],
+                "msg": "field required",
+                "type": "value_error.missing",
+            }
+        ])
 
     # Server will assume default value if any parameter is missing
     return Reader(
@@ -177,6 +189,7 @@ def read_config(
         default_domain_resolver=ddr,
         route_detour=rd,
         multiplex=mx,
+        custom_rule_sets=crs,
     ).unwarp()
 
 
