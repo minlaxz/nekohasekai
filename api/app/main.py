@@ -144,8 +144,7 @@ def read_config(
     ddr: str = os.getenv("APP_DEFAULT_DEFAULT_DOMAIN_RESOLVER", "dns-remote"),
     # Route options
     rd: str = os.getenv("APP_DEFAULT_ROUTE_DETOUR", "Out"),
-    crs: str = "",  # Custom Rule Set, APP_DEFAULT_OTHER_RULE_SETS has higher priority
-    crips: str = "",  # Custom Route IPs
+    crs: str = "",  # Custom Route Rule Sets, APP_DEFAULT_OTHER_RULE_SETS has higher priority
     # User authentication
     j: str = "",  # Required
     k: str = "",  # Required
@@ -209,7 +208,6 @@ def read_config(
         route_detour=rd,
         multiplex=mx,
         custom_rule_sets=crs,
-        custom_route_ips=crips,
     ).unwarp()
 
 
