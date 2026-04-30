@@ -47,7 +47,7 @@ async def validation_error(request: Request, exc: RequestValidationError) -> Res
     logging.info(f"400 Error: {exc}")
     return JSONResponse(
         status_code=400,
-        content={"message": "Bad request"},
+        content={"message": str(exc)},
     )
 
 
@@ -145,6 +145,7 @@ def read_config(
     # Route options
     rd: str = os.getenv("APP_DEFAULT_ROUTE_DETOUR", "Out"),
     crs: str = "",  # Custom Rule Set, APP_DEFAULT_OTHER_RULE_SETS has higher priority
+    crips: str = "",  # Custom Route IPs
     # User authentication
     j: str = "",  # Required
     k: str = "",  # Required
@@ -208,6 +209,7 @@ def read_config(
         route_detour=rd,
         multiplex=mx,
         custom_rule_sets=crs,
+        custom_route_ips=crips,
     ).unwarp()
 
 

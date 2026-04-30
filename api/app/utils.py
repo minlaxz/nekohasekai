@@ -23,7 +23,7 @@ APP_UDP_OUT_NAME = os.getenv("APP_UDP_OUT_NAME", "UDP-Out")
 APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
 
 APP_DEFAULT_QUOTA_IN_BYTES = int(os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "30000000000"))
-HTTP_TIMEOUT = 5 # seconds
+HTTP_TIMEOUT = 5  # seconds
 
 # -------------------------------------------------------------------
 # Logging
@@ -166,6 +166,7 @@ class Reader(Checker):
         default_domain_resolver: str,
         route_detour: str,
         custom_rule_sets: str,
+        custom_route_ips: str,
         multiplex: bool,
     ) -> None:
         super().__init__(username, psk, platform, version)
@@ -181,6 +182,7 @@ class Reader(Checker):
         self.route_detour = route_detour
         self.multiplex = multiplex
         self.custom_rule_sets = custom_rule_sets
+        self.custom_route_ips = custom_route_ips
 
     # ------------------------------------------------------------------
 
@@ -313,6 +315,14 @@ class Reader(Checker):
         # *This is a bit hacky, but this is it.
         rules[3]["outbound"] = APP_TCP_OUT_NAME
         rules[3]["rules"][1]["rules"][0]["rule_set"] = geosite_rule_sets
+        if self.custom_route_ips:
+            rules[3]["rules"][1]["rules"].append({
+                "ip_cidr": [
+                    ip.strip() + "/32"
+                    for ip in self.custom_route_ips.split(",")
+                    if ip.strip()
+                ]
+            })
         rules[4]["outbound"] = APP_UDP_OUT_NAME
         rules[4]["rules"][1]["rules"][0]["rule_set"] = geosite_rule_sets
 
