@@ -153,20 +153,8 @@ def read_config(
     please: bool = False,
     # Humorous parameter to appease the server
 ) -> dict[str, Any]:
-    client_info: dict[str, Any] = {
-        "real_ip": request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-        or request.headers.get("x-real-ip")
-        or (request.client.host if request.client else None),
-        "ip": request.client.host if request.client else None,
-        "port": request.client.port if request.client else None,
-        "headers": dict(request.headers),
-        "user_agent": request.headers.get("user-agent"),
-        "method": request.method,
-        "url": str(request.url),
-        "query_params": dict(request.query_params),
-    }
-    logging.info(f"Received request: {client_info}")
 
+    # Nothing to check if `j` and `k` aren't provided.
     if not j or not k:
         raise RequestValidationError([
             {
@@ -175,6 +163,33 @@ def read_config(
                 "type": "value_error.missing",
             }
         ])
+
+    # Check client platform from User-Agent header.
+    user_agent: str = request.headers.get("user-agent") or ""
+    if user_agent:
+        if "SFA" in user_agent:
+            p = "a"
+        elif "SFI" in user_agent:
+            p = "i"
+        else:
+            raise RequestValidationError([
+                {
+                    "loc": ["headers", "user-agent"],
+                    "msg": "Unsupported client platform",
+                    "type": "value_error.unsupported_platform",
+                }
+            ])
+        v = 11 if "1.11.4" in user_agent.split(";")[1] else 12
+    else:
+        p = p  # Use the provided platform
+        v = v  # Use the provided version
+
+    real_ip = (
+        request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        or request.headers.get("x-real-ip")
+        or (request.client.host if request.client else None),
+    )
+    logging.info(f"Received request: {j}-{real_ip}")
 
     # Server will assume default value if any parameter is missing
     return Reader(
