@@ -68,6 +68,10 @@ def head_and_fetch(
     Check if a remote rule set exists by sending a HEAD request.
     """
     rule_set = rule_set.strip().lower()
+
+    if not rule_set:
+        return
+
     url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{rule_set}.srs"
     if "ip-" in rule_set:
         url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/{rule_set.replace('ip-', '')}.srs"
