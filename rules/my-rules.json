@@ -67,7 +67,8 @@
         ".dbreunig.com",
         ".composio.dev",
         ".langchain.com",
-        ".litellm.ai"
+        ".litellm.ai",
+        ".line-apps.com"
       ]
     },
     {
@@ -136,7 +137,8 @@
         "grok.com",
         "railway.app",
         "cohere.com",
-        "zilliz.com"
+        "zilliz.com",
+        "line-apps.com"
       ]
     }
   ]
