@@ -68,7 +68,14 @@
         ".composio.dev",
         ".langchain.com",
         ".litellm.ai",
-        ".line-apps.com"
+        ".line-apps.com",
+        ".cloudcli.ai",
+        ".aihero.dev",
+        ".usehallmark.com",
+        ".fal.ai",
+        ".21st.dev",
+        ".browser-use.com",
+        ".browserbase.com"
       ]
     },
     {
@@ -138,7 +145,14 @@
         "railway.app",
         "cohere.com",
         "zilliz.com",
-        "line-apps.com"
+        "line-apps.com",
+        "cloudcli.ai",
+        "aihero.dev",
+        "usehallmark.com",
+        "fal.ai",
+        "21st.dev",
+        "browser-use.com",
+        "browserbase.com"
       ]
     }
   ]
