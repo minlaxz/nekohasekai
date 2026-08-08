@@ -2,6 +2,9 @@
   "version": 3,
   "rules": [
     {
+      "domain_keyword": [
+        "grabacademy"
+      ],
       "domain_suffix": [
         ".dify.ai",
         ".wikileaks.org",
