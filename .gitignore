@@ -185,4 +185,4 @@ git-ignored
 
 **/test_data/*
 # Runtime user store (see example-users.json)
-users.json
+*.users.json

@@ -6,7 +6,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-rules.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -14,7 +14,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -22,7 +22,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -30,7 +30,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -38,7 +38,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -46,7 +46,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/threads.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -54,7 +54,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/notion.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -62,7 +62,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/anthropic.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -70,7 +70,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/viber.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -78,7 +78,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -86,7 +86,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/tailscale.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -94,7 +94,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/stripe.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -102,7 +102,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/slack.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -110,7 +110,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/signal.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -118,7 +118,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/manus.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -126,7 +126,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/jquery.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -134,7 +134,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/huggingface.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -142,7 +142,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/google-gemini.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -150,7 +150,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/docker.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -158,7 +158,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/bluesky.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -166,7 +166,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/figma.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -174,7 +174,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/paypal.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -182,7 +182,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       },
       {
@@ -190,7 +190,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/vercel.srs",
-        "download_detour": "TCP",
+        "http_client": { "detour": "TCP" },
         "update_interval": "1d"
       }
     ],

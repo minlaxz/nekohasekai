@@ -129,8 +129,8 @@ class Reader(Checker):
             if ob.get("type") != "shadowsocks":
                 continue  # shadowtls password is shared, set by entrypoint
             ob["password"] = self.psk
-            if self.multiplex:
-                ob["multiplex"] = {"enabled": True, "padding": False}
+            if "multiplex" in ob:  # uot outbound has none: conflicts with multiplex
+                ob["multiplex"]["enabled"] = self.multiplex
         return outbounds
 
     def unwarp(self) -> Dict[str, Any]:
