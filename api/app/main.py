@@ -130,28 +130,22 @@ def read_root(request: Request):
 @app.get("/c", response_class=JSONResponse)
 def read_config(
     request: Request,
-    # Common options
-    p: str = os.getenv("APP_DEFAULT_PLATFORM", "a"),
-    v: int = int(os.getenv("APP_DEFAULT_VERSION", 12)),
-    ll: str = os.getenv("APP_DEFAULT_LOG_LEVEL", "warn"),
-    # DNS options
-    dh: str = os.getenv("APP_DEFAULT_DNS_HOST", "dns.nextdns.io"),
-    dp: str = os.getenv("APP_DEFAULT_DNS_PATH", "/"),
-    dd: str = os.getenv("APP_DEFAULT_DNS_DETOUR", "Out"),
-    df: str = os.getenv("APP_DEFAULT_DNS_FINAL", "dns-remote"),
-    dr: str = os.getenv("APP_DEFAULT_DNS_RESOLVER", "1.1.1.1"),
-    dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 4)),
-    ddr: str = os.getenv("APP_DEFAULT_DEFAULT_DOMAIN_RESOLVER", "dns-remote"),
-    # Route options
-    rd: str = os.getenv("APP_DEFAULT_ROUTE_DETOUR", "Out"),
-    crs: str = "",  # Custom Route Rule Sets, APP_DEFAULT_OTHER_RULE_SETS has higher priority
     # User authentication
     j: str = "",  # Required
     k: str = "",  # Required
+    # Common options
+    p: str = os.getenv("APP_DEFAULT_PLATFORM", ""),
+    v: int = int(os.getenv("APP_DEFAULT_VERSION", 0)),
+    ll: str = os.getenv("APP_DEFAULT_LOG_LEVEL", ""),
+    # DNS options
+    dh: str = os.getenv("APP_DEFAULT_DNS_HOST", ""),
+    dp: str = os.getenv("APP_DEFAULT_DNS_PATH", ""),
+    dd: str = os.getenv("APP_DEFAULT_DNS_DETOUR", ""),
+    df: str = os.getenv("APP_DEFAULT_DNS_FINAL", ""),
+    dr: str = os.getenv("APP_DEFAULT_DNS_RESOLVER", ""),
+    dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 0)),
     # Experimental options
     mx: bool = os.getenv("APP_DEFAULT_MULTIPLEX_ENABLED") == "true",
-    please: bool = False,
-    # Humorous parameter to appease the server
 ) -> dict[str, Any]:
 
     # Nothing to check if `j` and `k` aren't provided.
@@ -164,26 +158,6 @@ def read_config(
             }
         ])
 
-    # Check client platform from User-Agent header.
-    user_agent: str = request.headers.get("user-agent") or ""
-    if user_agent:
-        if "SFA" in user_agent:
-            p = "a"
-        elif "SFI" in user_agent:
-            p = "i"
-        else:
-            raise RequestValidationError([
-                {
-                    "loc": ["headers", "user-agent"],
-                    "msg": "Unsupported client platform",
-                    "type": "value_error.unsupported_platform",
-                }
-            ])
-        v = 11 if "1.11.4" in user_agent.split(";")[1] else 12
-    else:
-        p = p  # Use the provided platform
-        v = v  # Use the provided version
-
     real_ip = (
         request.headers.get("x-forwarded-for", "").split(",")[0].strip()
         or request.headers.get("x-real-ip")
@@ -191,12 +165,10 @@ def read_config(
     )
     logging.info(f"Received request: {j}-{real_ip}")
 
-    # Server will assume default value if any parameter is missing
+    # p / v accepted for URL compatibility with /i; config no longer depends on them.
     return Reader(
         username=j,  # Required
         psk=k,  # Required
-        platform=p,
-        version=v,
         log_level=ll,
         dns_host=dh,
         dns_path=dp,
@@ -204,10 +176,7 @@ def read_config(
         dns_final=df,
         dns_resolver=dr,
         dns_version=dv,
-        default_domain_resolver=ddr,
-        route_detour=rd,
         multiplex=mx,
-        custom_rule_sets=crs,
     ).unwarp()
 
 

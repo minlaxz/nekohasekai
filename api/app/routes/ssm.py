@@ -14,10 +14,8 @@ from fastapi.templating import Jinja2Templates
 router = APIRouter()
 
 APP_HOST: str = os.getenv("APP_HOST", "www.gstatic.com")
-START_PORT: int = int(os.getenv("START_PORT", "1080"))
-END_PORT: int = int(os.getenv("END_PORT", "1090"))
-
-APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
+APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
+APP_USERS_PATH = os.getenv("APP_INTERNAL_USERS_PATH", "/users.json")
 
 templates = Jinja2Templates(directory="templates")
 
@@ -54,18 +52,12 @@ async def create_user_in_memory(username: str, uPSK: str):
 
 
 async def create_user_in_file(username: str, uPSK: str):
-    with open("/public/users.json", "r") as f:
+    # Server inbounds pick this up on next sing-box restart (see scaffolds/entrypoint.sh).
+    with open(APP_USERS_PATH, "r") as f:
         users = json.load(f)
-    with open("/configs/inbounds.json", "r") as f:
-        inbounds = json.load(f)
-    users["users"].append({"name": username, "password": uPSK})
-    inbounds["inbounds"][-1]["users"] = [
-        {"name": u["name"], "password": u["password"]} for u in users["users"]
-    ]
-    with open("/public/users.json", "w") as f:
+    users["users"].append({"name": username, "password": uPSK, "admin": False})
+    with open(APP_USERS_PATH, "w") as f:
         json.dump(users, f, indent=2)
-    with open("/configs/inbounds.json", "w") as f:
-        json.dump(inbounds, f, indent=2)
 
 
 @router.get("/form")

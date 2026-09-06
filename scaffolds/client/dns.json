@@ -1,0 +1,34 @@
+{
+  "dns": {
+    "servers": [
+      {
+        "tag": "dns-remote",
+        "type": "https",
+        "server": "",
+        "path": "",
+        "domain_resolver": {
+          "server": "dns-resolver",
+          "strategy": "ipv4_only"
+        }
+      },
+      {
+        "tag": "dns-resolver",
+        "type": "udp",
+        "server": "1.1.1.1",
+        "detour": "shadowsocks-udp"
+      },
+      {
+        "tag": "dns-resolver-bypass",
+        "type": "udp",
+        "server": "1.1.1.1"
+      }
+    ],
+    "independent_cache": false,
+    "strategy": "ipv4_only",
+    "disable_cache": false,
+    "disable_expire": false,
+    "cache_capacity": 10240,
+    "reverse_mapping": true,
+    "final": "dns-remote"
+  }
+}

@@ -1,0 +1,15 @@
+
+{
+  "users": [
+    {
+      "name": "user1",
+      "password": "insecure-user123==",
+      "admin": false
+    },
+    {
+      "name": "user2",
+      "password": "insecure-admin123==",
+      "admin": true
+    }
+  ]
+}

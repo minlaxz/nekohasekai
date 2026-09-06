@@ -1,0 +1,332 @@
+{
+  "route": {
+    "rule_set": [
+      {
+        "tag": "my-rules",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-rules.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "facebook",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "whatsapp",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "messenger",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "instagram",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "threads",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/threads.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "notion",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/notion.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "anthropic",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/anthropic.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "viber",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/viber.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "twitter",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "tailscale",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/tailscale.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "stripe",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/stripe.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "slack",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/slack.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "signal",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/signal.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "manus",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/manus.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "jquery",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/jquery.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "huggingface",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/huggingface.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "google-gemini",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/google-gemini.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "docker",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/docker.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "bluesky",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/bluesky.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "figma",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/figma.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "paypal",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/paypal.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "github",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "vercel",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/vercel.srs",
+        "download_detour": "TCP",
+        "update_interval": "1d"
+      }
+    ],
+    "rules": [
+      {
+        "port": 53,
+        "action": "hijack-dns"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "network": "tcp",
+            "port": [5222, 853]
+          },
+          {
+            "ip_cidr": ["5.28.195.2/32", "0.0.0.0/32", "::/128"]
+          }
+        ],
+        "action": "reject",
+        "method": "drop"
+      },
+      {
+        "action": "sniff",
+        "timeout": "100ms"
+      },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "network": "tcp"
+          },
+          {
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "rule_set": [
+                  "my-rules",
+                  "facebook",
+                  "whatsapp",
+                  "messenger",
+                  "instagram",
+                  "threads",
+                  "notion",
+                  "anthropic",
+                  "viber",
+                  "twitter",
+                  "tailscale",
+                  "stripe",
+                  "slack",
+                  "signal",
+                  "manus",
+                  "jquery",
+                  "huggingface",
+                  "google-gemini",
+                  "docker",
+                  "bluesky",
+                  "figma",
+                  "paypal",
+                  "github",
+                  "vercel"
+                ]
+              },
+              {
+                "domain": ["gstatic.com"]
+              },
+              {
+                "domain_suffix": [".gstatic.com"]
+              }
+            ]
+          },
+          {
+            "clash_mode": "Partial"
+          }
+        ],
+        "outbound": "TCP"
+      },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "network": "udp"
+          },
+          {
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {
+                "rule_set": [
+                  "my-rules",
+                  "facebook",
+                  "whatsapp",
+                  "messenger",
+                  "instagram",
+                  "threads",
+                  "notion",
+                  "anthropic",
+                  "viber",
+                  "twitter",
+                  "tailscale",
+                  "stripe",
+                  "slack",
+                  "signal",
+                  "manus",
+                  "jquery",
+                  "huggingface",
+                  "google-gemini",
+                  "docker",
+                  "bluesky",
+                  "figma",
+                  "paypal",
+                  "github",
+                  "vercel"
+                ]
+              },
+              {
+                "domain": ["gstatic.com"]
+              },
+              {
+                "domain_suffix": [".gstatic.com"]
+              }
+            ]
+          },
+          {
+            "clash_mode": "Partial"
+          }
+        ],
+        "outbound": "UDP"
+      }
+    ],
+    "final": "direct",
+    "auto_detect_interface": true,
+    "default_domain_resolver": "dns-resolver"
+  }
+}

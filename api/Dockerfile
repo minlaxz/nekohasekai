@@ -17,3 +17,6 @@ RUN pip install --no-cache-dir \
 COPY . .
 
 EXPOSE 8000
+
+# See more options at https://fastapi.tiangolo.com/deployment/docker/
+CMD ["fastapi", "run", "app/main.py", "--port", "8000", "--proxy-headers"]

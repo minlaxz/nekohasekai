@@ -1,0 +1,99 @@
+name: sing-box
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:ci-alpine
+    # Resource limits
+    mem_limit: 128m
+    mem_reservation: 64m
+    memswap_limit: -1 # no swap limit
+    # Network and ports
+    networks:
+      - caddy-net
+    ports:
+      - 80:80
+      - 443:443/tcp
+      - 443:443/udp
+    # Env and volumes
+    environment:
+      - CADDY_INGRESS_NETWORKS=caddy-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
+    # Loggings and others
+    logging:
+      <<: *default-logging
+    restart: unless-stopped
+    profile: with-caddy
+
+  sing-box-api:
+    image: ghcr.io/minlaxz/nekohasekai:neko-api
+    # Resource limits
+    mem_limit: 128m
+    mem_reservation: 64m
+    memswap_limit: -1 # no swap limit
+    # Networks and ports
+    networks:
+      - caddy-net
+      - sing-box-net
+    ports:
+      - "127.0.0.1:8000:8000"
+    # Env and volumes
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - sing-box-configs:/sing-box:ro
+      - ./users.json:/users.json
+    # Loggings and others
+    labels:
+      caddy: ${APP_HOST?}
+      caddy.reverse_proxy: "{{upstreams 8000}}"
+    logging:
+      <<: *default-logging
+    restart: unless-stopped
+
+  sing-box:
+    image: ghcr.io/minlaxz/nekohasekai:neko
+    # Resource limits
+    mem_limit: 128m
+    mem_reservation: 64m
+    memswap_limit: -1 # no swap limit
+    # Networks and ports
+    networks:
+      - sing-box-net
+    ports:
+      - "127.0.0.1:7777:7777"
+      - "127.0.0.1:8888:8888"
+      - "${SHADOWSOCKS_PORT?}:${SHADOWSOCKS_PORT?}/tcp"
+      - "${SHADOWSOCKS_PORT?}:${SHADOWSOCKS_PORT?}/udp"
+      - "${SHADOWTLS_PORT?}:${SHADOWTLS_PORT?}/tcp"
+    # Env and volumes
+    environment:
+      - SHADOWSOCKS_PORT=${SHADOWSOCKS_PORT?}
+      - SHADOWTLS_PORT=${SHADOWTLS_PORT?}
+      - SHADOWTLS_SNI=${SHADOWTLS_SNI?}
+      - PUBLIC_IP=${PUBLIC_IP:-}
+    volumes:
+      - sing-box-configs:/sing-box
+      - ./users.json:/users.json:ro
+    # Loggings and others
+    logging:
+      <<: *default-logging
+    restart: unless-stopped
+
+networks:
+  caddy-net:
+    external: true
+  sing-box-net:
+
+volumes:
+  caddy_data: {}
+  sing-box-configs: {}

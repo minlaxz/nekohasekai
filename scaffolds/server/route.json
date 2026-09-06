@@ -1,6 +1,6 @@
 {
   "route": {
-    "outbound": "direct-out",
+    "final": "direct-out",
     "auto_detect_interface": true
   }
 }

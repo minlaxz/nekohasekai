@@ -1,0 +1,15 @@
+{
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "address": [
+        "10.10.10.0/24"
+      ],
+      "mtu": 1420,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "gvisor"
+    }
+  ]
+}

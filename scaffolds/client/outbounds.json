@@ -37,12 +37,45 @@
       "password": "",
       "tls": {
         "enabled": true,
-        "server_name": "mozilla.org",  // Server Name Indication (SNI) for TLS handshake (should match the domain with configs/inbounds.json)
+        "server_name": "",
         "utls": {
           "enabled": true,
           "fingerprint": "chrome"
         }
       }
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "urltest",
+      "tag": "all-outbounds",
+      "outbounds": [
+        "shadowsocks-tcp",
+        "shadowsocks-udp",
+        "shadowsocks-uot",
+        "direct"
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "30s",
+      "tolerance": 100
+    },
+    {
+      "type": "urltest",
+      "tag": "TCP",
+      "outbounds": ["shadowsocks-tcp", "shadowsocks-uot"],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "30s",
+      "tolerance": 100
+    },
+    {
+      "type": "urltest",
+      "tag": "UDP",
+      "outbounds": ["shadowsocks-udp", "shadowsocks-uot"],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "30s",
+      "tolerance": 100
     }
   ]
 }

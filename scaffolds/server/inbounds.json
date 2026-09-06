@@ -22,7 +22,7 @@
       "version": 3,
       "users": [],
       "handshake": {
-        "server": "mozilla.org", // Server Name Indication (SNI) for TLS handshake (should match the domain with public/outbounds.json)
+        "server": "",
         "server_port": 443
       },
       "strict_mode": true
