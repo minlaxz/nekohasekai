@@ -126,9 +126,10 @@ class Reader(Checker):
     def _outbounds(self) -> List[Dict[str, Any]]:
         outbounds = self._section("outbounds")
         for ob in outbounds:
-            if ob.get("password") == "":
-                ob["password"] = self.psk
-            if ob.get("type") == "shadowsocks" and self.multiplex:
+            if ob.get("type") != "shadowsocks":
+                continue  # shadowtls password is shared, set by entrypoint
+            ob["password"] = self.psk
+            if self.multiplex:
                 ob["multiplex"] = {"enabled": True, "padding": False}
         return outbounds
 

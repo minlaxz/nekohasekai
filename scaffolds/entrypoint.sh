@@ -2,7 +2,6 @@
 set -e
 
 ROOT="${SING_BOX_ROOT:-/sing-box}"
-USERS_FILE="${USERS_FILE:-/users.json}"
 SERVER_IN="$ROOT/server/inbounds.json"
 CLIENT_OUT="$ROOT/client/outbounds.json"
 
@@ -28,28 +27,29 @@ if [ ! -f "$ROOT/server/.configured" ]; then
     : "${SHADOWSOCKS_PORT:?SHADOWSOCKS_PORT is required}"
     : "${SHADOWTLS_PORT:?SHADOWTLS_PORT is required}"
     : "${SHADOWTLS_SNI:?SHADOWTLS_SNI is required}"
+    : "${SHADOWTLS_PASSWORD:?SHADOWTLS_PASSWORD is required}"
 
+    # ShadowTLS is transport only; one shared handshake password for everyone.
+    # Per-user auth happens in the Shadowsocks inbound (ssm-api).
     jqi "$SERVER_IN" \
-        --argjson ss "$SHADOWSOCKS_PORT" --argjson stls "$SHADOWTLS_PORT" --arg sni "$SHADOWTLS_SNI" \
+        --argjson ss "$SHADOWSOCKS_PORT" --argjson stls "$SHADOWTLS_PORT" \
+        --arg sni "$SHADOWTLS_SNI" --arg pw "$SHADOWTLS_PASSWORD" \
         '.inbounds[0].listen_port = $ss
         | .inbounds[1].listen_port = $stls
-        | .inbounds[1].handshake.server = $sni'
+        | .inbounds[1].handshake.server = $sni
+        | .inbounds[1].users = [{name: "shadowtls", password: $pw}]'
 
     jqi "$CLIENT_OUT" \
-        --argjson ss "$SHADOWSOCKS_PORT" --argjson stls "$SHADOWTLS_PORT" --arg sni "$SHADOWTLS_SNI" \
+        --argjson ss "$SHADOWSOCKS_PORT" --argjson stls "$SHADOWTLS_PORT" \
+        --arg sni "$SHADOWTLS_SNI" --arg pw "$SHADOWTLS_PASSWORD" \
         '.outbounds[1].server_port = $ss
         | .outbounds[3].server_port = $stls
-        | .outbounds[3].tls.server_name = $sni'
+        | .outbounds[3].tls.server_name = $sni
+        | .outbounds[3].password = $pw'
 
     touch "$ROOT/server/.configured"
     echo "entrypoint: configured ports ss=$SHADOWSOCKS_PORT shadowtls=$SHADOWTLS_PORT sni=$SHADOWTLS_SNI"
 fi
-
-# ---- every start: shadowtls users from users.json ----
-[ -f "$USERS_FILE" ] || die "$USERS_FILE not found (mount ./users.json)"
-users=$(jq -c '[.users[] | {name, password}]' "$USERS_FILE") || die "$USERS_FILE is not valid JSON"
-[ "$users" = "[]" ] && echo "entrypoint: warning: no users in $USERS_FILE" >&2
-jqi "$SERVER_IN" --argjson u "$users" '.inbounds[1].users = $u'
 
 # ---- every start: public IPv4 ----
 ip="$PUBLIC_IP"

@@ -81,10 +81,10 @@ services:
       - SHADOWSOCKS_PORT=${SHADOWSOCKS_PORT?}
       - SHADOWTLS_PORT=${SHADOWTLS_PORT?}
       - SHADOWTLS_SNI=${SHADOWTLS_SNI?}
+      - SHADOWTLS_PASSWORD=${SHADOWTLS_PASSWORD?}
       - PUBLIC_IP=${PUBLIC_IP:-}
     volumes:
       - sing-box-configs:/sing-box
-      - ./users.json:/users.json:ro
     # Loggings and others
     logging:
       <<: *default-logging

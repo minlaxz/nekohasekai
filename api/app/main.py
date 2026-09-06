@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse, Response, HTMLResponse
 # from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 
-from .routes.ssm import router as ssm_router
+from .routes.ssm import router as ssm_router, seed_users_from_file
 from .routes.ssm_transparent import router as ssm_transparent_router
 from .utils import Reader, get_stats
 
@@ -70,6 +70,10 @@ async def check_quota_exceeded_task() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run once at startup
+    try:
+        await seed_users_from_file()
+    except Exception as exc:  # ssm-api not up yet, or users.json missing
+        logging.warning(f"users.json seed skipped: {exc}")
     scheduler.add_job(  # type: ignore
         check_quota_exceeded_task,
         "interval",

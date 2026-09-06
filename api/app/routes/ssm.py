@@ -51,13 +51,54 @@ async def create_user_in_memory(username: str, uPSK: str):
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
 
 
-async def create_user_in_file(username: str, uPSK: str):
-    # Server inbounds pick this up on next sing-box restart (see scaffolds/entrypoint.sh).
+def _read_users() -> Dict[str, Any]:
     with open(APP_USERS_PATH, "r") as f:
-        users = json.load(f)
-    users["users"].append({"name": username, "password": uPSK, "admin": False})
+        return json.load(f)
+
+
+def _write_users(users: Dict[str, Any]) -> None:
     with open(APP_USERS_PATH, "w") as f:
         json.dump(users, f, indent=2)
+
+
+async def create_user_in_file(username: str, uPSK: str):
+    users = _read_users()
+    users["users"] = [u for u in users["users"] if u.get("name") != username]
+    users["users"].append({"name": username, "password": uPSK, "admin": False})
+    _write_users(users)
+
+
+async def delete_user_in_memory(username: str):
+    async with httpx.AsyncClient(timeout=5) as client:
+        try:
+            r = await client.delete(f"{APP_SSM_UPSTREAM}/server/v1/users/{username}")
+            if r.status_code != 404:
+                r.raise_for_status()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+
+
+async def delete_user_in_file(username: str):
+    users = _read_users()
+    users["users"] = [u for u in users["users"] if u.get("name") != username]
+    _write_users(users)
+
+
+async def seed_users_from_file() -> None:
+    """Add-only: every user in users.json exists in ssm-api. Never deletes."""
+    users = _read_users()["users"]
+    async with httpx.AsyncClient(timeout=5) as client:
+        r = await client.get(f"{APP_SSM_UPSTREAM}/server/v1/users")
+        r.raise_for_status()
+        existing = {u["username"] for u in r.json().get("users", [])}
+        for u in users:
+            if u["name"] in existing:
+                continue
+            r = await client.post(
+                f"{APP_SSM_UPSTREAM}/server/v1/users",
+                json={"username": u["name"], "uPSK": u["password"]},
+            )
+            r.raise_for_status()
 
 
 @router.get("/form")
@@ -84,3 +125,10 @@ async def create_user(
         "form.html",
         {"request": request, "import_url": import_url, "config_url": config_url},
     )
+
+
+@router.post("/delete")
+async def delete_user(username: str = Form(...)):
+    await delete_user_in_memory(username)
+    await delete_user_in_file(username)
+    return {"deleted": username}
