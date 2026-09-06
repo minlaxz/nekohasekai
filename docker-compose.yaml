@@ -30,7 +30,8 @@ services:
     logging:
       <<: *default-logging
     restart: unless-stopped
-    profile: with-caddy
+    profiles:
+      - with-caddy
 
   sing-box-api:
     image: ghcr.io/minlaxz/nekohasekai:neko-api
