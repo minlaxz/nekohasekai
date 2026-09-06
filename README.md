@@ -81,10 +81,3 @@ echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
 echo 'vm.vfs_cache_pressure=50' | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
-
-## Next step
-
-Clone the repository and start checking out the 
-1. [Makefile](./Makefile)
-2. [scaffolds/setup.sh](./scaffolds/setup.sh)
-3. [scaffolds/docker-compose.yaml](./scaffolds/docker-compose.yaml)

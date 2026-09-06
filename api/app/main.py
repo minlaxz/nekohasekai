@@ -138,8 +138,6 @@ def read_config(
     j: str = "",  # Required
     k: str = "",  # Required
     # Common options
-    p: str = os.getenv("APP_DEFAULT_PLATFORM", ""),
-    v: int = int(os.getenv("APP_DEFAULT_VERSION", 0)),
     ll: str = os.getenv("APP_DEFAULT_LOG_LEVEL", ""),
     # DNS options
     dh: str = os.getenv("APP_DEFAULT_DNS_HOST", ""),
@@ -159,6 +157,15 @@ def read_config(
                 "loc": ["query", "j" if not j else "k"],
                 "msg": "field required",
                 "type": "value_error.missing",
+            }
+        ])
+
+    if not dp.startswith("/"):
+        raise RequestValidationError([
+            {
+                "loc": ["query", "dp"],
+                "msg": "must start with '/'",
+                "type": "value_error.invalid",
             }
         ])
 

@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import secrets
 import string
@@ -91,6 +92,7 @@ async def seed_users_from_file() -> None:
         r = await client.get(f"{APP_SSM_UPSTREAM}/server/v1/users")
         r.raise_for_status()
         existing = {u["username"] for u in r.json().get("users", [])}
+        added = []
         for u in users:
             if u["name"] in existing:
                 continue
@@ -99,6 +101,8 @@ async def seed_users_from_file() -> None:
                 json={"username": u["name"], "uPSK": u["password"]},
             )
             r.raise_for_status()
+            added.append(u["name"])
+        logging.info(f"users.json seed: {len(added)} added {added}, {len(existing)} existing")
 
 
 @router.get("/form")
