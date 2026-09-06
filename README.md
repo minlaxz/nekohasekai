@@ -1,83 +1,115 @@
-# Configuration Collection for sing-box
+# nekohasekai
 
-Configurations and tooling for [**sing-box**](https://github.com/SagerNet/sing-box), the universal proxy platform.
+Self-hosted [sing-box](https://github.com/SagerNet/sing-box) server plus a small API that hands out per-user client profiles. Built to get around Myanmar internet restrictions. Transport is Shadowsocks over ShadowTLS v3.
 
----
+The repository name comes from the author of sing-box. Please consider supporting the original project ❤️
 
-## Repository Overview
+## Layout
 
-This repository provides guides to help bypass Myanmar Internet Restrictions using sing-box configurations on both the client and server side.
+| Path | What it is | Image |
+|---|---|---|
+| `scaffolds/` | sing-box server: config templates, client templates, init entrypoint | `ghcr.io/minlaxz/nekohasekai:neko` |
+| `api/` | FastAPI service: profile generation, user management, stats | `ghcr.io/minlaxz/nekohasekai:neko-api` |
+| `rules/` | Routing rule generation from OONI data, published on the [`route-rules`](https://github.com/minlaxz/nekohasekai/tree/route-rules) branch | |
+| `docker-compose.yaml` | Runs both, optionally behind Caddy | |
+| `CONTEXT.md` | Glossary of domain terms | |
 
-### Directory Structure
+Images are built by GitHub Actions on push to `master`.
 
-- **[`rules/`](./rules/)**  
-  Scripts for collecting and generating routing rules from OONI data.  
-  For more details, see the [`route-rules` branch](https://github.com/minlaxz/nekohasekai/tree/route-rules).
+## How it works
 
-- **[`api/`](./api/)**  
-  Client-side configuration generator exposed as an API.
+- **Server** runs two inbounds: Shadowsocks (per-user PSK, managed by sing-box's ssm-api) and ShadowTLS v3 (one shared handshake password, detours into Shadowsocks). ShadowTLS is transport only. All user identity lives in Shadowsocks.
+- **Client profile** (`/c`) is built from `scaffolds/client/*.json`. The API fills in log level, DNS, and the user's PSK. Everything else is served as-is. `/i` wraps that into a `sing-box://import-remote-profile` link.
+- **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. Every start re-detects the public IPv4 and writes it into the client template.
+- **Users** live in `users.json`. The API seeds them into ssm-api at startup (add-only) and keeps the file in sync through `/ssm/create` and `/ssm/delete`.
 
-- **[`generator/`](./generator/)**  
-  Server-side sing-box configuration generator.
+## Deploy
 
-### Credits
-
-The repository name **nekohasekai** comes from the author of **Project S**.  
-Please consider supporting the original project and its maintainers ❤️
-
----
-
-## Prerequisites
-
-This setup is designed with Docker in mind. Before getting started, ensure your
-system meets the following requirements:
-
-1. **Docker** with the Compose plugin installed
-2. **TCP Brutal Multiplexing** (for TCP-based proxies)
-3. **BBR congestion control** (recommended for TUIC)
-4. **Swap memory** (optional, but strongly recommended for low-RAM VPS)
-
----
-
-## 1. Install Docker and Docker Compose
+Prerequisites: Docker with the Compose plugin. Swap is strongly recommended on a 512 MB VPS (see below).
 
 ```sh
-wget -qO- https://get.docker.com | bash
-sudo usermod -aG docker $USER # Let's just add your user to the docker group
-newgrp docker # Apply the new group membership without logging out
-docker pull ghcr.io/sagernet/sing-box:v1.12.14
+git clone https://github.com/minlaxz/nekohasekai.git && cd nekohasekai
+cp .env.sample .env
+cp example-users.json users.json
+docker network create caddy-net
 ```
 
-## 2. Enable TCP Brutal Multiplexing (TCP Proxies)
+Edit `.env`:
 
-> ⚠️ Not recommended in most cases, as Brutal mode can result in overly flat
-> bandwidth behavior for TCP connections.
+| Variable | Required | Meaning |
+|---|---|---|
+| `SHADOWSOCKS_PORT` | yes | Shadowsocks inbound, published TCP and UDP |
+| `SHADOWTLS_PORT` | yes | ShadowTLS inbound, published TCP |
+| `SHADOWTLS_SNI` | yes | Domain the handshake imitates, e.g. `mozilla.org` |
+| `SHADOWTLS_PASSWORD` | yes | Shared handshake password |
+| `PUBLIC_IP` | no | Skips auto-detection |
+| `APP_HOST` | yes | Public hostname of the API, used in import links and Caddy |
+| `APP_DEFAULT_*` | no | Defaults for `/c` query parameters |
+
+Then:
 
 ```sh
-bash <(curl -fsSL https://tcp.hy2.sh/)
+docker compose pull
+docker compose up -d                       # sing-box + API
+docker compose --profile with-caddy up -d  # also Caddy with automatic TLS
+docker compose logs sing-box | grep entrypoint
 ```
 
-## 3. Enable BBR Congestion Control (UDP-based proxies such as TUIC)
+Expect `configured ports ...` on first start and `public ip x.x.x.x` on every start.
 
-BBR significantly improves performance for UDP-based protocols such as TUIC.
+Ports, SNI, and the ShadowTLS password are written once. To change them, remove the volume:
+
+```sh
+docker compose down && docker volume rm sing-box_sing-box-configs && docker compose up -d
+```
+
+## Users
+
+`users.json`:
+
+```json
+{ "users": [ { "name": "alice", "password": "20-random-chars==", "admin": false } ] }
+```
+
+- Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
+- Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
+- Create: form at `/ssm/form`, or `POST /ssm/create`
+- Delete: `POST /ssm/delete` with form field `username`
+- Stats: `/ssm/server/v1/users`
+
+Changes take effect immediately. No restart needed.
+
+`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host, `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6, `mx` multiplex.
+
+## Develop
+
+No Docker needed for the fast loop:
+
+```sh
+# API
+cd api && uv run --with 'fastapi[standard]' --with httpx --with apscheduler fastapi dev app/main.py
+
+# Entrypoint, against a scratch dir with a stubbed sing-box
+SING_BOX_ROOT=/path/to/scratch SHADOWSOCKS_PORT=1 SHADOWTLS_PORT=2 \
+  SHADOWTLS_SNI=x SHADOWTLS_PASSWORD=y PUBLIC_IP=1.2.3.4 sh scaffolds/entrypoint.sh
+```
+
+Validate a config inside the image: `sing-box check -C /sing-box/server`.
+
+## VPS tuning
+
+Swap for low-memory hosts:
+
+```sh
+fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+```
+
+BBR congestion control:
 
 ```sh
 echo net.core.default_qdisc=fq | sudo tee -a /etc/sysctl.conf
 echo net.ipv4.tcp_congestion_control=bbr | sudo tee -a /etc/sysctl.conf
-sudo sysctl -p
-```
-
-## 4. Configure Swap Memory (Example for a 512 MB RAM VPS)
-
-Recommended for low-memory servers to avoid out-of-memory (OOM) issues.
-
-```sh
-fallocate -l 1G /swapfile
-chmod 600 /swapfile
-mkswap /swapfile
-swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
-echo 'vm.vfs_cache_pressure=50' | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
