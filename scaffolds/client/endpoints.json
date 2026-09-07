@@ -1,3 +1,21 @@
 {
-  "endpoints": []
+  "endpoints": [
+    {
+      "type": "tailscale",
+      "tag": "ts-ep",
+      "auth_key": "",
+      "control_url": "",
+      "ephemeral": false,
+      "hostname": "",
+      "accept_routes": false,
+      "exit_node": "",
+      "exit_node_allow_lan_access": false,
+      "advertise_routes": [],
+      "advertise_exit_node": false,
+      "advertise_tags": [],
+      "system_interface": false,
+      "udp_timeout": "5m",
+      "detour": "shadowsocks-uot"
+    }
+  ]
 }

@@ -71,6 +71,14 @@ docker compose down && docker volume rm sing-box_sing-box-configs && docker comp
 { "users": [ { "name": "alice", "password": "20-random-chars==", "admin": false } ] }
 ```
 
+Optional `ts_auth_key` (Mesh key): a reusable headscale pre-auth key for that user. Mint it by hand:
+
+```sh
+headscale preauthkeys create --user alice --reusable --expiration 1y
+```
+
+A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username, `control_url` from `APP_TS_CONTROL_URL`) and `100.64.0.0/10` routed into it. A user without one gets no endpoint and no such rule.
+
 - Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
 - Create: form at `/ssm/form`, or `POST /ssm/create`

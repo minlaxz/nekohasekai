@@ -16,10 +16,13 @@ from fastapi import HTTPException
 APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
 APP_CLIENT_DIR = os.getenv("APP_INTERNAL_CLIENT_DIR", "/sing-box/client")
 APP_DEFAULT_QUOTA_IN_BYTES = int(os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "30000000000"))
+APP_USERS_PATH = os.getenv("APP_INTERNAL_USERS_PATH", "/users.json")
+APP_TS_CONTROL_URL = os.getenv("APP_TS_CONTROL_URL", "")
 HTTP_TIMEOUT = 5  # seconds
 
-# Sections copied verbatim from APP_CLIENT_DIR; log/dns/outbounds get injected.
-STATIC_SECTIONS = ("inbounds", "experimental", "endpoints", "services", "route")
+# Sections copied verbatim from APP_CLIENT_DIR; log/dns/outbounds/endpoints get injected.
+STATIC_SECTIONS = ("inbounds", "experimental", "services", "route")
+MESH_ENDPOINT_TAG = "ts-ep"
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +30,36 @@ logger = logging.getLogger(__name__)
 def load_json(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def mesh_key(username: str) -> str:
+    """Mesh key (headscale pre-auth key) from the Users file; "" when absent."""
+    for u in load_json(APP_USERS_PATH).get("users", []):
+        if u.get("name") == username:
+            return u.get("ts_auth_key") or ""
+    return ""
+
+
+def apply_mesh(
+    endpoints: List[Dict[str, Any]],
+    route: Dict[str, Any],
+    username: str,
+    key: str,
+    control_url: str,
+) -> List[Dict[str, Any]]:
+    """Fill the Mesh endpoint for a user with a Mesh key; strip it (and every
+    route rule pointing at it) for a user without one. Mutates `route`."""
+    if not key:
+        route["rules"] = [
+            r for r in route.get("rules", []) if r.get("outbound") != MESH_ENDPOINT_TAG
+        ]
+        return [ep for ep in endpoints if ep.get("tag") != MESH_ENDPOINT_TAG]
+    for ep in endpoints:
+        if ep.get("tag") == MESH_ENDPOINT_TAG:
+            ep["auth_key"] = key
+            ep["hostname"] = username
+            ep["control_url"] = control_url
+    return endpoints
 
 
 # -------------------------------------------------------------------
@@ -142,6 +175,16 @@ class Reader(Checker):
         }
         for name in STATIC_SECTIONS:
             config[name] = self._section(name)
+
+        key = mesh_key(self.username)
+        if key and not APP_TS_CONTROL_URL:
+            logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", self.username)
+            raise HTTPException(status_code=500, detail="APP_TS_CONTROL_URL is not set.")
+        endpoints = apply_mesh(
+            self._section("endpoints"), config["route"], self.username, key, APP_TS_CONTROL_URL
+        )
+        if endpoints:
+            config["endpoints"] = endpoints
         return config
 
 

@@ -10,6 +10,12 @@
       "name": "user2",
       "password": "insecure-admin123==",
       "admin": true
+    },
+    {
+      "name": "user3",
+      "password": "insecure-user123==",
+      "admin": false,
+      "ts_auth_key": "ts-auth-key-for-user3"
     }
   ]
 }

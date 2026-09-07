@@ -64,8 +64,11 @@ def _write_users(users: Dict[str, Any]) -> None:
 
 async def create_user_in_file(username: str, uPSK: str):
     users = _read_users()
-    users["users"] = [u for u in users["users"] if u.get("name") != username]
-    users["users"].append({"name": username, "password": uPSK, "admin": False})
+    existing = next((u for u in users["users"] if u.get("name") == username), None)
+    if existing is None:
+        users["users"].append({"name": username, "password": uPSK, "admin": False})
+    else:
+        existing["password"] = uPSK  # keep admin / ts_auth_key
     _write_users(users)
 
 
