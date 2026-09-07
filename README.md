@@ -87,7 +87,7 @@ A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username,
 
 Changes take effect immediately. No restart needed.
 
-`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host, `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6, `mx` multiplex.
+`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6, `mx` multiplex.
 
 ## Develop
 

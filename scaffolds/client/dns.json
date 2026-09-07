@@ -15,7 +15,7 @@
         "tag": "dns-resolver",
         "type": "udp",
         "server": "1.1.1.1",
-        "detour": "shadowsocks-udp"
+        "detour": "UDP"
       },
       {
         "tag": "dns-resolver-bypass",

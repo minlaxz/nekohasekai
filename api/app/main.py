@@ -141,6 +141,7 @@ def read_config(
     ll: str = os.getenv("APP_DEFAULT_LOG_LEVEL", ""),
     # DNS options
     dh: str = os.getenv("APP_DEFAULT_DNS_HOST", ""),
+    dn: str = os.getenv("APP_DEFAULT_DNS_SNI", ""),
     dp: str = os.getenv("APP_DEFAULT_DNS_PATH", ""),
     dd: str = os.getenv("APP_DEFAULT_DNS_DETOUR", ""),
     df: str = os.getenv("APP_DEFAULT_DNS_FINAL", ""),
@@ -182,6 +183,7 @@ def read_config(
         psk=k,  # Required
         log_level=ll,
         dns_host=dh,
+        dns_sni=dn,
         dns_path=dp,
         dns_detour=dd,
         dns_final=df,

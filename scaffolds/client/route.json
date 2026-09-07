@@ -196,6 +196,10 @@
     ],
     "rules": [
       {
+        "ip_cidr": ["100.64.0.0/10"],
+        "outbound": "ts-ep"
+      },
+      {
         "port": 53,
         "action": "hijack-dns"
       },
@@ -215,12 +219,17 @@
         "method": "drop"
       },
       {
-        "ip_cidr": ["100.64.0.0/10"],
-        "outbound": "ts-ep"
+        "clash_mode": "Full",
+        "network": "tcp",
+        "outbound": "TCP"
       },
       {
-        "action": "sniff",
-        "timeout": "100ms"
+        "clash_mode": "Full",
+        "network": "udp",
+        "outbound": "UDP"
+      },
+      {
+        "action": "sniff"
       },
       {
         "type": "logical",
@@ -262,10 +271,7 @@
                 ]
               },
               {
-                "domain": ["gstatic.com"]
-              },
-              {
-                "domain_suffix": [".gstatic.com"]
+                "domain_suffix": ["gstatic.com"]
               }
             ]
           },
@@ -315,10 +321,7 @@
                 ]
               },
               {
-                "domain": ["gstatic.com"]
-              },
-              {
-                "domain_suffix": [".gstatic.com"]
+                "domain_suffix": ["gstatic.com"]
               }
             ]
           },

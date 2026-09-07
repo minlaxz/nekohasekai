@@ -23,6 +23,7 @@ HTTP_TIMEOUT = 5  # seconds
 # Sections copied verbatim from APP_CLIENT_DIR; log/dns/outbounds/endpoints get injected.
 STATIC_SECTIONS = ("inbounds", "experimental", "services", "route")
 MESH_ENDPOINT_TAG = "ts-ep"
+FULL_MODE = "Full"  # clash_mode that proxies everything; admin-only
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +33,21 @@ def load_json(path: str) -> Dict[str, Any]:
         return json.load(f)
 
 
-def mesh_key(username: str) -> str:
-    """Mesh key (headscale pre-auth key) from the Users file; "" when absent."""
+def user_entry(username: str) -> Dict[str, Any]:
+    """The user's entry in the Users file; {} when absent."""
     for u in load_json(APP_USERS_PATH).get("users", []):
         if u.get("name") == username:
-            return u.get("ts_auth_key") or ""
-    return ""
+            return u
+    return {}
+
+
+def apply_full_mode(route: Dict[str, Any], admin: bool) -> None:
+    """Full mode (proxy everything) is admin-only: strip its route rules for
+    everyone else so the mode is a no-op in their dashboard. Mutates `route`."""
+    if not admin:
+        route["rules"] = [
+            r for r in route.get("rules", []) if r.get("clash_mode") != FULL_MODE
+        ]
 
 
 def apply_mesh(
@@ -107,6 +117,7 @@ class Reader(Checker):
         psk: str,
         log_level: str,
         dns_host: str,
+        dns_sni: str,
         dns_path: str,
         dns_detour: str,
         dns_final: str,
@@ -117,6 +128,7 @@ class Reader(Checker):
         super().__init__(username, psk)
         self.log_level = log_level
         self.dns_host = dns_host
+        self.dns_sni = dns_sni
         self.dns_path = dns_path
         self.dns_detour = dns_detour
         self.dns_final = dns_final
@@ -145,6 +157,8 @@ class Reader(Checker):
                 case "dns-remote":
                     server["server"] = self.dns_host
                     server["path"] = f"{self.dns_path}{self.username}"
+                    if self.dns_sni:  # host is a pinned IP; SNI + cert check need the name
+                        server["tls"] = {"enabled": True, "server_name": self.dns_sni}
                     server["domain_resolver"] = {
                         "server": "dns-resolver",
                         "strategy": strategy,
@@ -176,7 +190,9 @@ class Reader(Checker):
         for name in STATIC_SECTIONS:
             config[name] = self._section(name)
 
-        key = mesh_key(self.username)
+        user = user_entry(self.username)
+        apply_full_mode(config["route"], bool(user.get("admin")))
+        key = user.get("ts_auth_key") or ""
         if key and not APP_TS_CONTROL_URL:
             logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", self.username)
             raise HTTPException(status_code=500, detail="APP_TS_CONTROL_URL is not set.")

@@ -31,3 +31,15 @@ def test_without_key_strips_endpoint_and_rules():
     assert eps == []
     assert all(r.get("outbound") != "ts-ep" for r in route["rules"])
     assert len(route["rules"]) == len(before) - 1
+
+
+def test_full_mode_admin_only():
+    from app.utils import apply_full_mode
+
+    route = _load("route")
+    n = len(route["rules"])
+    apply_full_mode(route, admin=True)
+    assert len(route["rules"]) == n
+    apply_full_mode(route, admin=False)
+    assert all(r.get("clash_mode") != "Full" for r in route["rules"])
+    assert len(route["rules"]) == n - 2
