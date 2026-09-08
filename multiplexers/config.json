@@ -18,6 +18,7 @@
       "tag": "ccm",
       "listen": "0.0.0.0",
       "listen_port": 4200,
+      "credential_path": "/data/claude/.credentials.json",
       "usages_path": "/data/claude-usages.json",
       "users": "${MUX_USERS}"
     },
@@ -26,6 +27,7 @@
       "tag": "ocm",
       "listen": "0.0.0.0",
       "listen_port": 4201,
+      "credential_path": "/data/codex/auth.json",
       "usages_path": "/data/codex-usages.json",
       "users": "${MUX_USERS}"
     }

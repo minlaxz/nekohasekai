@@ -20,7 +20,7 @@ What it runs, one `sing-box` container:
 | `entrypoint.sh` | Fills placeholders from env, `sing-box check`, `sing-box run`. |
 | `docker-compose.yaml` | One service, `ghcr.io/sagernet/sing-box:v1.14.0`. |
 | `.env.sample` | Copy to `.env`. |
-| `data/` | Created on first run. Tailscale state, usage stats. Back this up. |
+| `data/` | Tailscale state, usage stats, ccm/ocm credential copies. Back this up. |
 
 ## Setup (on the mux VPS)
 
@@ -29,8 +29,14 @@ What it runs, one `sing-box` container:
    claude auth login
    codex login
    ```
-   Result: `~/.claude/.credentials.json`, `~/.codex/auth.json`. Mounted read-write;
-   ccm/ocm refresh tokens in place.
+   Then copy the credential files into `data/`. ccm/ocm own these copies and
+   refresh tokens there; the host files are never touched again.
+   ```sh
+   mkdir -p data/claude data/codex
+   cp ~/.claude/.credentials.json data/claude/.credentials.json
+   cp ~/.codex/auth.json data/codex/auth.json
+   ```
+   Re-copy only if a copy stops refreshing (host re-login invalidated it).
 2. Mint a headscale pre-auth key for the mux node.
    ```sh
    headscale preauthkeys create --user <user> --expiration 1h

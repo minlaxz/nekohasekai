@@ -24,8 +24,6 @@ services:
       - ./entrypoint.sh:/entrypoint.sh:ro
       - ./config.json:/config.json.tmpl:ro
       - ./data:/data
-      - ~/.claude:/root/.claude
-      - ~/.codex:/root/.codex
     # Loggings and others
     logging:
       <<: *default-logging
