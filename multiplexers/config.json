@@ -1,0 +1,46 @@
+{
+  "log": { "level": "info", "timestamp": true },
+  "endpoints": [
+    {
+      "type": "tailscale",
+      "tag": "ts-ep",
+      "state_directory": "/data/tailscale",
+      "auth_key": "${MUX_TS_AUTH_KEY}",
+      "control_url": "${MUX_TS_CONTROL_URL}",
+      "hostname": "${MUX_TS_HOSTNAME}",
+      "ephemeral": false,
+      "udp_timeout": "5m"
+    }
+  ],
+  "services": [
+    {
+      "type": "ccm",
+      "tag": "ccm",
+      "listen": "0.0.0.0",
+      "listen_port": 4200,
+      "usages_path": "/data/claude-usages.json",
+      "users": "${MUX_USERS}"
+    },
+    {
+      "type": "ocm",
+      "tag": "ocm",
+      "listen": "0.0.0.0",
+      "listen_port": 4201,
+      "usages_path": "/data/codex-usages.json",
+      "users": "${MUX_USERS}"
+    }
+  ],
+  "outbounds": [{ "type": "direct", "tag": "direct-out" }],
+  "route": {
+    "rules": [
+      {
+        "inbound": "ts-ep",
+        "action": "route",
+        "outbound": "direct-out",
+        "override_address": "127.0.0.1"
+      }
+    ],
+    "final": "direct-out",
+    "auto_detect_interface": true
+  }
+}

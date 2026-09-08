@@ -1,0 +1,32 @@
+name: sing-box-mux
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  sing-box:
+    image: ghcr.io/sagernet/sing-box:v1.14.0
+    entrypoint: ["/entrypoint.sh"]
+    # Resource limits
+    mem_limit: 256m
+    mem_reservation: 64m
+    memswap_limit: -1 # no swap limit
+    # Networks and ports (loopback only; reach via ssh tunnel or tailnet)
+    ports:
+      - "127.0.0.1:4200:4200"
+      - "127.0.0.1:4201:4201"
+    # Env and volumes
+    env_file: .env
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh:ro
+      - ./config.json:/config.json.tmpl:ro
+      - ./data:/data
+      - ~/.claude:/root/.claude
+      - ~/.codex:/root/.codex
+    # Loggings and others
+    logging:
+      <<: *default-logging
+    restart: unless-stopped
