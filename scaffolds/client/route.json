@@ -2,6 +2,14 @@
   "route": {
     "rule_set": [
       {
+        "tag": "mm-ip-rules",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/mm.srs",
+        "http_client": { "detour": "TCP" },
+        "update_interval": "1d"
+      },
+      {
         "tag": "my-rules",
         "type": "remote",
         "format": "binary",
@@ -217,6 +225,10 @@
         ],
         "action": "reject",
         "method": "drop"
+      },
+      {
+        "rule_set": ["mm-ip-rules"],
+        "outbound": "direct"
       },
       {
         "clash_mode": "Full",
