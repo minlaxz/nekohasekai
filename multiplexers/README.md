@@ -24,19 +24,18 @@ What it runs, one `sing-box` container:
 
 ## Setup (on the mux VPS)
 
-1. Log in once so the credential files exist. Headless: both print a URL + code.
-   ```sh
-   claude auth login
-   codex login
-   ```
-   Then copy the credential files into `data/`. ccm/ocm own these copies and
-   refresh tokens there; the host files are never touched again.
+1. Log in once, straight into `data/`. Headless: both print a URL + code.
    ```sh
    mkdir -p data/claude data/codex
-   cp ~/.claude/.credentials.json data/claude/.credentials.json
-   cp ~/.codex/auth.json data/codex/auth.json
+   CLAUDE_CONFIG_DIR=$PWD/data/claude claude auth login
+   CODEX_HOME=$PWD/data/codex codex login
    ```
-   Re-copy only if a copy stops refreshing (host re-login invalidated it).
+   Writes `data/claude/.credentials.json` and `data/codex/auth.json`. ccm/ocm own
+   these and refresh tokens there. Do **not** copy from `~/.claude` or `~/.codex`:
+   refresh tokens rotate on every use, so a host `claude`/`codex` run sharing the
+   same token kills the copy (`invalid_grant`). Separate login = separate token.
+   Re-login the same way if a copy ever stops refreshing, then
+   `docker compose up -d --force-recreate` (ccm/ocm read the file only at start).
 2. Mint a headscale pre-auth key for the mux node.
    ```sh
    headscale preauthkeys create --user <user> --expiration 1h
