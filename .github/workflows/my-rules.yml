@@ -8,9 +8,6 @@ on:
     paths:
       - "rules/*.json"
 
-env:
-  SING_BOX_VERSION: "1.12.22"
-
 jobs:
   run-scripts:
     runs-on: ubuntu-latest
@@ -20,15 +17,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: |
-          curl -Lo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz
+          SING_BOX_VERSION=$(curl -fsSL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r '.tag_name | ltrimstr("v")')
+          echo "sing-box ${SING_BOX_VERSION}"
+          curl -fLo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz
           tar -xz -C /tmp -f sing-box.tar.gz --strip-components=1
 
           mkdir -p rules/route-rules
 
-          for file in rules/*-rules.json; do
-            name=$(basename "$file" .json)
+          for file in rules/*-rules.jsonc; do
+            name=$(basename "$file" .jsonc)
             /tmp/sing-box rule-set compile "$file" -o "rules/route-rules/${name}.srs"
-            cp "$file" "rules/route-rules/${name}.json"
+            cp "$file" "rules/route-rules/${name}.jsonc"
           done
 
       - uses: peaceiris/actions-gh-pages@v4
