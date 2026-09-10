@@ -57,7 +57,15 @@ docker compose logs sing-box | grep entrypoint
 
 Expect `configured ports ...` on first start and `public ip x.x.x.x` on every start.
 
-Upgrade is the same two commands: `docker compose pull && docker compose up -d`. Every start copies the client template (`route.json`, `dns.json`, `inbounds.json`, ...) from the image into the volume, so rule and DNS changes land without touching it. `client/outbounds.json`, `server/`, and `cache/` persist.
+### Upgrade
+
+```sh
+docker compose pull && docker compose up -d
+```
+
+That is the whole upgrade path. The image carries the configs: every start copies the client template (`route.json`, `dns.json`, `inbounds.json`, ...) from the image into the volume, so rule and DNS changes land without touching it. `client/outbounds.json`, `server/`, and `cache/` persist.
+
+`git pull` on the server is only needed when `docker-compose.yaml` changes or `.env` gains a new variable.
 
 Ports, SNI, and the ShadowTLS password are written once. To change them, remove the volume:
 
