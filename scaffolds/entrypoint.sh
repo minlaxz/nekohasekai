@@ -2,6 +2,7 @@
 set -e
 
 ROOT="${SING_BOX_ROOT:-/sing-box}"
+DEFAULTS="${SING_BOX_DEFAULTS:-/defaults}"   # image copy; lives outside the volume mount
 SERVER_IN="$ROOT/server/inbounds.json"
 CLIENT_OUT="$ROOT/client/outbounds.json"
 
@@ -17,9 +18,20 @@ jqi() { # jqi <file> <filter> [jq args...]
 for d in server client cache; do
     if [ ! -f "$ROOT/$d/.initialized" ]; then
         mkdir -p "$ROOT/$d"
-        cp -a "$ROOT/$d.default/." "$ROOT/$d/"
+        cp -a "$DEFAULTS/$d/." "$ROOT/$d/"
         touch "$ROOT/$d/.initialized"
     fi
+done
+# pre-#14 images seeded from *.default dirs inside the volume; they are stale and unused now
+for d in "$ROOT"/*.default; do
+    [ -d "$d" ] && rm -rf "$d" && echo "entrypoint: removed stale $d"
+done
+
+# ---- every start: Template refresh (#14) ----
+# outbounds.json holds deploy values (ports, SNI, password, public IP) and is never refreshed;
+# every other client file is copied from the image. Additive: files dropped from the image linger.
+for f in "$DEFAULTS"/client/*.json; do
+    case "$f" in */outbounds.json) ;; *) cp -a "$f" "$ROOT/client/" ;; esac
 done
 
 # ---- first-init only: ports + SNI ----

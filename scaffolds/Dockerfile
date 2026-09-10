@@ -4,9 +4,10 @@ RUN apk add --no-cache jq
 
 WORKDIR /sing-box
 
-COPY cache /sing-box/cache.default
-COPY server /sing-box/server.default
-COPY client /sing-box/client.default
+# Kept outside /sing-box so the volume mount never hides them (#14).
+COPY cache /defaults/cache
+COPY server /defaults/server
+COPY client /defaults/client
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
