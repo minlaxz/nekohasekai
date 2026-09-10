@@ -15,7 +15,7 @@
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-rules.srs",
         "http_client": { "detour": "TCP" },
-        "update_interval": "1d"
+        "update_interval": "1h"
       },
       {
         "tag": "facebook",
