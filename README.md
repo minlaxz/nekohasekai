@@ -57,6 +57,8 @@ docker compose logs sing-box | grep entrypoint
 
 Expect `configured ports ...` on first start and `public ip x.x.x.x` on every start.
 
+Upgrade is the same two commands: `docker compose pull && docker compose up -d`. Every start re-copies the client template (`route.json`, `dns.json`, `inbounds.json`, ...) from the image, so rule and DNS changes land without touching the volume. Only `client/outbounds.json` and `server/` persist.
+
 Ports, SNI, and the ShadowTLS password are written once. To change them, remove the volume:
 
 ```sh

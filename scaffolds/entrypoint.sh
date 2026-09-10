@@ -2,6 +2,7 @@
 set -e
 
 ROOT="${SING_BOX_ROOT:-/sing-box}"
+DEFAULTS="${SING_BOX_DEFAULTS:-/defaults}"   # image copy; lives outside the volume mount
 SERVER_IN="$ROOT/server/inbounds.json"
 CLIENT_OUT="$ROOT/client/outbounds.json"
 
@@ -17,9 +18,16 @@ jqi() { # jqi <file> <filter> [jq args...]
 for d in server client cache; do
     if [ ! -f "$ROOT/$d/.initialized" ]; then
         mkdir -p "$ROOT/$d"
-        cp -a "$ROOT/$d.default/." "$ROOT/$d/"
+        cp -a "$DEFAULTS/$d/." "$ROOT/$d/"
         touch "$ROOT/$d/.initialized"
     fi
+done
+rm -rf "$ROOT"/*.default   # stale copies left by images that seeded from inside the volume
+
+# ---- every start: refresh client files Init never edits (#14) ----
+# outbounds.json holds deploy values (ports, SNI, password, public IP); everything else is image-owned.
+for f in "$DEFAULTS"/client/*.json; do
+    [ "$(basename "$f")" = outbounds.json ] || cp -a "$f" "$ROOT/client/"
 done
 
 # ---- first-init only: ports + SNI ----
