@@ -200,6 +200,14 @@
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/vercel.srs",
         "http_client": { "detour": "TCP" },
         "update_interval": "1d"
+      },
+      {
+        "tag": "bytedance",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/bytedance.srs",
+        "http_client": { "detour": "TCP" },
+        "update_interval": "1d"
       }
     ],
     "rules": [
@@ -279,7 +287,8 @@
                   "figma",
                   "paypal",
                   "github",
-                  "vercel"
+                  "vercel",
+                  "bytedance"
                 ]
               },
               {
@@ -329,7 +338,8 @@
                   "figma",
                   "paypal",
                   "github",
-                  "vercel"
+                  "vercel",
+                  "bytedance"
                 ]
               },
               {
