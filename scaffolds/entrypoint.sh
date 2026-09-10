@@ -22,12 +22,16 @@ for d in server client cache; do
         touch "$ROOT/$d/.initialized"
     fi
 done
-rm -rf "$ROOT"/*.default   # stale copies left by images that seeded from inside the volume
+# pre-#14 images seeded from *.default dirs inside the volume; they are stale and unused now
+for d in "$ROOT"/*.default; do
+    [ -d "$d" ] && rm -rf "$d" && echo "entrypoint: removed stale $d"
+done
 
-# ---- every start: refresh client files Init never edits (#14) ----
-# outbounds.json holds deploy values (ports, SNI, password, public IP); everything else is image-owned.
+# ---- every start: Template refresh (#14) ----
+# outbounds.json holds deploy values (ports, SNI, password, public IP) and is never refreshed;
+# every other client file is copied from the image. Additive: files dropped from the image linger.
 for f in "$DEFAULTS"/client/*.json; do
-    [ "$(basename "$f")" = outbounds.json ] || cp -a "$f" "$ROOT/client/"
+    case "$f" in */outbounds.json) ;; *) cp -a "$f" "$ROOT/client/" ;; esac
 done
 
 # ---- first-init only: ports + SNI ----
