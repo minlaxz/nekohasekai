@@ -36,3 +36,9 @@ jobs:
           publish_branch: route-rules
           publish_dir: rules/route-rules
           force_orphan: true
+
+      - name: Purge jsDelivr cache
+        run: |
+          for file in rules/route-rules/*.srs; do
+            curl -fsS "https://purge.jsdelivr.net/gh/${{ github.repository }}@route-rules/$(basename "$file")"
+          done
