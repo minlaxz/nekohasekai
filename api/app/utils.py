@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import urllib.parse
 from typing import Any, Dict, List
 
 import httpx
@@ -24,6 +25,10 @@ HTTP_TIMEOUT = 5  # seconds
 STATIC_SECTIONS = ("inbounds", "experimental", "services", "route")
 MESH_ENDPOINT_TAG = "ts-ep"
 FULL_MODE = "Full"  # clash_mode that proxies everything; admin-only
+# User rule set fetch limits: fixed hosts keep the API from reaching internal services (SSRF).
+USER_RULES_HOSTS = ("gist.githubusercontent.com", "raw.githubusercontent.com")
+USER_RULES_MAX_BYTES = 64 * 1024
+PROXY_OUTBOUNDS = ("TCP", "UDP")
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +75,71 @@ def apply_mesh(
             ep["hostname"] = username
             ep["control_url"] = control_url
     return endpoints
+
+
+def _bad_rules(detail: str) -> HTTPException:
+    return HTTPException(status_code=400, detail=f"User rule set: {detail}")
+
+
+def parse_user_rules(body: bytes) -> List[str]:
+    """Domain suffixes from a User rule set. Structure only; the client validates the rest."""
+    try:
+        data = json.loads(body)
+    except ValueError:
+        raise _bad_rules("not valid JSON")
+    if not isinstance(data, dict) or not isinstance(data.get("version"), int):
+        raise _bad_rules("missing integer 'version'")
+    rules = data.get("rules")
+    if not isinstance(rules, list) or not rules:
+        raise _bad_rules("'rules' must be a non-empty list")
+    suffixes: List[str] = []
+    for rule in rules:
+        if not isinstance(rule, dict) or set(rule) != {"domain_suffix"}:
+            raise _bad_rules("each rule may only contain 'domain_suffix'")
+        values = rule["domain_suffix"]
+        if not isinstance(values, list) or not all(isinstance(v, str) for v in values):
+            raise _bad_rules("'domain_suffix' must be a list of strings")
+        suffixes.extend(values)
+    return suffixes
+
+
+def fetch_user_rules(url: str) -> List[str]:
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme != "https" or parts.hostname not in USER_RULES_HOSTS:
+        raise _bad_rules(f"URL must be https on {', '.join(USER_RULES_HOSTS)}")
+    body = b""
+    try:
+        with httpx.stream("GET", url, timeout=HTTP_TIMEOUT, follow_redirects=False) as r:
+            if r.status_code != 200:
+                raise _bad_rules(f"fetch returned HTTP {r.status_code}")
+            for chunk in r.iter_bytes():
+                body += chunk
+                if len(body) > USER_RULES_MAX_BYTES:
+                    raise _bad_rules(f"larger than {USER_RULES_MAX_BYTES} bytes")
+    except httpx.HTTPError as exc:
+        raise _bad_rules(f"fetch failed ({type(exc).__name__})")
+    return parse_user_rules(body)
+
+
+def apply_user_rules(route: Dict[str, Any], suffixes: List[str]) -> None:
+    """Add a User rule set's suffixes to every domain_suffix list under the proxied
+    (TCP/UDP outbound) rules. Mutates `route`."""
+    targets: List[List[str]] = []
+
+    def walk(rule: Dict[str, Any]) -> None:
+        if isinstance(rule.get("domain_suffix"), list):
+            targets.append(rule["domain_suffix"])
+        for child in rule.get("rules", []):
+            walk(child)
+
+    for rule in route.get("rules", []):
+        if rule.get("outbound") in PROXY_OUTBOUNDS:
+            walk(rule)
+    if not targets:
+        logger.error("Client template route has no proxied domain_suffix list")
+        raise HTTPException(status_code=500, detail="No proxied domain_suffix list in route.")
+    for target in targets:
+        target.extend(s for s in dict.fromkeys(suffixes) if s not in target)
 
 
 # -------------------------------------------------------------------
@@ -124,8 +194,10 @@ class Reader(Checker):
         dns_resolver: str,
         dns_version: int,
         multiplex: bool,
+        rules_url: str = "",
     ) -> None:
         super().__init__(username, psk)
+        self.rules_url = rules_url
         self.log_level = log_level
         self.dns_host = dns_host
         self.dns_sni = dns_sni
@@ -192,6 +264,8 @@ class Reader(Checker):
 
         user = user_entry(self.username)
         apply_full_mode(config["route"], bool(user.get("admin")))
+        if self.rules_url:
+            apply_user_rules(config["route"], fetch_user_rules(self.rules_url))
         key = user.get("ts_auth_key") or ""
         if key and not APP_TS_CONTROL_URL:
             logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", self.username)
