@@ -149,6 +149,8 @@ def read_config(
     dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 0)),
     # Experimental options
     mx: bool = os.getenv("APP_DEFAULT_MULTIPLEX_ENABLED") == "true",
+    # User rule set URL (optional)
+    r: str = "",
 ) -> dict[str, Any]:
 
     # Nothing to check if `j` and `k` aren't provided.
@@ -190,6 +192,7 @@ def read_config(
         dns_resolver=dr,
         dns_version=dv,
         multiplex=mx,
+        rules_url=r,
     ).unwarp()
 
 
