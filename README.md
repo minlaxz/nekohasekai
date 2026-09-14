@@ -95,7 +95,17 @@ A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username,
 - Delete: `POST /ssm/delete` with form field `username`
 - Stats: `/ssm/server/v1/users`
 
-Changes take effect immediately. No restart needed.
+Changes made through `/ssm/create` and `/ssm/delete` take effect immediately. No restart needed.
+
+Editing `users.json` by hand is picked up only at API startup, and the seed is add-only. Don't use `down -v`: it wipes the volume (traffic stats, ssm cache).
+
+| Hand edit | Apply with |
+|---|---|
+| Added user | `docker compose up -d --force-recreate sing-box-api` |
+| Changed password | `curl -X DELETE http://127.0.0.1:8888/server/v1/users/<name>`, then the recreate above |
+| Removed user | `curl -X DELETE http://127.0.0.1:8888/server/v1/users/<name>` |
+
+`--force-recreate` (not `restart`) because editors replace the file, and a running container keeps the old single-file bind mount.
 
 `/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6, `mx` multiplex.
 
