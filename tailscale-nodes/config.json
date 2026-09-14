@@ -1,0 +1,28 @@
+{
+  "log": { "level": "info", "timestamp": true },
+  "endpoints": [
+    {
+      "type": "tailscale",
+      "tag": "ts-ep",
+      "state_directory": "/var/lib/tailscale",
+      "auth_key": "${TSN_AUTH_KEY}",
+      "control_url": "${TSN_CONTROL_URL}",
+      "hostname": "${TSN_HOSTNAME}",
+      "ephemeral": true,
+      "udp_timeout": "5m"
+    }
+  ],
+  "outbounds": [{ "type": "direct", "tag": "direct-out" }],
+  "route": {
+    "rules": [
+      {
+        "inbound": "ts-ep",
+        "action": "route",
+        "outbound": "direct-out",
+        "override_address": "127.0.0.1"
+      }
+    ],
+    "final": "direct-out",
+    "auto_detect_interface": true
+  }
+}

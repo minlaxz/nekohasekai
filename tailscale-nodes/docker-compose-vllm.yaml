@@ -1,0 +1,60 @@
+name: tailscale-nodes
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # Joins the Mesh; owns the netns that vllm shares.
+  ts:
+    image: ghcr.io/sagernet/sing-box:v1.14.0
+    entrypoint: ["/entrypoint.sh"]
+    # Resource limits
+    mem_limit: 256m
+    mem_reservation: 64m
+    memswap_limit: -1 # no swap limit
+    # Networks and ports: vllm listens inside this netns, so its port is published here
+    ports:
+      - "127.0.0.1:8000:8000"
+    # Env and volumes
+    env_file: .env
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh:ro
+      - ./config.json:/config.json.tmpl:ro
+    tmpfs:
+      - /var/lib/tailscale # ephemeral node: no state kept, fresh registration each start
+    # Loggings and others
+    logging:
+      <<: *default-logging
+    restart: unless-stopped
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm
+    restart: unless-stopped
+    ipc: host
+    network_mode: service:ts # reachable as 127.0.0.1:8000 from ts
+    depends_on:
+      - ts
+    volumes:
+      - /data/hf:/root/.cache/huggingface
+    environment:
+      - HF_XET_HIGH_PERFORMANCE=1
+    command:
+      - Qwen/Qwen3-VL-8B-Instruct
+      - --dtype=bfloat16
+      - --max-model-len=4096
+      - --max-num-seqs=8
+      - --gpu-memory-utilization=0.95
+      - --limit-mm-per-prompt={"image":1}
+      - --mm-processor-kwargs={"max_pixels":1003520}
+      - --port=8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
