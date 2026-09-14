@@ -19,4 +19,4 @@ Single bounded context. Glossary of domain terms as used in this repo.
 - **Profile import** — the `/i` page that wraps a Profile config URL in a `sing-box://import-remote-profile` link.
 - **PSK** — the user's Shadowsocks password (`k`). Verified against ssm-api before a Profile config is issued; the same value is the ShadowTLS password.
 - **Mesh** — the headscale tailnet that users' devices join. Separate deployment from the VPS; the VPS is not in the mesh path. Mesh addresses are the whole `100.64.0.0/10` range; a device reaches a peer only if that peer is registered.
-- **Mesh key** — a per-user, reusable headscale pre-auth key (`ts_auth_key` in the Users file), minted by the admin by hand. Optional: a user with a Mesh key gets a Profile config that joins the Mesh under their username; a user without one gets no Mesh sections at all.
+- **Mesh key** — a per-user, reusable headscale pre-auth key (`ts_auth_key` in the Users file), minted by the admin by hand. Optional: a user with a Mesh key gets a Profile config that joins the Mesh under their username and resolves MagicDNS names (`*.minlaxz.internal`); a user without one gets no Mesh sections at all.

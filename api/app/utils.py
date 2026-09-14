@@ -24,6 +24,7 @@ HTTP_TIMEOUT = 5  # seconds
 # Sections copied verbatim from APP_CLIENT_DIR; log/dns/outbounds/endpoints get injected.
 STATIC_SECTIONS = ("inbounds", "experimental", "services", "route")
 MESH_ENDPOINT_TAG = "ts-ep"
+MESH_DNS_TAG = "dns-mesh"  # tailscale DNS server: resolves MagicDNS names via ts-ep
 FULL_MODE = "Full"  # clash_mode that proxies everything; admin-only
 # User rule set fetch limits: fixed hosts keep the API from reaching internal services (SSRF).
 USER_RULES_HOSTS = ("gist.githubusercontent.com", "raw.githubusercontent.com")
@@ -58,16 +59,21 @@ def apply_full_mode(route: Dict[str, Any], admin: bool) -> None:
 def apply_mesh(
     endpoints: List[Dict[str, Any]],
     route: Dict[str, Any],
+    dns: Dict[str, Any],
     username: str,
     key: str,
     control_url: str,
 ) -> List[Dict[str, Any]]:
     """Fill the Mesh endpoint for a user with a Mesh key; strip it (and every
-    route rule pointing at it) for a user without one. Mutates `route`."""
+    route rule, DNS server and DNS rule pointing at it) for a user without one.
+    Mutates `route` and `dns`."""
     if not key:
         route["rules"] = [
             r for r in route.get("rules", []) if r.get("outbound") != MESH_ENDPOINT_TAG
         ]
+        # sing-box refuses to start with a tailscale DNS server whose endpoint is missing.
+        dns["servers"] = [s for s in dns.get("servers", []) if s.get("tag") != MESH_DNS_TAG]
+        dns["rules"] = [r for r in dns.get("rules", []) if r.get("server") != MESH_DNS_TAG]
         return [ep for ep in endpoints if ep.get("tag") != MESH_ENDPOINT_TAG]
     for ep in endpoints:
         if ep.get("tag") == MESH_ENDPOINT_TAG:
@@ -271,7 +277,12 @@ class Reader(Checker):
             logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", self.username)
             raise HTTPException(status_code=500, detail="APP_TS_CONTROL_URL is not set.")
         endpoints = apply_mesh(
-            self._section("endpoints"), config["route"], self.username, key, APP_TS_CONTROL_URL
+            self._section("endpoints"),
+            config["route"],
+            config["dns"],
+            self.username,
+            key,
+            APP_TS_CONTROL_URL,
         )
         if endpoints:
             config["endpoints"] = endpoints

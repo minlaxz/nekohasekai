@@ -21,6 +21,19 @@
         "tag": "dns-resolver-bypass",
         "type": "udp",
         "server": "1.1.1.1"
+      },
+      {
+        "tag": "dns-mesh",
+        "type": "tailscale",
+        "endpoint": "ts-ep",
+        "accept_search_domain": true
+      }
+    ],
+    "rules": [
+      {
+        "preferred_by": "dns-mesh",
+        "action": "route",
+        "server": "dns-mesh"
       }
     ],
     "independent_cache": false,
