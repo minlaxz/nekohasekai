@@ -23,8 +23,7 @@ services:
     volumes:
       - ./entrypoint.sh:/entrypoint.sh:ro
       - ./config.json:/config.json.tmpl:ro
-    tmpfs:
-      - /var/lib/tailscale # ephemeral node: no state kept, fresh registration each start
+      - /data/tailscale:/var/lib/tailscale # on EBS: same node, IP and name every boot
     # Loggings and others
     logging:
       <<: *default-logging

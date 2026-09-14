@@ -8,7 +8,7 @@
       "auth_key": "${TSN_AUTH_KEY}",
       "control_url": "${TSN_CONTROL_URL}",
       "hostname": "${TSN_HOSTNAME}",
-      "ephemeral": true,
+      "ephemeral": false,
       "udp_timeout": "5m"
     }
   ],

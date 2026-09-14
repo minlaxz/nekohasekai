@@ -22,9 +22,9 @@ Tailnet `100.x.x.x:8000` → `ts` → `127.0.0.1:8000` → vLLM.
 
 ## Setup (on the EC2 host)
 
-1. Mint a reusable, ephemeral key.
+1. Mint a single-use, non-ephemeral key (`headscale users list` shows the ID).
    ```sh
-   headscale preauthkeys create --user <user> --reusable --ephemeral --expiration 1y
+   headscale preauthkeys create --user <user-id> --expiration 1h
    ```
 2. `cp .env.sample .env`, fill `TSN_*`.
 3. Run.
@@ -33,17 +33,27 @@ Tailnet `100.x.x.x:8000` → `ts` → `127.0.0.1:8000` → vLLM.
    docker compose logs -f ts
    ```
 
-Ephemeral: state is a tmpfs, so each start is a new node. Headscale drops it after
-`ephemeral_node_inactivity_timeout` (30m) once the EC2 is off. The IP may change per start.
+Persistent node: tailscale state lives in `/data/tailscale` on the EBS volume. The first start
+registers; every later start is the same node, so the IP and the name `vllm` stay the same.
+The key is not used again. Headscale's `node.expiry` defaults to `0`, so the node key never expires.
+
+- Moving from the old ephemeral setup: delete leftover `vllm` / `vllm-N` nodes first
+  (`headscale nodes list`, `headscale nodes delete -i <id>`), or the new node gets a `-N` name.
+- `/data/tailscale` holds the node's private key. An EBS snapshot copied to another AZ carries the
+  same identity: never run two hosts from it at once.
+- Fresh identity: stop, `sudo rm -rf /data/tailscale`, delete the node in headscale, new key, start.
 
 ## Client
 
 From any Mesh node (no ACL policy set in headscale, so all nodes reach each other):
 
 ```sh
-curl http://100.x.x.x:8000/v1/models
-tailscale ping 100.x.x.x
+curl http://vllm.minlaxz.internal:8000/v1/models   # MagicDNS; or the 100.x.x.x IP
+tailscale ping vllm
 ```
+
+MagicDNS names resolve on official tailscale clients and on Profile configs with a Mesh key
+(`dns-mesh` server in `../scaffolds/client/dns.json`).
 
 ## EC2 user data
 

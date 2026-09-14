@@ -7,7 +7,7 @@ TMPL="${TSN_CONFIG_TEMPLATE:-/config.json.tmpl}"
 OUT="${TSN_CONFIG_OUT:-/tmp/config.json}"
 VARS="TSN_AUTH_KEY TSN_CONTROL_URL TSN_HOSTNAME"
 
-# Ephemeral node + tmpfs state: every start registers anew, so the key is always required.
+# Key is only used on first registration (empty /var/lib/tailscale); later starts ignore it.
 for v in $VARS; do
     eval "[ -n \"\$$v\" ]" || { echo "entrypoint: $v is required" >&2; exit 1; }
 done
