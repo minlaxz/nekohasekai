@@ -3,7 +3,7 @@
 Standalone. Puts a compose service on the Mesh (headscale), same idea as `../multiplexers/`,
 but the thing exposed is another container instead of a sing-box service.
 
-`docker-compose-vllm.yaml`, two containers:
+`docker-compose.yaml`, two containers:
 
 - `ts` — sing-box with a `tailscale` endpoint. Owns the network namespace.
 - `vllm` — `network_mode: service:ts`, so vLLM's `:8000` is `127.0.0.1:8000` inside `ts`.
@@ -17,7 +17,7 @@ Tailnet `100.x.x.x:8000` → `ts` → `127.0.0.1:8000` → vLLM.
 |---|---|
 | `config.json` | sing-box config template. `${TSN_*}` placeholders. |
 | `entrypoint.sh` | Fills placeholders from env, `sing-box check`, `sing-box run`. |
-| `docker-compose-vllm.yaml` | `ts` + `vllm`. |
+| `docker-compose.yaml` | `ts` + `vllm`. |
 | `.env.sample` | Copy to `.env`. |
 
 ## Setup (on the EC2 host)
@@ -29,8 +29,8 @@ Tailnet `100.x.x.x:8000` → `ts` → `127.0.0.1:8000` → vLLM.
 2. `cp .env.sample .env`, fill `TSN_*`.
 3. Run.
    ```sh
-   docker compose -f docker-compose-vllm.yaml up -d
-   docker compose -f docker-compose-vllm.yaml logs -f ts
+   docker compose up -d
+   docker compose logs -f ts
    ```
 
 Ephemeral: state is a tmpfs, so each start is a new node. Headscale drops it after
@@ -77,7 +77,7 @@ Downloads skip the tailnet:
 # Public IP vllm uses for the internet: must be the EC2 IP, not a VPS IP
 docker exec vllm python3 -c "import urllib.request; print(urllib.request.urlopen('https://checkip.amazonaws.com').read().decode())"
 # ts only logs tailnet connections: no huggingface here during a download
-docker compose -f docker-compose-vllm.yaml logs ts | grep -i huggingface
+docker compose logs ts | grep -i huggingface
 ```
 
 Tailnet peers are direct, not relayed (from a tailscale CLI node, e.g. 100.64.0.10):
@@ -103,5 +103,5 @@ docker stats headscale
 - No auth on vLLM: anyone on the tailnet can use it. Add `--api-key` to the vllm command if that matters.
 - Plain ICMP `ping` rides sing-box's ping forwarding; `tailscale ping` (disco) works regardless.
 - `ts` owns the netns. If `ts` alone restarts, `vllm` loses its network:
-  `docker compose -f docker-compose-vllm.yaml up -d --force-recreate`.
+  `docker compose up -d --force-recreate`.
 - All tailnet ports forward to `127.0.0.1`; only vLLM listens there.
