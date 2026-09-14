@@ -15,7 +15,7 @@ services:
     mem_reservation: 64m
     memswap_limit: -1 # no swap limit
     # Networks and ports (loopback only; reach via ssh tunnel or tailnet)
-    ports:
+    ports: # unnecessary even 127.0.0.1, just for testing purposes
       - "127.0.0.1:4200:4200"
       - "127.0.0.1:4201:4201"
     # Env and volumes
