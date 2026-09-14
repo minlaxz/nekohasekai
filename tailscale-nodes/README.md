@@ -45,6 +45,29 @@ curl http://100.x.x.x:8000/v1/models
 tailscale ping 100.x.x.x
 ```
 
+## EC2 user data
+
+`../userdata.sh` prepares a fresh g6.xlarge (Deep Learning AMI, Ubuntu 24.04): finds the data
+EBS volume, mounts it at `/data`, installs Docker + NVIDIA toolkit, puts Docker's data-root on
+`/data/docker`, clones this repo to `/data/nekohasekai`. It runs on first boot only.
+
+The data volume is attached by hand after launch. The script waits **5 minutes** for it.
+
+Check the log:
+
+```sh
+tail -f /var/log/userdata.log        # this script's own log
+sudo cat /var/log/cloud-init-output.log   # everything cloud-init ran
+```
+
+Missed the window? The log shows `No data volume found; aborting`, and Docker is not
+installed either. Attach the volume, then run the script again (safe to repeat: formats only a
+blank disk, skips what is already installed):
+
+```sh
+sudo bash /var/lib/cloud/instance/scripts/part-001
+```
+
 ## Traffic and costs
 
 Only traffic to the node's tailnet IP enters the tailnet. sing-box's tailscale is userspace:
