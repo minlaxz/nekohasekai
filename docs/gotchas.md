@@ -11,7 +11,15 @@
 
 ### DNS: when NextDNS gets blocked
 - Today DoH to NextDNS goes direct (no `detour` on `dns-remote`): NextDNS dashboard shows each user's IP, CDNs resolve near the user.
-- If a network blocks `dns.nextdns.io` / `45.90.28.0`, add `"detour": "TCP"` to `dns-remote` in `scaffolds/client/dns.json`. Trade-off: NextDNS and CDNs see the VPS IP; dashboard still shows per-user device names (from the DoH path). Bootstrap `dns-resolver` already detours via `APP_DEFAULT_DNS_DETOUR` (`UDP` group).
+- `dns-remote` detours via the `DNS` selector group (`direct` default, or `TCP`). If a network blocks `dns.nextdns.io` / `45.90.28.0`, switch the `DNS` group to `TCP` in the app (same place as Clash mode / proxy groups), no config edit. `interrupt_exist_connections` drops the open DoH transport so the switch takes effect at once. Trade-off when on `TCP`: NextDNS and CDNs see the VPS IP; dashboard still shows per-user device names (from the DoH path). Bootstrap `dns-resolver` already detours via `APP_DEFAULT_DNS_DETOUR` (`UDP` group).
+- Symptom (2026-09-15, cellular and wifi at once): every site dead, Slack/Telegram stuck connecting, yet urltest and direct outbounds healthy. Log is silent, no error line:
+  ```
+  inbound/tun[tun-in]: inbound DNS packet from 10.10.10.1:63715
+  dns: exchange example.com. IN A
+  <no "dns: exchanged ..." reply, client retries every 2-4 s>
+  ```
+  `ping 1.1.1.1` pongs, `ping example.com` says bad address. Quick check from a Mac on the same network, below the TUN:
+  `curl --interface en0 --resolve dns.nextdns.io:443:45.90.28.243 https://dns.nextdns.io/dns-query?name=example.com -H 'accept: application/dns-json'`
 
 ### TUN on macOS CLI: LAN resolver bypasses the tunnel
 - sing-tun never installs the TUN DNS address (`10.10.10.2`, address+1) as system resolver on macOS CLI. If the system resolver is a LAN address (`192.168.x.1` from DHCP), the directly-connected `/24` beats the TUN's `/1` routes and DNS leaves via en0: neither the auto hijack nor the `port: 53` rule sees it.

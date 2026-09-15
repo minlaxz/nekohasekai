@@ -98,6 +98,16 @@
       "url": "https://www.gstatic.com/generate_204",
       "interval": "30s",
       "tolerance": 100
+    },
+    {
+      "type": "selector",
+      "tag": "Remote DNS Detour",
+      "outbounds": [
+        "direct",
+        "TCP"
+      ],
+      "default": "direct",
+      "interrupt_exist_connections": true
     }
   ]
 }

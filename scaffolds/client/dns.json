@@ -9,7 +9,8 @@
         "domain_resolver": {
           "server": "dns-resolver",
           "strategy": "ipv4_only"
-        }
+        },
+        "detour": "Remote DNS Detour"
       },
       {
         "tag": "dns-resolver",
