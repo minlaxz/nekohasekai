@@ -48,7 +48,10 @@ services:
       - --max-num-seqs=8
       - --gpu-memory-utilization=0.95
       - --limit-mm-per-prompt={"image":1}
-      - --mm-processor-kwargs={"max_pixels":1003520}
+      # image is 3:2, recommanded reso is ~1500
+      # 1500 × 1000 card is 1.5 MP. Qwen3-VL snaps image dimensions to multiples of 32,
+      # so 1,605,632 (= 1568 × 1024) is the nearest clean value above it
+      - --mm-processor-kwargs={"max_pixels":1605632}
       - --port=8000
     deploy:
       resources:
