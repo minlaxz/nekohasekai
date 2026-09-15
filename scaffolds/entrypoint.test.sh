@@ -23,11 +23,16 @@ run 1111
 
 # image update: new route.json + new outbounds.json in defaults
 jq '.marker = "v2"' "$tmp/defaults/client/route.json" > "$tmp/r" && mv "$tmp/r" "$tmp/defaults/client/route.json"
-jq '.marker = "v2"' "$tmp/defaults/client/outbounds.json" > "$tmp/o" && mv "$tmp/o" "$tmp/defaults/client/outbounds.json"
+jq '.marker = "v2" | .outbounds += [{type: "selector", tag: "NEW", outbounds: ["direct"]}]' "$tmp/defaults/client/outbounds.json" > "$tmp/o" && mv "$tmp/o" "$tmp/defaults/client/outbounds.json"
+n=$(q outbounds.json '.outbounds | length')
 
 run 9999
 [ "$(q route.json '.marker')" = v2 ]                          # refreshed from image
 [ "$(q outbounds.json '.marker')" = null ]                    # not overwritten
 [ "$(q outbounds.json '.outbounds[1].server_port')" = 1111 ]  # deploy value survives
+[ "$(q outbounds.json '.outbounds[-1].tag')" = NEW ]           # new outbound appended by tag
+[ "$(q outbounds.json '.outbounds | length')" = $((n + 1)) ]
+run 9999
+[ "$(q outbounds.json '.outbounds | length')" = $((n + 1)) ]  # idempotent
 [ -f "$tmp/root/server/.configured" ]
 echo "entrypoint.test: ok"

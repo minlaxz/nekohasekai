@@ -63,7 +63,7 @@ Expect `configured ports ...` on first start and `public ip x.x.x.x` on every st
 docker compose pull && docker compose up -d
 ```
 
-That is the whole upgrade path. The image carries the configs: every start copies the client template (`route.json`, `dns.json`, `inbounds.json`, ...) from the image into the volume, so rule and DNS changes land without touching it. `client/outbounds.json`, `server/`, and `cache/` persist.
+That is the whole upgrade path. The image carries the configs: every start copies the client template (`route.json`, `dns.json`, `inbounds.json`, ...) from the image into the volume, so rule and DNS changes land without touching it. `client/outbounds.json`, `server/`, and `cache/` persist; outbounds the image adds (new tags) are appended to `outbounds.json` on start, existing entries stay as they are.
 
 `git pull` on the server is only needed when `docker-compose.yaml` changes or `.env` gains a new variable.
 

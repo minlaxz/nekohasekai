@@ -33,6 +33,11 @@ done
 for f in "$DEFAULTS"/client/*.json; do
     case "$f" in */outbounds.json) ;; *) cp -a "$f" "$ROOT/client/" ;; esac
 done
+# outbounds.json: append outbounds the image added (matched by tag) so new groups reach old volumes;
+# existing entries and their deploy values are left alone
+jqi "$CLIENT_OUT" --slurpfile img "$DEFAULTS/client/outbounds.json" \
+    '(.outbounds | map(.tag)) as $have
+    | .outbounds += [$img[0].outbounds[] | select(.tag as $t | $have | index($t) | not)]'
 
 # ---- first-init only: ports + SNI ----
 if [ ! -f "$ROOT/server/.configured" ]; then
