@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 import urllib.parse
 from typing import Any, Dict, List
 
@@ -113,6 +114,8 @@ def fetch_user_rules(url: str) -> List[str]:
     parts = urllib.parse.urlsplit(url)
     if parts.scheme != "https" or parts.hostname not in USER_RULES_HOSTS:
         raise _bad_rules(f"URL must be https on {', '.join(USER_RULES_HOSTS)}")
+    # GitHub CDN caches raw content ~5 min per URL; fresh query string bypasses it.
+    url = f"{url}{'&' if parts.query else '?'}_={int(time.time())}"
     body = b""
     try:
         with httpx.stream("GET", url, timeout=HTTP_TIMEOUT, follow_redirects=False) as r:
