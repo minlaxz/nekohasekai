@@ -117,7 +117,7 @@ The wire threat is identical. What differs is *what* leaks and *what the protoco
 | `ssm-api`   | API key                     | admin API hijack                                   | same shape as `ccm`                                          |
 | `trojan`    | SHA224(password) in header  | password hash replay + all traffic cleartext        | protocol *designed* to look like HTTPS; `tls` effectively required, no `tls` = not trojan anymore |
 | `naive`     | user:pass (HTTP basic)      | credentials cleartext; real naive clients cannot connect | naive is HTTP/2 CONNECT over TLS. sing-box only *rejects* a missing `tls` for the QUIC network; over TCP it starts, for use behind a TLS-terminating front |
-| `vmess`     | none plain (AEAD encrypted) | payload still encrypted by vmess itself, but fingerprintable | `tls` optional, recommended                        |
+| `vmess`     | none plain (UUID never sent; header AEAD only with `alter_id: 0`) | fingerprintable; payload is cleartext if the client chose `security: none` or `zero` | `tls` optional, recommended. vmess encrypts the payload only when the client's `security` says so |
 | `vless`     | UUID in clear               | UUID replay + all traffic cleartext                | no built-in encryption; needs `tls` or `reality`             |
 | `hysteria2` | password                    | not runnable                                        | QUIC = TLS 1.3 by design; `tls` mandatory                    |
 | `tuic`      | uuid + password             | not runnable                                        | QUIC; `tls` mandatory                                        |
