@@ -1,6 +1,8 @@
 # Why every sing-box inbound has a `tls` block
 
-Applies to: `ccm`, `ssm-api`, `trojan`, `naive`, `vmess`, `vless`, `hysteria2`, `tuic`, `anytls`, `http`, `mixed`, and any other listener.
+Applies to: `ccm`, `ssm-api`, `trojan`, `naive`, `vmess`, `vless`, `hysteria2`, `tuic`, `anytls`, `http`, `mixed`. Not every listener has the field: `socks`, `shadowsocks` and `shadowtls` inbounds do not.
+
+See also: [outbound-tls](outbound-tls.md), the client-side half of the same handshake.
 
 ## One idea
 
@@ -88,7 +90,8 @@ ANTHROPIC_BASE_URL=https://box.example.com:8443 ANTHROPIC_AUTH_TOKEN=ak-ccm-alic
 
 Consequences:
 
-- Need a domain and a certificate. ACME needs port 80/443 reachable, or use `certificate_path` / `key_path`.
+- Need a domain and a certificate. ACME needs port 80 (HTTP challenge) or 443 (TLS-ALPN challenge) reachable; a `dns01_challenge` needs neither. Or use `certificate_path` / `key_path`.
+- Inline `acme` is deprecated in sing-box 1.14.0 and will be removed in 1.16.0; the replacement is `certificate_provider` (since 1.14.0).
 - Self-signed cert: Claude Code (Node) rejects it unless `NODE_EXTRA_CA_CERTS` is set.
 - Safe on the public internet. Same wire protection as Anthropic's own endpoint.
 
@@ -102,7 +105,7 @@ remote laptop         internet          edge (Caddy / nginx / tailscale)   sing-
 ```
 
 No `tls` in sing-box, bind `listen: "127.0.0.1"`. Encryption lives in the layer in front.
-This repo's Mesh (`ts_auth_key`) is this option: tailscale encrypts, so `tls` is redundant.
+A tailscale / WireGuard mesh is this option: the mesh encrypts, so `tls` is redundant.
 
 ## Same concept, other inbounds
 
@@ -113,27 +116,51 @@ The wire threat is identical. What differs is *what* leaks and *what the protoco
 | `ccm`       | bearer token, prompts       | token replay, prompt/code leak                     | HTTP service; TLS optional                                   |
 | `ssm-api`   | API key                     | admin API hijack                                   | same shape as `ccm`                                          |
 | `trojan`    | SHA224(password) in header  | password hash replay + all traffic cleartext        | protocol *designed* to look like HTTPS; `tls` effectively required, no `tls` = not trojan anymore |
-| `naive`     | user:pass (HTTP basic)      | not runnable                                        | naive is HTTP/2 CONNECT over TLS; `tls` mandatory            |
+| `naive`     | user:pass (HTTP basic)      | credentials cleartext; real naive clients cannot connect | naive is HTTP/2 CONNECT over TLS. sing-box only *rejects* a missing `tls` for the QUIC network; over TCP it starts, for use behind a TLS-terminating front |
 | `vmess`     | none plain (AEAD encrypted) | payload still encrypted by vmess itself, but fingerprintable | `tls` optional, recommended                        |
 | `vless`     | UUID in clear               | UUID replay + all traffic cleartext                | no built-in encryption; needs `tls` or `reality`             |
 | `hysteria2` | password                    | not runnable                                        | QUIC = TLS 1.3 by design; `tls` mandatory                    |
 | `tuic`      | uuid + password             | not runnable                                        | QUIC; `tls` mandatory                                        |
-| `anytls`    | password                    | not runnable                                        | TLS is the protocol; `tls` mandatory                         |
+| `anytls`    | password                    | password + traffic cleartext                        | TLS is the protocol by design. The inbound docs do not mark `tls` Required (the *outbound* does), so sing-box starts without it; only sane behind a TLS-terminating front |
 | `shadowsocks` | none (AEAD cipher)        | fine                                                | encrypts itself; no `tls` field at all                       |
-| `http` / `mixed` / `socks` | user:pass    | credentials + traffic cleartext                    | LAN / loopback only without `tls`                            |
+| `http` / `mixed` | user:pass              | credentials + traffic cleartext                    | LAN / loopback only without `tls`. The `mixed` docs page omits the field, but the source accepts it (shared options struct with `http`) |
+| `socks`     | user:pass                   | credentials + traffic cleartext                    | no `tls` field at all; LAN / loopback only                   |
 
 Three buckets:
 
 ```
                  ┌───────────────────────────┐
   tls optional   │ ccm  ssm-api  vmess  http │  runs without it; unsafe outside private nets
+                 │ mixed                     │
                  ├───────────────────────────┤
-  tls mandatory  │ trojan naive hysteria2    │  protocol *is* TLS; config rejected or broken without it
-                 │ tuic anytls  (vless+tls)  │
+  tls required   │ hysteria  hysteria2  tuic │  docs mark ==Required==; QUIC cannot run without it
+  by sing-box    │                           │
                  ├───────────────────────────┤
-  no tls field   │ shadowsocks  wireguard    │  brings own crypto; add TLS only for camouflage
+  tls required   │ trojan  naive  anytls     │  sing-box starts without it, but the protocol
+  by the protocol│ (vless+tls)               │  assumes TLS: clients fail or everything leaks
+                 ├───────────────────────────┤
+  no tls field   │ shadowsocks  socks        │  own crypto (shadowsocks) or none (socks)
+                 │ shadowtls    wireguard    │
                  └───────────────────────────┘
 ```
+
+## Inbound fields at a glance
+
+| Field | Since | Meaning |
+|---|---|---|
+| `enabled`, `server_name`, `alpn`, `min_version`, `max_version`, `cipher_suites` | - | same meaning as on the client side |
+| `certificate`(`_path`), `key`(`_path`) | - | the cert and private key this server presents; `*_path` files are reloaded when modified |
+| `curve_preferences` | 1.13.0 | allowed key exchanges |
+| `client_authentication` | 1.13.0 | mutual TLS: `no` (default), `request`, `require-any`, `verify-if-given`, `require-and-verify` |
+| `client_certificate`(`_path`), `client_certificate_public_key_sha256` | 1.13.0 | which client certs to accept; one is required for the two `verify` modes |
+| `kernel_tx` / `kernel_rx` | 1.13.0 | kernel TLS, Linux 5.1+, TLS 1.3 only; docs advise against `kernel_rx` |
+| `handshake_timeout` | 1.14.0 | default `15s` |
+| `certificate_provider` | 1.14.0 | tag of a shared certificate provider, or an inline one; replaces `acme` |
+| `acme` | deprecated 1.14.0 | removal planned for 1.16.0 |
+| `ech` | - | server side holds `key` / `key_path` |
+| `reality` | - | server side holds `handshake`, `private_key`, `short_id[]`, `max_time_difference` |
+
+Client-only fields (`insecure`, `utls`, `disable_sni`, ...) are in [outbound-tls](outbound-tls.md).
 
 ## Decision
 
@@ -143,7 +170,7 @@ Is the listener reachable from a network you don't own?
 └─ yes
    ├─ something in front terminates TLS (Caddy, nginx, CDN) → omit tls, bind 127.0.0.1
    └─ sing-box is the edge                                   → tls.enabled = true
-        ├─ have domain, port 80/443 open → acme
+        ├─ have domain, port 80/443 open → certificate_provider (1.14.0+), acme before that
         └─ otherwise                     → certificate_path + key_path
 ```
 
@@ -152,3 +179,7 @@ Is the listener reachable from a network you don't own?
 - CCM service: https://sing-box.sagernet.org/configuration/service/ccm/
 - Shared TLS fields: https://sing-box.sagernet.org/configuration/shared/tls/
 - Listen fields: https://sing-box.sagernet.org/configuration/shared/listen/
+- Certificate provider (since 1.14.0): https://sing-box.sagernet.org/configuration/shared/certificate-provider/
+- Inbound pages (per-protocol `tls` and Required markers): https://sing-box.sagernet.org/configuration/inbound/
+- Source, which inbounds embed TLS options (`socks` does not, `mixed` does): https://github.com/SagerNet/sing-box/blob/testing/option/simple.go
+- Trojan protocol (`hex(SHA224(password))`): https://trojan-gfw.github.io/trojan/protocol
