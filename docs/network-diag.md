@@ -96,6 +96,45 @@ Run once without `-L` to compare a tiny redirect body against the full page.
 `mss_fix` clamps TCP MSS in both directions; `mtu` caps the tunnel interface.
 Pick values under the probed ceiling: `"mss_fix": 1350`, `"mtu": 1380`.
 
+### Worked case: OpenVPN client over shadowtls (2026-09-23)
+
+Setup: `openvpn-client` endpoint, `network: tcp`, detoured through a
+shadowsocks + shadowtls outbound (OpenVPN signature blocked locally, so the
+extra TCP wrap is required). Web server on `192.168.10.1` behind the VPN.
+
+Symptom: ping fine, `curl http://192.168.10.1/` (302, 270 bytes) done in
+0.4 s, but `curl -L` to `/login` got 448 bytes then hung until the 90 s
+timeout.
+
+Why: endpoint `mtu` defaulted to 1500, so the tunnel's TCP stack advertised
+MSS 1460. Segments near that size did not survive the nested path
+(OpenVPN inside Shadowsocks inside TLS, plus the server-side LAN). Nothing on
+the path sent ICMP "fragmentation needed" back through the userspace stack, so
+TCP never shrank the segment size. Result: a classic PMTU blackhole where only
+packets under the real ceiling arrive.
+
+Proof: don't-fragment pings passed at 1350-byte payload (112 ms RTT) and half
+failed at 1400 (641 ms). Ceiling between 1378 and 1428 bytes on the wire.
+
+Change on the endpoint:
+
+```json
+"mss_fix": 1350,
+"mtu": 1380
+```
+
+`mss_fix` rewrites the MSS option in SYN packets crossing the tunnel, both
+directions, so the web server also sends segments the path can carry. `mtu`
+backs that up for non-TCP traffic and for any flow that skips the clamp.
+
+After: `curl -L` returned the full 3649-byte page in 2.9 s. Remaining time is
+tunnel RTT (~112 ms) multiplied by the handshakes in a TCP-over-TCP path;
+expected while the shadowtls wrap stays.
+
+Also changed `detour` from the `UDP` urltest group to `TCP`: the endpoint
+speaks TCP, and `UDP` held a udp-only shadowsocks member that could never
+carry it. Cosmetic, not part of the fix.
+
 ## Local interfaces
 
 ### MTU of every utun
