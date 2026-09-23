@@ -88,8 +88,12 @@ def _bad_rules(detail: str) -> HTTPException:
     return HTTPException(status_code=400, detail=f"User rule set: {detail}")
 
 
-def parse_user_rules(body: bytes) -> List[str]:
-    """Domain suffixes from a User rule set. Structure only; the client validates the rest."""
+USER_RULE_FIELDS = ("domain_suffix", "domain_keyword", "domain_regex")
+
+
+def parse_user_rules(body: bytes) -> Dict[str, List[str]]:
+    """Domain matchers from a User rule set, by field. Structure only; the client
+    validates the rest (e.g. domain_regex syntax)."""
     try:
         data = json.loads(body)
     except ValueError:
@@ -99,18 +103,18 @@ def parse_user_rules(body: bytes) -> List[str]:
     rules = data.get("rules")
     if not isinstance(rules, list) or not rules:
         raise _bad_rules("'rules' must be a non-empty list")
-    suffixes: List[str] = []
+    matchers: Dict[str, List[str]] = {}
     for rule in rules:
-        if not isinstance(rule, dict) or set(rule) != {"domain_suffix"}:
-            raise _bad_rules("each rule may only contain 'domain_suffix'")
-        values = rule["domain_suffix"]
-        if not isinstance(values, list) or not all(isinstance(v, str) for v in values):
-            raise _bad_rules("'domain_suffix' must be a list of strings")
-        suffixes.extend(values)
-    return suffixes
+        if not isinstance(rule, dict) or not rule or not set(rule) <= set(USER_RULE_FIELDS):
+            raise _bad_rules(f"each rule may only contain {', '.join(USER_RULE_FIELDS)}")
+        for field, values in rule.items():
+            if not isinstance(values, list) or not all(isinstance(v, str) for v in values):
+                raise _bad_rules(f"'{field}' must be a list of strings")
+            matchers.setdefault(field, []).extend(values)
+    return matchers
 
 
-def fetch_user_rules(url: str) -> List[str]:
+def fetch_user_rules(url: str) -> Dict[str, List[str]]:
     parts = urllib.parse.urlsplit(url)
     if parts.scheme != "https" or parts.hostname not in USER_RULES_HOSTS:
         raise _bad_rules(f"URL must be https on {', '.join(USER_RULES_HOSTS)}")
@@ -130,14 +134,15 @@ def fetch_user_rules(url: str) -> List[str]:
     return parse_user_rules(body)
 
 
-def apply_user_rules(route: Dict[str, Any], suffixes: List[str]) -> None:
-    """Add a User rule set's suffixes to every domain_suffix list under the proxied
-    (TCP/UDP outbound) rules. Mutates `route`."""
-    targets: List[List[str]] = []
+def apply_user_rules(route: Dict[str, Any], matchers: Dict[str, List[str]]) -> None:
+    """Add a User rule set's matchers to every rule holding a domain_suffix list under
+    the proxied (TCP/UDP outbound) rules. sing-box ORs the domain_* fields within one
+    rule, so keywords and regexes sit beside the suffixes. Mutates `route`."""
+    targets: List[Dict[str, Any]] = []
 
     def walk(rule: Dict[str, Any]) -> None:
         if isinstance(rule.get("domain_suffix"), list):
-            targets.append(rule["domain_suffix"])
+            targets.append(rule)
         for child in rule.get("rules", []):
             walk(child)
 
@@ -148,7 +153,9 @@ def apply_user_rules(route: Dict[str, Any], suffixes: List[str]) -> None:
         logger.error("Client template route has no proxied domain_suffix list")
         raise HTTPException(status_code=500, detail="No proxied domain_suffix list in route.")
     for target in targets:
-        target.extend(s for s in dict.fromkeys(suffixes) if s not in target)
+        for field, values in matchers.items():
+            existing = target.setdefault(field, [])
+            existing.extend(v for v in dict.fromkeys(values) if v not in existing)
 
 
 # -------------------------------------------------------------------

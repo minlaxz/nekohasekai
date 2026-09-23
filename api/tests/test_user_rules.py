@@ -20,9 +20,18 @@ def _body(rules, version=5):
     return json.dumps({"version": version, "rules": rules}).encode()
 
 
-def test_parse_collects_suffixes():
-    body = _body([{"domain_suffix": ["a.com", "b.com"]}, {"domain_suffix": ["c.com"]}])
-    assert parse_user_rules(body) == ["a.com", "b.com", "c.com"]
+def test_parse_collects_matchers_by_field():
+    body = _body(
+        [
+            {"domain_suffix": ["a.com", "b.com"], "domain_keyword": ["google"]},
+            {"domain_suffix": ["c.com"], "domain_regex": [r"^cdn\d+\.x\.com$"]},
+        ]
+    )
+    assert parse_user_rules(body) == {
+        "domain_suffix": ["a.com", "b.com", "c.com"],
+        "domain_keyword": ["google"],
+        "domain_regex": [r"^cdn\d+\.x\.com$"],
+    }
 
 
 @pytest.mark.parametrize(
@@ -34,6 +43,8 @@ def test_parse_collects_suffixes():
         _body([{"domain_suffix": ["a.com"], "domain": ["b.com"]}]),
         _body([{"ip_cidr": ["1.1.1.1/32"]}]),
         _body([{"domain_suffix": "a.com"}]),
+        _body([{"domain_keyword": "google"}]),
+        _body([{}]),
     ],
 )
 def test_parse_rejects_bad_structure(body):
@@ -56,23 +67,27 @@ def test_fetch_rejects_disallowed_urls_without_network(url):
     assert exc.value.status_code == 400
 
 
-def test_apply_extends_exactly_the_tcp_and_udp_lists():
+def test_apply_extends_exactly_the_tcp_and_udp_rules():
     route = _route()
-    apply_user_rules(route, ["x.com", "gstatic.com", "x.com"])
-    lists = []
+    apply_user_rules(
+        route,
+        {"domain_suffix": ["x.com", "gstatic.com", "x.com"], "domain_keyword": ["google"]},
+    )
+    hits = []
 
     def walk(rule):
         if "domain_suffix" in rule:
-            lists.append(rule["domain_suffix"])
+            hits.append(rule)
         for child in rule.get("rules", []):
             walk(child)
 
     for rule in route["rules"]:
         walk(rule)
-    assert lists == [["gstatic.com", "x.com"], ["gstatic.com", "x.com"]]
+    want = {"domain_suffix": ["gstatic.com", "x.com"], "domain_keyword": ["google"]}
+    assert hits == [want, want]
 
 
 def test_apply_without_target_list_is_500():
     with pytest.raises(HTTPException) as exc:
-        apply_user_rules({"rules": [{"outbound": "TCP", "clash_mode": "Full"}]}, ["x.com"])
+        apply_user_rules({"rules": [{"outbound": "TCP", "clash_mode": "Full"}]}, {"domain_suffix": ["x.com"]})
     assert exc.value.status_code == 500
