@@ -63,12 +63,61 @@ nc -z -v -G 5 <ip> <port>
 `-z` no data, `-v` print result, `-G 5` connect timeout 5 s. Output
 `succeeded!` or `Connection refused` / timeout.
 
-Caveat under the sing-box tun: the tun stack completes the TCP handshake
-locally, then dials the outbound. So `succeeded!` proves only that the route
-matched. The remote port can still be closed or unreachable. Proof of the
+Caveat under the sing-box tun: `succeeded!` does not prove the remote port.
+The `system` / `mixed` stacks complete the handshake before any dial. The
+`gvisor` stack waits for the outbound dial, but a proxy outbound (Shadowsocks
+and most others) "succeeds" once the proxy server is up, not the target. See
+"When does the app's `connect()` succeed?" in
+[concepts/tun-inbound.md](concepts/tun-inbound.md). Proof of the
 remote end needs data back: use the `curl` line below, or read the sing-box
 log for the outbound dial error. `Connection refused` or a timeout is still a
 real failure.
+
+Control test: probe a port that is surely closed. If it also says
+`succeeded!`, the tun or the proxy answered, not the remote.
+
+```sh
+nc -z -v -G 5 <ip> 1
+```
+
+Seen 2026-10-01: port 1 on a Lightsail VPS reported `succeeded!`, and so did
+443, which the Lightsail firewall blocks. Stack was `gvisor`; the IP routed
+to the `TCP` urltest (Shadowsocks), so the probe only proved the Shadowsocks
+server was reachable. To test the real path, stop sing-box
+or add `"route_exclude_address": ["<ip>/32"]` to the tun inbound, then repeat.
+A firewall drop then shows as a timeout.
+
+### UDP port reachable
+
+`nc -u -G 5 ...` fails on macOS with `nc: TCP_CONNECTIONTIMEOUT: Invalid argument`:
+`-G` is a TCP-only option. Drop it. A bare `nc -u -v <host> <port>` still
+proves nothing: UDP has no handshake, so nc reports success without sending a
+packet. A server that ignores junk (any QUIC server, e.g. `google.com:443`)
+also stays silent, so silence is not a block either.
+
+Proof needs a reply. Run a listener on your own VPS and send a line from the
+client. Stop sing-box first, or the tun carries the UDP through the proxy.
+
+```sh
+# VPS (open the port in the cloud firewall first)
+nc -u -l <port>
+# client: type a line, press Enter; it must appear on the VPS
+nc -u <vps-ip> <port>
+```
+
+Line appears: UDP to that port works. Nothing: UDP blocked on that port, or a
+firewall in between. Try several ports (443, 8443, a high one). Blocking only
+some ports suggests a per-port rule; Hysteria2 port hopping targets that.
+
+QUIC to a real HTTP/3 site, if your curl was built with HTTP/3 (`curl -V`
+lists `HTTP3`; Apple's `/usr/bin/curl` may not):
+
+```sh
+curl --http3-only -sI https://www.google.com -o /dev/null -w '%{http_version}\n'
+```
+
+`3` means QUIC passed. An error or timeout while the same URL over TCP works
+means QUIC (UDP 443) is blocked or throttled.
 
 ### TCP works but an app says "connection refused"
 

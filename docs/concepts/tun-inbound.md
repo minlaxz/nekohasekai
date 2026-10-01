@@ -203,6 +203,72 @@ Consequences:
 Default in release builds. Takes the kernel's fast TCP and gVisor's better
 UDP handling.
 
+### When does the app's `connect()` succeed?
+
+The stack decides when the app is told "connected". The outbound decides what
+that dial actually proved.
+
+```
+ system / mixed: handshake first, dial later
+
+ nc SYN ──▶ tun0 ──▶ kernel listener ──▶ SYN-ACK at once     ◀── nc: succeeded!
+                            │
+                            ▼  only now
+                   router ──▶ outbound ──▶ dial 1.2.3.4:1
+                                                 │
+                                          timeout / refused
+                                                 │
+                                   sing-box closes the app socket
+                                   (nc -z already gone)
+
+ gvisor: dial first, handshake later (lazy)
+
+ nc SYN ──▶ tun0 ──▶ gVisor holds SYN ──▶ router ──▶ outbound dial
+                                                         │
+                       ok:   SYN-ACK ◀───────────────────┤   ◀── nc: succeeded!
+                       fail: RST     ◀───────────────────┘   ◀── nc: refused
+```
+
+What "outbound dial ok" means:
+
+| outbound                         | dial succeeds when                          |
+|----------------------------------|---------------------------------------------|
+| `direct`                         | the real destination answered SYN-ACK       |
+| `shadowsocks` (TCP)              | the TCP link to the *proxy server* is up    |
+| most proxy protocols             | same: the proxy server, not the destination |
+
+Shadowsocks connects to its server and returns an "early" connection. The
+target address rides inside the first data write. The client never learns
+whether the server reached the target.
+
+Consequences:
+
+- `system` / `mixed`: every TCP probe says "connected", any IP, any port.
+- `gvisor` + `direct`: probes are close to the truth.
+- `gvisor` + proxy: probes test the proxy server, not the destination.
+- To probe the real path, keep the target off the TUN entirely with
+  `route_exclude_address` (below).
+
+### `route_exclude_address` — punch a hole in the TUN routes
+
+```json
+{ "type": "tun", "auto_route": true,
+  "route_exclude_address": ["203.0.113.7/32"] }
+```
+
+sing-box subtracts the listed prefixes from the `/1` routes. It installs
+more-specific routes around the hole, not a separate "exclude" route. Traffic
+to the excluded address then follows the real default route out `en0`, and
+sing-box never sees it.
+
+```
+ with exclude:   app ──▶ kernel ──▶ en0 ──▶ 203.0.113.7    (real answer)
+ without:        app ──▶ kernel ──▶ tun0 ──▶ sing-box ──▶ ...
+```
+
+Cost: nothing reaches the router for that address. No rule, no proxy, no
+log line. Use it for test hosts and for addresses that must never be proxied.
+
 ## The fast path: some packets never become connections
 
 Before either stack sees a packet, a **flow dispatcher** looks at the first
