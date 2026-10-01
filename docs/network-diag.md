@@ -54,6 +54,26 @@ ping -c 4 -i 0.3 <ip>
 loss on a public server often means ICMP is filtered, not that the host is
 down. Confirm with an HTTP request (next section), not only with `nc`.
 
+Under the sing-box tun, which path the ping takes depends on the route:
+
+- ICMP routed to `direct` (here: no rule matches ICMP, so `route.final: direct`
+  catches it): sing-box sends a real echo out `en0`. The reply is honest, but
+  it tests the direct path, not the proxy.
+- ICMP routed to an outbound that cannot carry ICMP (Shadowsocks and most
+  proxies) on the `gvisor` stack: gVisor answers the echo itself. Every IP
+  "replies" [sing-tun `stack_gvisor_icmp.go:121-154`]. The `system` stack also
+  fakes ping.
+
+Control test: ping an address that never answers. A reply means it is faked.
+
+```sh
+ping -c 2 192.0.2.1    # TEST-NET-1, reserved, nothing should answer
+```
+
+Seen 2026-10-01 (SFM 1.14.2, `gvisor`): 192.0.2.1 got 100% loss, 1.1.1.1
+replied, so ping was real and went out direct. The Lightsail VPS got 100%
+loss. Lightsail blocks ICMP until a "Ping" firewall rule is added.
+
 ### TCP port reachable
 
 ```sh
