@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - master
+      - dev
     paths:
       - "api/**/*.py"
       - "api/**/*.html"
@@ -13,6 +14,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # dev branch builds neko-api-dev; master keeps neko-api
+  TAG: neko-api${{ github.ref_name == 'dev' && '-dev' || '' }}
 
 jobs:
   Build:
@@ -48,5 +51,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ${{ env.IMAGE_NAME }}:neko-api
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:neko-api
+            ${{ env.IMAGE_NAME }}:${{ env.TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}

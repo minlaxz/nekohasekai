@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - master
+      - dev
     paths:
       - "scaffolds/**"
       - "!scaffolds/deprecated/**"
@@ -12,6 +13,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # dev branch builds neko-dev; master keeps neko
+  TAG: neko${{ github.ref_name == 'dev' && '-dev' || '' }}
 
 jobs:
   Build:
@@ -47,5 +50,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ${{ env.IMAGE_NAME }}:neko
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:neko
+            ${{ env.IMAGE_NAME }}:${{ env.TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
