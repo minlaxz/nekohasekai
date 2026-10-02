@@ -26,6 +26,22 @@
         "server_port": 443
       },
       "strict_mode": true
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2",
+      "listen": "0.0.0.0",
+      "listen_port": 0,
+      "users": [],
+      "obfs": {
+        "type": "salamander",
+        "password": ""
+      },
+      "tls": {
+        "enabled": true,
+        "certificate": [],
+        "key": []
+      }
     }
   ]
 }

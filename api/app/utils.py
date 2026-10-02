@@ -262,7 +262,7 @@ class Reader(Checker):
         outbounds = self._section("outbounds")
         for ob in outbounds:
             if ob.get("type") != "shadowsocks":
-                continue  # shadowtls password is shared, set by entrypoint
+                continue  # ShadowTLS password and Hysteria2 secrets are shared, set by Init
             ob["password"] = self.psk
             if "multiplex" in ob:  # uot outbound has none: conflicts with multiplex
                 ob["multiplex"]["enabled"] = self.multiplex
