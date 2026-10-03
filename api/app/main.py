@@ -70,6 +70,8 @@ async def check_quota_exceeded_task() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run once at startup
+    if not os.getenv("APP_ADMIN_PASSWORD"):
+        logging.critical("APP_ADMIN_PASSWORD is not set: every /ssm request will be refused")
     try:
         await seed_users_from_file()
     except Exception as exc:  # ssm-api not up yet, or users.json missing
@@ -87,8 +89,16 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()  # type: ignore
 
 
-app = FastAPI(exception_handlers=exceptions, lifespan=lifespan)
-# Both ssm and ssm-transparent routes should be protected by some authentication
+app = FastAPI(
+    title="nekohasekai API",
+    description=(
+        "Hands out per-user sing-box profiles and manages Managed users. "
+        "Admin routes under `/ssm` need HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD`). "
+        "See docs/api.md in the repo for the integration flow."
+    ),
+    exception_handlers=exceptions,
+    lifespan=lifespan,
+)
 app.include_router(ssm_router, prefix="/ssm")
 app.include_router(ssm_transparent_router, prefix="/ssm-transparent")
 
@@ -99,10 +109,11 @@ origins = [
 ]
 APP_HOST = os.getenv("APP_HOST", "")
 if APP_HOST:
-    origins.append(APP_HOST)
+    origins.append(f"https://{APP_HOST}")
 else:
     logging.critical("APP_HOST is not set in environment variables!")
     # exit(1)
+origins += [o.strip() for o in os.getenv("APP_CORS_ORIGINS", "").split(",") if o.strip()]
 
 
 app.add_middleware(
@@ -128,10 +139,20 @@ def read_root(request: Request):
     Returns:
         _TemplateResponse: _nginx default page_
     """
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
-@app.get("/c", response_class=JSONResponse)
+@app.get(
+    "/c",
+    response_class=JSONResponse,
+    tags=["profile"],
+    summary="Profile config",
+    description=(
+        "Full sing-box client config for one user. `j` username, `k` PSK (both required, "
+        "checked against ssm-api). Other params override the `APP_DEFAULT_*` values; "
+        "`r` is an optional User rule set URL."
+    ),
+)
 def read_config(
     request: Request,
     # User authentication
@@ -196,10 +217,16 @@ def read_config(
     ).unwarp()
 
 
-@app.get("/i", response_class=HTMLResponse)
+@app.get(
+    "/i",
+    response_class=HTMLResponse,
+    tags=["profile"],
+    summary="Profile import page",
+    description="Wraps the `/c` URL for `j`/`k` in a `sing-box://import-remote-profile` link. `p`/`v` are accepted for old links and ignored.",
+)
 def read_user(request: Request, p: str = "a", v: int = 12, j: str = "", k: str = ""):
     url = "https://" + APP_HOST + f"/c?p={p}&v={v}&j={j}&k={k}"
     encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"
     return templates.TemplateResponse(
-        "render.html", {"request": request, "j": j, "encoded_url": encoded_url}
+        request, "render.html", {"j": j, "encoded_url": encoded_url}
     )
