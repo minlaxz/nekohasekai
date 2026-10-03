@@ -55,7 +55,7 @@ def ssm_key(k: str) -> str:
 
 
 def client_key(k: str) -> str:
-    """The key the client outbounds get for a `k`. sing-box's server (sing-shadowsocks) reduces
+    """The key the client outbounds get for a `k` (#24). sing-box's server (sing-shadowsocks) reduces
     the 18-byte ssm_key to 16 bytes with SHA-256; its client (sing-shadowsocks2) takes exactly
     16 bytes and nothing else, so the API applies the same reduction (verified, sing-box 1.14.2)."""
     raw = base64.b64decode(ssm_key(k))
