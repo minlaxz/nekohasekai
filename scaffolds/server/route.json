@@ -11,6 +11,11 @@
       {
         "inbound": "hysteria2",
         "action": "reject"
+      },
+      {
+        "inbound": "shadowsocks",
+        "ip_is_private": true,
+        "action": "reject"
       }
     ],
     "final": "direct-out",

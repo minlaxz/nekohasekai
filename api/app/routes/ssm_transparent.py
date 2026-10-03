@@ -1,14 +1,15 @@
 import os
 
 import httpx
-from fastapi import APIRouter, Request, Response
+from app.auth import require_admin
+from fastapi import APIRouter, Depends, Request, Response
 
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
 APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)], include_in_schema=False)
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
@@ -21,7 +22,8 @@ async def full_proxy(path: str, request: Request):
             url,
             params=request.query_params,
             content=await request.body(),
-            headers=request.headers,
+            # Admin credential must not reach the upstream; host belongs to it, not us.
+            headers={k: v for k, v in request.headers.items() if k.lower() not in ("authorization", "host")},
         )
 
     return Response(

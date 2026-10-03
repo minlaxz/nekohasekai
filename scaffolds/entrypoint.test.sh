@@ -51,7 +51,7 @@ hysteria2_ok() { # hysteria2_ok <root> <shadowsocks port> <hysteria2 port>
     is "$srv" '.inbounds[-1] | [.type, .listen_port, .obfs.type, .tls.enabled]' "[hysteria2,$3,salamander,true]"
     is "$srv" '.inbounds[-1] | [.users[0].password, .obfs.password]' '[hy2-pw,obfs-pw]'
     is "$srv" '.inbounds[-1] | [.tls.key[0], .tls.certificate[0]] | map(length > 0) | all' true
-    is "$1/server/route.json" '.route.rules' \
+    is "$1/server/route.json" '.route.rules[:2]' \
         "[{inbound:hysteria2,ip_cidr:[127.0.0.1/32],port:$2,action:route,outbound:direct-out},{inbound:hysteria2,action:reject}]"
     is "$1/server/route.json" '.route.final' direct-out
 
@@ -60,8 +60,7 @@ hysteria2_ok() { # hysteria2_ok <root> <shadowsocks port> <hysteria2 port>
     is "$cli" "[$(ob shadowsocks-hy2)] | length" 1
     is "$cli" "$(ob shadowsocks-hy2) | [.server, .server_port, .detour, .password]" "[127.0.0.1,$2,hysteria2,]"
     is "$cli" "$(ob shadowsocks-hy2) | has(\"multiplex\") or has(\"network\")" false
-    is "$cli" "[.outbounds[] | select(.tag == \"UDP\" or .tag == \"all-outbounds\").outbounds | map(select(. == \"shadowsocks-hy2\")) | length]" '[1,1]'
-    is "$cli" "$(ob TCP) | .outbounds | index(\"shadowsocks-hy2\")" null
+    is "$cli" "$(ob Proxy) | .outbounds" '[shadowsocks-uot,shadowsocks-hy2]'
     # client carries the server's secrets and its certificate as the trust anchor
     jq -s '.[0].inbounds[-1] as $s | .[1].outbounds[] | select(.tag == "hysteria2")
         | [.password == $s.users[0].password, .obfs.password == $s.obfs.password, .tls.certificate == $s.tls.certificate] | all' \
@@ -78,8 +77,10 @@ for v in HYSTERIA2_PORT HYSTERIA2_PASSWORD HYSTERIA2_OBFS_PASSWORD; do  # subshe
 done
 
 run "$root" 1111 3333
-is "$out" '.outbounds[1].server_port' 1111
-is "$out" '.outbounds[1].server' 1.2.3.4
+is "$out" "$(ob shadowtls) | [.server, .server_port, .tls.server_name, .password]" '[1.2.3.4,2222,x.org,pw]'
+is "$out" '[.outbounds[].tag]' '[shadowsocks-uot,shadowtls,shadowsocks-hy2,hysteria2,direct,Proxy,Remote DNS Detour]'
+is "$root/server/inbounds.json" '.inbounds[0] | [.tag, .listen]' '[shadowsocks,127.0.0.1]'
+is "$root/server/route.json" '.route.rules[2]' '{inbound:shadowsocks,ip_is_private:true,action:reject}'
 hysteria2_ok "$root" 1111 3333
 check "$root"
 cp "$root/server/inbounds.json" "$tmp/in1"; cp "$root/server/route.json" "$tmp/route1"
@@ -92,7 +93,7 @@ n=$(jq '.outbounds | length' "$out")
 run "$root" 9999 4444
 is "$root/client/route.json" '.marker' v2      # refreshed from image
 is "$out" '.marker' null                       # not overwritten
-is "$out" '.outbounds[1].server_port' 1111     # deploy value survives
+is "$out" "$(ob shadowtls) | .server_port" 2222  # deploy value survives
 is "$out" '.outbounds[-1].tag' NEW             # new outbound appended by tag
 is "$out" '.outbounds | length' $((n + 1))
 cp "$out" "$tmp/out2"
@@ -103,12 +104,12 @@ cmp "$root/server/route.json" "$tmp/route1"
 hysteria2_ok "$root" 1111 3333
 [ -f "$root/server/.configured" ]
 
-# ---- volume configured before #22: pre-#22 shape, deploy values at the old positions ----
+# ---- volume configured before #22: no Hysteria2 entries anywhere ----
 old="$tmp/old"; out="$old/client/outbounds.json"
 for d in cache server client; do mkdir -p "$old"; cp -R "$here/$d" "$old/$d"; touch "$old/$d/.initialized"; done
 touch "$old/server/.configured"
 is "$here/server/inbounds.json" '[.inbounds[].tag]' '[shadowsocks,shadowtls,hysteria2]'  # scaffold shows the full shape
-is "$here/server/route.json" '[.route.rules[].inbound]' '[hysteria2,hysteria2]'
+is "$here/server/route.json" '[.route.rules[].inbound]' '[hysteria2,hysteria2,shadowsocks]'
 jq 'del(.inbounds[] | select(.tag == "hysteria2"))
     | .inbounds[0].listen_port = 5555 | .inbounds[1].listen_port = 6666 | .inbounds[1].handshake.server = "old.org"
     | .inbounds[1].users = [{name: "shadowtls", password: "oldpw"}]' "$here/server/inbounds.json" > "$old/server/inbounds.json"
@@ -116,15 +117,13 @@ jq 'del(.route.rules)' "$here/server/route.json" > "$old/server/route.json"
 no hysteria2 "$old/server/inbounds.json" "$old/server/route.json"
 jq 'del(.outbounds[] | select(.tag == "hysteria2" or .tag == "shadowsocks-hy2"))
     | (.outbounds[] | select(.type == "urltest").outbounds) -= ["shadowsocks-hy2"]
-    | .outbounds[1].server_port = 5555 | .outbounds[3].server_port = 6666
-    | .outbounds[3].tls.server_name = "old.org" | .outbounds[3].password = "oldpw"' "$here/client/outbounds.json" > "$out"
+    | (.outbounds[] | select(.tag == "shadowtls")) |= (.server_port = 6666 | .tls.server_name = "old.org" | .password = "oldpw")' \
+    "$here/client/outbounds.json" > "$out"
 no hy "$out"
-is "$out" '.outbounds[3].tag' shadowtls
 
 unchanged() {
     is "$old/server/inbounds.json" '.inbounds[:2] | [.[0].listen_port, .[1].listen_port, .[1].handshake.server, .[1].users[0].password]' '[5555,6666,old.org,oldpw]'
-    is "$out" '.outbounds | [.[1].server_port, .[3].server_port, .[3].tls.server_name, .[3].password]' '[5555,6666,old.org,oldpw]'
-    is "$out" '.outbounds | [.[1].tag, .[3].tag, .[1].server, .[3].server]' '[shadowsocks-udp,shadowtls,1.2.3.4,1.2.3.4]'
+    is "$out" "$(ob shadowtls) | [.server, .server_port, .tls.server_name, .password]" '[1.2.3.4,6666,old.org,oldpw]'
 }
 run "$old" 9999 4444
 unchanged

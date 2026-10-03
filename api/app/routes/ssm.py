@@ -3,16 +3,18 @@ import logging
 import os
 import secrets
 import string
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List
 
 import httpx
+from app.auth import require_admin
 from app.utils import get_stats
-from fastapi import APIRouter, Form, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)], tags=["admin"])
 
 APP_HOST: str = os.getenv("APP_HOST", "www.gstatic.com")
 APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
@@ -20,25 +22,61 @@ APP_USERS_PATH = os.getenv("APP_INTERNAL_USERS_PATH", "/users.json")
 
 templates = Jinja2Templates(directory="templates")
 
+USERNAME_PATTERN = r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,31}$"
+# Invalid names fail request validation and surface through main.py's 400 handler.
+Username = Annotated[str, Form(pattern=USERNAME_PATTERN)]
+
+
+class CreatedUser(BaseModel):
+    username: str
+    uPSK: str
+    import_url: str
+    config_url: str
+
+
+class DeletedUser(BaseModel):
+    deleted: str
+
+
+class Stats(BaseModel):
+    users: List[Dict[str, Any]]
+
+
+def wants_html(request: Request) -> bool:
+    return "text/html" in request.headers.get("accept", "")
+
 
 @router.get(
     "/server/v1/users",
-    response_model=Dict[str, List[Dict[str, Any]]],
-    response_class=HTMLResponse,
+    response_model=Stats,
+    summary="Per-user traffic stats",
+    description="HTML table for browsers; JSON with `Accept: application/json`.",
 )
 async def proxy_server_users(request: Request):
     stats: List[Dict[str, Any]] = await get_stats()
-    return templates.TemplateResponse(
-        "users.html", {"request": request, "users": stats}
-    )
+    if wants_html(request):
+        return templates.TemplateResponse(request, "users.html", {"users": stats})
+    return {"users": stats}
 
 
-def create_upsk(custom_upsk: str | None):
-    if custom_upsk:
-        if len(custom_upsk) == 22 and custom_upsk.endswith("=="):
-            return custom_upsk
+def create_upsk() -> str:
     alphabet = string.ascii_lowercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(20)) + "=="
+
+
+async def _upstream_usernames() -> set[str]:
+    async with httpx.AsyncClient(timeout=5) as client:
+        try:
+            r = await client.get(f"{APP_SSM_UPSTREAM}/server/v1/users")
+            r.raise_for_status()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+    return {u["username"] for u in r.json().get("users", [])}
+
+
+async def _user_exists(username: str) -> bool:
+    in_file = any(u.get("name") == username for u in _read_users()["users"])
+    return in_file or username in await _upstream_usernames()
 
 
 async def create_user_in_memory(username: str, uPSK: str):
@@ -64,11 +102,7 @@ def _write_users(users: Dict[str, Any]) -> None:
 
 async def create_user_in_file(username: str, uPSK: str):
     users = _read_users()
-    existing = next((u for u in users["users"] if u.get("name") == username), None)
-    if existing is None:
-        users["users"].append({"name": username, "password": uPSK, "admin": False})
-    else:
-        existing["password"] = uPSK  # keep admin / ts_auth_key
+    users["users"].append({"name": username, "password": uPSK, "admin": False})
     _write_users(users)
 
 
@@ -91,10 +125,8 @@ async def delete_user_in_file(username: str):
 async def seed_users_from_file() -> None:
     """Add-only: every user in users.json exists in ssm-api. Never deletes."""
     users = _read_users()["users"]
+    existing = await _upstream_usernames()
     async with httpx.AsyncClient(timeout=5) as client:
-        r = await client.get(f"{APP_SSM_UPSTREAM}/server/v1/users")
-        r.raise_for_status()
-        existing = {u["username"] for u in r.json().get("users", [])}
         added = []
         for u in users:
             if u["name"] in existing:
@@ -108,34 +140,49 @@ async def seed_users_from_file() -> None:
         logging.info(f"users.json seed: {len(added)} added {added}, {len(existing)} existing")
 
 
-@router.get("/form")
+@router.get("/form", include_in_schema=False)
 async def get_form(request: Request):
-    return templates.TemplateResponse("form.html", {"request": request})
+    return templates.TemplateResponse(request, "form.html", {"pattern": USERNAME_PATTERN})
 
 
-@router.post("/create")
-async def create_user(
-    request: Request,
-    username: str = Form(...),
-    custom_upsk: Optional[str] = Form(None),
-    platform: str = Form(...),
-    version: str = Form(...),
-):
-    uPSK = create_upsk(custom_upsk)
+@router.post(
+    "/create",
+    response_model=CreatedUser,
+    summary="Create a Managed user",
+    description=(
+        "Form-encoded `username` only; the PSK is generated. "
+        "HTML result page for browsers; JSON with `Accept: application/json`. "
+        "409 if the username already exists (delete first to rotate the PSK)."
+    ),
+    responses={400: {"description": "Invalid username"}, 409: {"description": "Username exists"}},
+)
+async def create_user(request: Request, username: Username):
+    if await _user_exists(username):
+        raise HTTPException(status_code=409, detail=f"User '{username}' already exists")
 
+    uPSK = create_upsk()
     await create_user_in_memory(username, uPSK)
     await create_user_in_file(username, uPSK)
 
-    import_url = f"https://{APP_HOST}/i?p={platform}&v={version}&j={username}&k={uPSK}"
-    config_url = f"https://{APP_HOST}/c?p={platform}&v={version}&j={username}&k={uPSK}"
-    return templates.TemplateResponse(
-        "form.html",
-        {"request": request, "import_url": import_url, "config_url": config_url},
-    )
+    import_url = f"https://{APP_HOST}/i?j={username}&k={uPSK}"
+    config_url = f"https://{APP_HOST}/c?j={username}&k={uPSK}"
+    if wants_html(request):
+        return templates.TemplateResponse(
+            request, "form.html", {"import_url": import_url, "config_url": config_url}
+        )
+    return CreatedUser(username=username, uPSK=uPSK, import_url=import_url, config_url=config_url)
 
 
-@router.post("/delete")
-async def delete_user(username: str = Form(...)):
+@router.post(
+    "/delete",
+    response_model=DeletedUser,
+    summary="Delete a Managed user",
+    description="Form-encoded `username`. 404 if the user is unknown.",
+    responses={404: {"description": "Unknown username"}},
+)
+async def delete_user(username: Username):
+    if not await _user_exists(username):
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     await delete_user_in_memory(username)
     await delete_user_in_file(username)
     return {"deleted": username}
