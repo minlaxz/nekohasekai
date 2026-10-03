@@ -9,7 +9,7 @@ Two surfaces:
 | Profile | `GET /c`, `GET /i` | per-user: `j` username + `k` PSK |
 | Admin | `POST /ssm/create`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
 
-Terms (`CONTEXT.md`): a **Managed user** is one Shadowsocks identity; the **PSK** is their password; the **Admin credential** gates every admin route.
+Terms (`CONTEXT.md`): a **Managed user** is one Shadowsocks identity; the **PSK** is their password; the **Admin credential** gates every admin route. The PSK is what users hold and what `k` carries; ssm-api itself holds the derived **SSM key** (so the raw ssm-api proxy and stats show `uPSK` in that form, not `k`).
 
 ## Admin routes
 

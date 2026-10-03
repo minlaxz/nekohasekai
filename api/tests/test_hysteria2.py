@@ -17,18 +17,21 @@ def _outbounds(tmp_path, monkeypatch):
     hy2.update(server="1.2.3.4", server_port=8897, password="shared-pw")
     hy2["obfs"]["password"] = "obfs-pw"
     hy2["tls"].update(server_name="hysteria2.internal", certificate=CERT)
+    for o in template["outbounds"]:
+        if o["type"] == "shadowsocks":
+            o["password"] = "server-psk"
     (tmp_path / "outbounds.json").write_text(json.dumps(template))
     monkeypatch.setattr(utils, "APP_CLIENT_DIR", str(tmp_path))
 
     reader = utils.Reader.__new__(utils.Reader)  # skip the ssm-api PSK check
-    reader.psk = "user-psk"
+    reader.psk = "a" * 20 + "=="
     return {o["tag"]: o for o in reader._outbounds()}
 
 
 def test_shadowsocks_hy2_gets_psk_and_never_multiplex(tmp_path, monkeypatch):
     obs = _outbounds(tmp_path, monkeypatch)
     ss = obs["shadowsocks-hy2"]
-    assert ss["password"] == "user-psk"
+    assert ss["password"] == "server-psk:mP0JOjQ94DITPUE5SARMFA=="
     assert ss["detour"] == "hysteria2"
     assert "multiplex" not in ss  # smux would move UDP off QUIC datagrams
 
@@ -45,4 +48,4 @@ def test_two_transports_only(tmp_path, monkeypatch):
     obs = _outbounds(tmp_path, monkeypatch)
     assert obs["Proxy"]["outbounds"] == ["shadowsocks-uot", "shadowsocks-hy2"]
     assert [t for t, o in obs.items() if o["type"] == "shadowsocks"] == ["shadowsocks-uot", "shadowsocks-hy2"]
-    assert obs["shadowsocks-uot"]["password"] == "user-psk"
+    assert obs["shadowsocks-uot"]["password"] == "server-psk:mP0JOjQ94DITPUE5SARMFA=="

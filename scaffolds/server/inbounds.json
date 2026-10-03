@@ -5,7 +5,8 @@
       "tag": "shadowsocks",
       "listen": "127.0.0.1",
       "listen_port": 0,
-      "method": "xchacha20-ietf-poly1305",
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "",
       "users": [],
       "managed": true,
       "multiplex": {

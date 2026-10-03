@@ -4,12 +4,14 @@
 # without one they are faked and the `sing-box check` assertions are skipped.
 # Asserts: once-only seed + deploy values persist; non-outbounds client files refresh from the
 # image defaults on every start (#14); Hysteria2 setup on a fresh volume, on a volume configured
-# before #22, and its idempotence (#22).
+# before #22, and its idempotence (#22); SS-2022 on a fresh volume and on a volume configured
+# before #24: method, server PSK on both sides, cache reset (#24).
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 real=${SING_BOX:-$(command -v sing-box || true)}
 
+sspw=AAAAAAAAAAAAAAAAAAAAAA==  # 16 zero bytes: a well-formed SS-2022 server PSK
 mkdir -p "$tmp/bin" "$tmp/defaults"
 cat > "$tmp/bin/sing-box" <<EOF
 #!/bin/sh
@@ -24,7 +26,8 @@ for d in cache server client; do cp -R "$here/$d" "$tmp/defaults/$d"; done
 
 run() { # run <root> <shadowsocks port> <hysteria2 port>
     PATH="$tmp/bin:$PATH" SING_BOX_ROOT="$1" SING_BOX_DEFAULTS="$tmp/defaults" \
-    SHADOWSOCKS_PORT="$2" SHADOWTLS_PORT=2222 SHADOWTLS_SNI=x.org SHADOWTLS_PASSWORD=pw \
+    SHADOWSOCKS_PORT="$2" SHADOWSOCKS_PASSWORD="${SHADOWSOCKS_PASSWORD-$sspw}" \
+    SHADOWTLS_PORT=2222 SHADOWTLS_SNI=x.org SHADOWTLS_PASSWORD=pw \
     HYSTERIA2_PORT="$3" HYSTERIA2_PASSWORD="${HYSTERIA2_PASSWORD-hy2-pw}" \
     HYSTERIA2_OBFS_PASSWORD="${HYSTERIA2_OBFS_PASSWORD-obfs-pw}" PUBLIC_IP=1.2.3.4 \
     sh "$here/entrypoint.sh" >/dev/null
@@ -44,6 +47,14 @@ check() { # real binary only: sing-box check on the Server config; certificate o
         | openssl x509 -noout -checkend $((60 * 365 * 86400)) >/dev/null \
         || { echo "entrypoint.test: FAIL $1: certificate expires within 60 years" >&2; exit 1; }
 }
+# SS-2022 state both sides must agree on (#24)
+ss2022_ok() { # ss2022_ok <root>
+    srv="$1/server/inbounds.json"; cli="$1/client/outbounds.json"
+    is "$srv" '.inbounds[0] | [.tag, .method, .password, .managed]' "[shadowsocks,2022-blake3-aes-128-gcm,$sspw,true]"
+    is "$cli" '[.outbounds[] | select(.type == "shadowsocks") | [.method, .password]] | unique' "[[2022-blake3-aes-128-gcm,$sspw]]"
+    is "$1/cache/ssm-cache.json" '.endpoints["/"] | [.users, .user_uplink, .global_uplink]' '[{},{},0]'
+    no xchacha20 "$srv" "$cli"
+}
 # Hysteria2 state both sides must agree on; ss = the volume's Shadowsocks port
 hysteria2_ok() { # hysteria2_ok <root> <shadowsocks port> <hysteria2 port>
     srv="$1/server/inbounds.json"; cli="$1/client/outbounds.json"
@@ -58,7 +69,7 @@ hysteria2_ok() { # hysteria2_ok <root> <shadowsocks port> <hysteria2 port>
     is "$cli" "[$(ob hysteria2)] | length" 1
     is "$cli" "$(ob hysteria2) | [.server, .server_port, .obfs.type, .tls.server_name]" "[1.2.3.4,$3,salamander,hysteria2.internal]"
     is "$cli" "[$(ob shadowsocks-hy2)] | length" 1
-    is "$cli" "$(ob shadowsocks-hy2) | [.server, .server_port, .detour, .password]" "[127.0.0.1,$2,hysteria2,]"
+    is "$cli" "$(ob shadowsocks-hy2) | [.server, .server_port, .detour]" "[127.0.0.1,$2,hysteria2]"
     is "$cli" "$(ob shadowsocks-hy2) | has(\"multiplex\") or has(\"network\")" false
     is "$cli" "$(ob Proxy) | .outbounds" '[shadowsocks-uot,shadowsocks-hy2]'
     # client carries the server's secrets and its certificate as the trust anchor
@@ -70,11 +81,14 @@ hysteria2_ok() { # hysteria2_ok <root> <shadowsocks port> <hysteria2 port>
 
 # ---- fresh volume ----
 root="$tmp/root"; out="$root/client/outbounds.json"
-for v in HYSTERIA2_PORT HYSTERIA2_PASSWORD HYSTERIA2_OBFS_PASSWORD; do  # subshell: the empty value must not leak
+for v in HYSTERIA2_PORT HYSTERIA2_PASSWORD HYSTERIA2_OBFS_PASSWORD SHADOWSOCKS_PASSWORD; do  # subshell: the empty value must not leak
     port=3333; [ "$v" != HYSTERIA2_PORT ] || port=""
     if (eval "$v="; run "$tmp/nohy2" 1111 "$port") 2>"$tmp/err"; then echo "entrypoint.test: FAIL start without $v" >&2; exit 1; fi
     grep -q "$v is required" "$tmp/err" || { echo "entrypoint.test: FAIL wrong error: $(cat "$tmp/err")" >&2; exit 1; }
 done
+
+if (SHADOWSOCKS_PASSWORD=short run "$tmp/badpw" 1111 3333) 2>"$tmp/err"; then echo "entrypoint.test: FAIL start with a short SHADOWSOCKS_PASSWORD" >&2; exit 1; fi
+grep -q "16 base64-encoded bytes" "$tmp/err" || { echo "entrypoint.test: FAIL wrong error: $(cat "$tmp/err")" >&2; exit 1; }
 
 run "$root" 1111 3333
 is "$out" "$(ob shadowtls) | [.server, .server_port, .tls.server_name, .password]" '[1.2.3.4,2222,x.org,pw]'
@@ -82,6 +96,7 @@ is "$out" '[.outbounds[].tag]' '[shadowsocks-uot,shadowtls,shadowsocks-hy2,hyste
 is "$root/server/inbounds.json" '.inbounds[0] | [.tag, .listen]' '[shadowsocks,127.0.0.1]'
 is "$root/server/route.json" '.route.rules[2]' '{inbound:shadowsocks,ip_is_private:true,action:reject}'
 hysteria2_ok "$root" 1111 3333
+ss2022_ok "$root"
 check "$root"
 cp "$root/server/inbounds.json" "$tmp/in1"; cp "$root/server/route.json" "$tmp/route1"
 
@@ -102,6 +117,7 @@ cmp "$out" "$tmp/out2"                         # idempotent
 cmp "$root/server/inbounds.json" "$tmp/in1"    # same secrets, same certificate, same port
 cmp "$root/server/route.json" "$tmp/route1"
 hysteria2_ok "$root" 1111 3333
+ss2022_ok "$root"
 [ -f "$root/server/.configured" ]
 
 # ---- volume configured before #22: no Hysteria2 entries anywhere ----
@@ -110,16 +126,19 @@ for d in cache server client; do mkdir -p "$old"; cp -R "$here/$d" "$old/$d"; to
 touch "$old/server/.configured"
 is "$here/server/inbounds.json" '[.inbounds[].tag]' '[shadowsocks,shadowtls,hysteria2]'  # scaffold shows the full shape
 is "$here/server/route.json" '[.route.rules[].inbound]' '[hysteria2,hysteria2,shadowsocks]'
-jq 'del(.inbounds[] | select(.tag == "hysteria2"))
-    | .inbounds[0].listen_port = 5555 | .inbounds[1].listen_port = 6666 | .inbounds[1].handshake.server = "old.org"
+jq 'del(.inbounds[] | select(.tag == "hysteria2")) | del(.inbounds[0].password)
+    | .inbounds[0].method = "xchacha20-ietf-poly1305" | .inbounds[0].listen_port = 5555 | .inbounds[1].listen_port = 6666 | .inbounds[1].handshake.server = "old.org"
     | .inbounds[1].users = [{name: "shadowtls", password: "oldpw"}]' "$here/server/inbounds.json" > "$old/server/inbounds.json"
 jq 'del(.route.rules)' "$here/server/route.json" > "$old/server/route.json"
 no hysteria2 "$old/server/inbounds.json" "$old/server/route.json"
 jq 'del(.outbounds[] | select(.tag == "hysteria2" or .tag == "shadowsocks-hy2"))
     | (.outbounds[] | select(.type == "urltest").outbounds) -= ["shadowsocks-hy2"]
+    | (.outbounds[] | select(.type == "shadowsocks")).method = "xchacha20-ietf-poly1305"
     | (.outbounds[] | select(.tag == "shadowtls")) |= (.server_port = 6666 | .tls.server_name = "old.org" | .password = "oldpw")' \
     "$here/client/outbounds.json" > "$out"
 no hy "$out"
+jq '.endpoints["/"] |= (.users = {alice: "a"} | .user_uplink = {alice: 7} | .global_uplink = 7)' \
+    "$here/cache/ssm-cache.json" > "$old/cache/ssm-cache.json"
 
 unchanged() {
     is "$old/server/inbounds.json" '.inbounds[:2] | [.[0].listen_port, .[1].listen_port, .[1].handshake.server, .[1].users[0].password]' '[5555,6666,old.org,oldpw]'
@@ -128,6 +147,7 @@ unchanged() {
 run "$old" 9999 4444
 unchanged
 hysteria2_ok "$old" 5555 4444
+ss2022_ok "$old"
 check "$old"
 for f in server/inbounds.json server/route.json client/outbounds.json; do cp "$old/$f" "$tmp/$(basename "$f").old"; done
 run "$old" 9999 7777; run "$old" 9999 7777

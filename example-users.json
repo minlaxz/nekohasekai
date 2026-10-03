@@ -1,19 +1,18 @@
-
 {
   "users": [
     {
       "name": "user1",
-      "password": "insecure-user123==",
+      "password": "exampleuser1key00000==",
       "admin": false
     },
     {
       "name": "user2",
-      "password": "insecure-admin123==",
+      "password": "exampleadminkey00000==",
       "admin": true
     },
     {
       "name": "user3",
-      "password": "insecure-user123==",
+      "password": "exampleuser3key00000==",
       "admin": false,
       "ts_auth_key": "ts-auth-key-for-user3"
     }

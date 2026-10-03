@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app.main import app  # noqa: E402
 from app.routes import ssm  # noqa: E402
+from app.utils import ssm_key  # noqa: E402
 
 ADMIN = {"Authorization": "Basic " + base64.b64encode(b"admin:secret").decode()}
 JSON = {**ADMIN, "Accept": "application/json"}
@@ -29,8 +30,11 @@ def client(monkeypatch, tmp_path):
     async def names():
         return set(upstream)
 
+    posted = {}
+
     async def add(username, upsk):
         upstream.add(username)
+        posted[username] = upsk
 
     async def remove(username):
         upstream.discard(username)
@@ -41,6 +45,7 @@ def client(monkeypatch, tmp_path):
     c = TestClient(app)
     c.users_path = users
     c.upstream = upstream
+    c.posted = posted
     return c
 
 
@@ -86,6 +91,9 @@ def test_create_json(client):
     assert body["import_url"] == f"https://vpn.example/i?j=bob&k={body['uPSK']}"
     assert body["config_url"] == f"https://vpn.example/c?j=bob&k={body['uPSK']}"
     assert "bob" in client.upstream and "bob" in _file_names(client)
+    # ssm-api gets the SS-2022 key; the file and the user keep `k` (#24)
+    assert client.posted["bob"] == ssm_key(body["uPSK"])
+    assert json.loads(client.users_path.read_text())["users"][-1]["password"] == body["uPSK"]
 
 
 def test_create_html_for_browser(client):
@@ -173,3 +181,54 @@ def test_transparent_proxy_strips_admin_credential(client, monkeypatch):
     assert client.get("/ssm-transparent/server/v1/users", headers=ADMIN).status_code == 200
     assert "authorization" not in {k.lower() for k in seen}
     assert "host" not in {k.lower() for k in seen}
+
+
+# --- seed -------------------------------------------------------------------
+
+
+class _FakeClient:
+    """httpx.AsyncClient stand-in: records POSTed users, lists `existing` on GET."""
+
+    existing = ["alice"]
+    posted = []
+
+    def __init__(self, *a, **kw):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        pass
+
+    async def get(self, url):
+        return _FakeResp({"users": [{"username": n} for n in self.existing]})
+
+    async def post(self, url, json):
+        self.posted.append(json)
+        return _FakeResp({})
+
+
+class _FakeResp:
+    def __init__(self, data):
+        self._data = data
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._data
+
+
+def test_seed_posts_derived_keys_and_skips_bad_entries(client, monkeypatch):
+    k = "nj75pm4nlaslo8xm8xtK=="
+    client.users_path.write_text(json.dumps({"users": [
+        {"name": "alice", "password": "a" * 20 + "==", "admin": False},
+        {"name": "bad", "password": "insecure-user123==", "admin": False},
+        {"name": "bob", "password": k, "admin": False},
+    ]}))
+    _FakeClient.posted = []
+    monkeypatch.setattr(ssm.httpx, "AsyncClient", _FakeClient)
+    import asyncio
+    asyncio.run(ssm.seed_users_from_file())
+    assert _FakeClient.posted == [{"username": "bob", "uPSK": "nj75pm4nlaslo8xm8xtKnj75"}]
