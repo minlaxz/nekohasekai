@@ -59,13 +59,11 @@ if [ ! -f "$ROOT/server/.configured" ]; then
         | .inbounds[1].handshake.server = $sni
         | .inbounds[1].users = [{name: "shadowtls", password: $pw}]'
 
+    # No client reaches the Shadowsocks port directly: only the two Transports carry it (#30).
     jqi "$CLIENT_OUT" \
-        --argjson ss "$SHADOWSOCKS_PORT" --argjson stls "$SHADOWTLS_PORT" \
-        --arg sni "$SHADOWTLS_SNI" --arg pw "$SHADOWTLS_PASSWORD" \
-        '.outbounds[1].server_port = $ss
-        | .outbounds[3].server_port = $stls
-        | .outbounds[3].tls.server_name = $sni
-        | .outbounds[3].password = $pw'
+        --argjson stls "$SHADOWTLS_PORT" --arg sni "$SHADOWTLS_SNI" --arg pw "$SHADOWTLS_PASSWORD" \
+        '(.outbounds[] | select(.tag == "shadowtls")) |= (
+            .server_port = $stls | .tls.server_name = $sni | .password = $pw)'
 
     touch "$ROOT/server/.configured"
     echo "entrypoint: configured ports ss=$SHADOWSOCKS_PORT shadowtls=$SHADOWTLS_PORT sni=$SHADOWTLS_SNI"
@@ -76,8 +74,6 @@ fi
 # Transport only, like ShadowTLS: one shared password, Shadowsocks runs inside.
 # The two passwords come from .env, like the ShadowTLS password; the certificate is generated.
 # All three are written once and kept in the volume.
-# New entries are addressed by tag; the positional addressing above and below stays valid
-# because the image lists the new outbounds after shadowtls and old volumes get them appended.
 if [ ! -f "$ROOT/server/.hysteria2" ]; then
     ss=$(jq '.inbounds[] | select(.tag == "shadowsocks").listen_port' "$SERVER_IN")  # the volume's port, not .env's
     pw="$HYSTERIA2_PASSWORD"
@@ -109,7 +105,7 @@ if [ ! -f "$ROOT/server/.hysteria2" ]; then
             .server_port = $port | .password = $pw | .obfs.password = $obfs
             | .tls.server_name = $name | .tls.certificate = ($cert | split("\n")))
         | (.outbounds[] | select(.tag == "shadowsocks-hy2")).server_port = $ss
-        | (.outbounds[] | select(.tag == "UDP" or .tag == "all-outbounds").outbounds)
+        | (.outbounds[] | select(.tag == "Proxy").outbounds)
             |= if index("shadowsocks-hy2") then . else . + ["shadowsocks-hy2"] end'
 
     touch "$ROOT/server/.hysteria2"
@@ -126,8 +122,7 @@ fi
 echo "$ip" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' \
     || die "could not detect public IPv4 (got '$ip'); set PUBLIC_IP to override"
 jqi "$CLIENT_OUT" --arg ip "$ip" \
-    '.outbounds[1].server = $ip | .outbounds[3].server = $ip
-    | (.outbounds[] | select(.tag == "hysteria2")).server = $ip'
+    '(.outbounds[] | select(.tag == "shadowtls" or .tag == "hysteria2")).server = $ip'
 echo "entrypoint: public ip $ip"
 
 exec sing-box run -C "$ROOT/server"

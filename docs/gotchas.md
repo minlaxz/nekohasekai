@@ -11,7 +11,7 @@
 
 ### DNS: when NextDNS gets blocked
 - Today DoH to NextDNS goes direct (no `detour` on `dns-remote`): NextDNS dashboard shows each user's IP, CDNs resolve near the user.
-- `dns-remote` detours via the `DNS` selector group (`direct` default, or `TCP`). If a network blocks `dns.nextdns.io` / `45.90.28.0`, switch the `DNS` group to `TCP` in the app (same place as Clash mode / proxy groups), no config edit. `interrupt_exist_connections` drops the open DoH transport so the switch takes effect at once. Trade-off when on `TCP`: NextDNS and CDNs see the VPS IP; dashboard still shows per-user device names (from the DoH path). Bootstrap `dns-resolver` already detours via `APP_DEFAULT_DNS_DETOUR` (`UDP` group).
+- `dns-remote` detours via the `DNS` selector group (`direct` default, or `Proxy`). If a network blocks `dns.nextdns.io` / `45.90.28.0`, switch the `DNS` group to `Proxy` in the app (same place as Clash mode / proxy groups), no config edit. `interrupt_exist_connections` drops the open DoH transport so the switch takes effect at once. Trade-off when on `Proxy`: NextDNS and CDNs see the VPS IP; dashboard still shows per-user device names (from the DoH path). Bootstrap `dns-resolver` already detours via `APP_DEFAULT_DNS_DETOUR` (`Proxy` group).
 - Symptom (2026-09-15, cellular and wifi at once): every site dead, Slack/Telegram stuck connecting, yet urltest and direct outbounds healthy. Log is silent, no error line:
   ```
   inbound/tun[tun-in]: inbound DNS packet from 10.10.10.1:63715

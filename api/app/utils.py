@@ -30,7 +30,7 @@ FULL_MODE = "Full"  # clash_mode that proxies everything; admin-only
 # User rule set fetch limits: fixed hosts keep the API from reaching internal services (SSRF).
 USER_RULES_HOSTS = ("gist.githubusercontent.com", "raw.githubusercontent.com")
 USER_RULES_MAX_BYTES = 64 * 1024
-PROXY_OUTBOUNDS = ("TCP", "UDP")
+PROXY_OUTBOUNDS = ("Proxy",)
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ def fetch_user_rules(url: str) -> Dict[str, List[str]]:
 
 def apply_user_rules(route: Dict[str, Any], matchers: Dict[str, List[str]]) -> None:
     """Add a User rule set's matchers to every rule holding a domain_suffix list under
-    the proxied (TCP/UDP outbound) rules. sing-box ORs the domain_* fields within one
+    the proxied (`Proxy` outbound) rules. sing-box ORs the domain_* fields within one
     rule, so keywords and regexes sit beside the suffixes. Mutates `route`."""
     targets: List[Dict[str, Any]] = []
 
@@ -209,7 +209,6 @@ class Reader(Checker):
         dns_final: str,
         dns_resolver: str,
         dns_version: int,
-        multiplex: bool,
         rules_url: str = "",
     ) -> None:
         super().__init__(username, psk)
@@ -222,7 +221,6 @@ class Reader(Checker):
         self.dns_final = dns_final
         self.dns_resolver = dns_resolver
         self.dns_version = dns_version
-        self.multiplex = multiplex
 
     def _section(self, name: str) -> Any:
         return load_json(f"{APP_CLIENT_DIR}/{name}.json")[name]
@@ -264,8 +262,6 @@ class Reader(Checker):
             if ob.get("type") != "shadowsocks":
                 continue  # ShadowTLS password and Hysteria2 secrets are shared, set by Init
             ob["password"] = self.psk
-            if "multiplex" in ob:  # uot outbound has none: conflicts with multiplex
-                ob["multiplex"]["enabled"] = self.multiplex
         return outbounds
 
     def unwarp(self) -> Dict[str, Any]:
