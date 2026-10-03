@@ -16,7 +16,6 @@ cat > "$tmp/bin/sing-box" <<EOF
 [ "\$1" = run ] && exit 0
 [ -n "$real" ] && exec "$real" "\$@"
 case "\$2" in
-    rand) echo "rand-\$\$" ;;  # differs per call, like the real one
     tls-keypair) printf -- '-----BEGIN PRIVATE KEY-----\nkey-%s\n-----END PRIVATE KEY-----\n\n-----BEGIN CERTIFICATE-----\ncert-%s\n-----END CERTIFICATE-----\n' \$\$ \$\$ ;;
 esac
 EOF
@@ -26,7 +25,8 @@ for d in cache server client; do cp -R "$here/$d" "$tmp/defaults/$d"; done
 run() { # run <root> <shadowsocks port> <hysteria2 port>
     PATH="$tmp/bin:$PATH" SING_BOX_ROOT="$1" SING_BOX_DEFAULTS="$tmp/defaults" \
     SHADOWSOCKS_PORT="$2" SHADOWTLS_PORT=2222 SHADOWTLS_SNI=x.org SHADOWTLS_PASSWORD=pw \
-    HYSTERIA2_PORT="$3" PUBLIC_IP=1.2.3.4 \
+    HYSTERIA2_PORT="$3" HYSTERIA2_PASSWORD="${HYSTERIA2_PASSWORD-hy2-pw}" \
+    HYSTERIA2_OBFS_PASSWORD="${HYSTERIA2_OBFS_PASSWORD-obfs-pw}" PUBLIC_IP=1.2.3.4 \
     sh "$here/entrypoint.sh" >/dev/null
 }
 is() { # is <file> <jq filter> <want>
@@ -49,8 +49,8 @@ hysteria2_ok() { # hysteria2_ok <root> <shadowsocks port> <hysteria2 port>
     srv="$1/server/inbounds.json"; cli="$1/client/outbounds.json"
     is "$srv" '[.inbounds[] | select(.tag == "hysteria2")] | length' 1
     is "$srv" '.inbounds[-1] | [.type, .listen_port, .obfs.type, .tls.enabled]' "[hysteria2,$3,salamander,true]"
-    is "$srv" '.inbounds[-1] | [.users[0].password, .obfs.password, .tls.key[0], .tls.certificate[0]] | map(length > 0) | all' true
-    is "$srv" '.inbounds[-1] | .users[0].password != .obfs.password' true
+    is "$srv" '.inbounds[-1] | [.users[0].password, .obfs.password]' '[hy2-pw,obfs-pw]'
+    is "$srv" '.inbounds[-1] | [.tls.key[0], .tls.certificate[0]] | map(length > 0) | all' true
     is "$1/server/route.json" '.route.rules' \
         "[{inbound:hysteria2,ip_cidr:[127.0.0.1/32],port:$2,action:route,outbound:direct-out},{inbound:hysteria2,action:reject}]"
     is "$1/server/route.json" '.route.final' direct-out
@@ -71,8 +71,11 @@ hysteria2_ok() { # hysteria2_ok <root> <shadowsocks port> <hysteria2 port>
 
 # ---- fresh volume ----
 root="$tmp/root"; out="$root/client/outbounds.json"
-if run "$tmp/nohy2" 1111 "" 2>"$tmp/err"; then echo "entrypoint.test: FAIL start without HYSTERIA2_PORT" >&2; exit 1; fi
-grep -q 'HYSTERIA2_PORT is required' "$tmp/err" || { echo "entrypoint.test: FAIL wrong error: $(cat "$tmp/err")" >&2; exit 1; }
+for v in HYSTERIA2_PORT HYSTERIA2_PASSWORD HYSTERIA2_OBFS_PASSWORD; do  # subshell: the empty value must not leak
+    port=3333; [ "$v" != HYSTERIA2_PORT ] || port=""
+    if (eval "$v="; run "$tmp/nohy2" 1111 "$port") 2>"$tmp/err"; then echo "entrypoint.test: FAIL start without $v" >&2; exit 1; fi
+    grep -q "$v is required" "$tmp/err" || { echo "entrypoint.test: FAIL wrong error: $(cat "$tmp/err")" >&2; exit 1; }
+done
 
 run "$root" 1111 3333
 is "$out" '.outbounds[1].server_port' 1111

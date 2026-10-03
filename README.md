@@ -20,7 +20,7 @@ Images are built by GitHub Actions on push to `master`.
 
 - **Server** runs three inbounds: Shadowsocks (per-user PSK, managed by sing-box's ssm-api), ShadowTLS v3 (one shared handshake password, detours into Shadowsocks), and Hysteria2 (QUIC with Salamander obfuscation, one shared password, routed to the Shadowsocks inbound and nowhere else). ShadowTLS and Hysteria2 are transport only. All user identity lives in Shadowsocks.
 - **Client profile** (`/c`) is built from `scaffolds/client/*.json`. The API fills in log level, DNS, and the user's PSK. Everything else is served as-is. `/i` wraps that into a `sing-box://import-remote-profile` link.
-- **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. It also generates the Hysteria2 passwords and a self-signed certificate once; the client template carries that certificate as its trust anchor. Every start re-detects the public IPv4 and writes it into the client template.
+- **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. It also writes the Hysteria2 passwords once and generates a self-signed certificate once; the client template carries that certificate as its trust anchor. Every start re-detects the public IPv4 and writes it into the client template.
 - **Users** live in `users.json`. The API seeds them into ssm-api at startup (add-only) and keeps the file in sync through `/ssm/create` and `/ssm/delete`.
 
 ## Deploy
@@ -41,11 +41,21 @@ Edit `.env`:
 | `SHADOWSOCKS_PORT` | yes | Shadowsocks inbound, published TCP and UDP |
 | `SHADOWTLS_PORT` | yes | ShadowTLS inbound, published TCP |
 | `HYSTERIA2_PORT` | yes | Hysteria2 inbound, published UDP only |
+| `HYSTERIA2_PASSWORD` | yes | Shared Hysteria2 password |
+| `HYSTERIA2_OBFS_PASSWORD` | yes | Shared Salamander obfuscation password |
 | `SHADOWTLS_SNI` | yes | Domain the handshake imitates, e.g. `mozilla.org` |
 | `SHADOWTLS_PASSWORD` | yes | Shared handshake password |
 | `PUBLIC_IP` | no | Skips auto-detection |
 | `APP_HOST` | yes | Public hostname of the API, used in import links and Caddy |
 | `APP_DEFAULT_*` | no | Defaults for `/c` query parameters |
+
+The three `*_PASSWORD` values are shared by every client (per-user auth is the Shadowsocks PSK). Generate each one with:
+
+```sh
+openssl rand -base64 32
+```
+
+`docker compose up` refuses to start sing-box while any of the seven required values is empty.
 
 Then:
 
@@ -68,9 +78,9 @@ That is the whole upgrade path. The image carries the configs: every start copie
 
 `git pull` on the server is only needed when `docker-compose.yaml` changes or `.env` gains a new variable.
 
-**Upgrading a server deployed before Hysteria2:** add `HYSTERIA2_PORT=8897` to `.env`, open that UDP port in the VPS firewall, then `git pull && docker compose pull && docker compose up -d`. The next start adds the Hysteria2 inbound, its route rules, and the client outbounds to the existing volume and logs `configured hysteria2 ...`. Existing ports, SNI, and passwords stay as they are. Users get the new outbound when their client refreshes its profile.
+**Upgrading a server deployed before Hysteria2:** add `HYSTERIA2_PORT`, `HYSTERIA2_PASSWORD` and `HYSTERIA2_OBFS_PASSWORD` to `.env`, open that UDP port in the VPS firewall, then `git pull && docker compose pull && docker compose up -d`. The next start adds the Hysteria2 inbound, its route rules, and the client outbounds to the existing volume and logs `configured hysteria2 ...`. Existing ports, SNI, and passwords stay as they are. Users get the new outbound when their client refreshes its profile.
 
-Ports, SNI, the ShadowTLS password, and the Hysteria2 secrets are written once. To change them, remove the volume:
+Ports, SNI, the ShadowTLS and Hysteria2 passwords, and the Hysteria2 certificate are written once. To change them, remove the volume:
 
 ```sh
 docker compose down && docker volume rm sing-box_sing-box-configs && docker compose up -d
@@ -122,7 +132,8 @@ cd api && uv run --with 'fastapi[standard]' --with httpx --with apscheduler fast
 
 # Entrypoint, against a scratch dir with a stubbed sing-box
 SING_BOX_ROOT=/path/to/scratch SHADOWSOCKS_PORT=1 SHADOWTLS_PORT=2 HYSTERIA2_PORT=3 \
-  SHADOWTLS_SNI=x SHADOWTLS_PASSWORD=y PUBLIC_IP=1.2.3.4 sh scaffolds/entrypoint.sh
+  SHADOWTLS_SNI=x SHADOWTLS_PASSWORD=y HYSTERIA2_PASSWORD=h HYSTERIA2_OBFS_PASSWORD=o \
+  PUBLIC_IP=1.2.3.4 sh scaffolds/entrypoint.sh
 
 # Tests. SING_BOX is optional; it adds `sing-box check` on the generated Server config.
 SING_BOX=/path/to/sing-box sh scaffolds/entrypoint.test.sh
