@@ -39,6 +39,7 @@ Edit `.env`:
 | Variable | Required | Meaning |
 |---|---|---|
 | `SHADOWSOCKS_PORT` | yes | Shadowsocks inbound, loopback only, not published |
+| `SHADOWSOCKS_PASSWORD` | yes | SS-2022 server PSK, exactly 16 bytes: `openssl rand -base64 16` |
 | `SHADOWTLS_PORT` | yes | ShadowTLS inbound, published TCP |
 | `HYSTERIA2_PORT` | yes | Hysteria2 inbound, published UDP only |
 | `HYSTERIA2_PASSWORD` | yes | Shared Hysteria2 password |
@@ -52,7 +53,7 @@ Edit `.env`:
 | `APP_CORS_ORIGINS` | no | Extra browser origins allowed to call the API, comma-separated |
 | `APP_DEFAULT_*` | no | Defaults for `/c` query parameters |
 
-The three `*_PASSWORD` values are shared by every client (per-user auth is the Shadowsocks PSK). Generate each one with:
+The four `*_PASSWORD` values are shared by every client (per-user auth is the Shadowsocks PSK). Generate `SHADOWSOCKS_PASSWORD` with `openssl rand -base64 16` and the other three with:
 
 ```sh
 openssl rand -base64 32
@@ -135,7 +136,7 @@ No Docker needed for the fast loop:
 cd api && uv run --with 'fastapi[standard]' --with httpx --with apscheduler fastapi dev app/main.py
 
 # Entrypoint, against a scratch dir with a stubbed sing-box
-SING_BOX_ROOT=/path/to/scratch SHADOWSOCKS_PORT=1 SHADOWTLS_PORT=2 HYSTERIA2_PORT=3 \
+SING_BOX_ROOT=/path/to/scratch SHADOWSOCKS_PORT=1 SHADOWSOCKS_PASSWORD=$(openssl rand -base64 16) SHADOWTLS_PORT=2 HYSTERIA2_PORT=3 \
   SHADOWTLS_SNI=x SHADOWTLS_PASSWORD=y HYSTERIA2_PASSWORD=h HYSTERIA2_OBFS_PASSWORD=o \
   PUBLIC_IP=1.2.3.4 sh scaffolds/entrypoint.sh
 

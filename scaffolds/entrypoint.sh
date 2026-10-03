@@ -11,10 +11,14 @@ HYSTERIA2_CERT_NAME=hysteria2.internal
 die() { echo "entrypoint: $*" >&2; exit 1; }
 
 # Deploy values. Compose refuses to start without them; checked here too for runs outside compose.
-for v in SHADOWSOCKS_PORT SHADOWTLS_PORT HYSTERIA2_PORT HYSTERIA2_PASSWORD HYSTERIA2_OBFS_PASSWORD \
-         SHADOWTLS_SNI SHADOWTLS_PASSWORD; do
+for v in SHADOWSOCKS_PORT SHADOWSOCKS_PASSWORD SHADOWTLS_PORT HYSTERIA2_PORT HYSTERIA2_PASSWORD \
+         HYSTERIA2_OBFS_PASSWORD SHADOWTLS_SNI SHADOWTLS_PASSWORD; do
     eval "[ -n \"\${$v:-}\" ]" || die "$v is required"
 done
+
+# Both sing-box sides take the SS-2022 server PSK as exactly 16 base64-encoded bytes (#24).
+[ "$(printf %s "$SHADOWSOCKS_PASSWORD" | base64 -d 2>/dev/null | wc -c | tr -d ' ')" = 16 ] \
+    || die "SHADOWSOCKS_PASSWORD must be 16 base64-encoded bytes: openssl rand -base64 16"
 
 # jq in-place edit
 jqi() { # jqi <file> <filter> [jq args...]
@@ -110,6 +114,23 @@ if [ ! -f "$ROOT/server/.hysteria2" ]; then
 
     touch "$ROOT/server/.hysteria2"
     echo "entrypoint: configured hysteria2 port=$HYSTERIA2_PORT"
+fi
+
+# ---- once: Shadowsocks 2022 (#24) ----
+# Own gate, so a volume configured before #24 is upgraded on its next start.
+# The server PSK comes from .env and is written to the inbound and to both client Shadowsocks
+# outbounds; the API appends ":<user key>" per Profile config. The ssm-api cache holds users under
+# their old keys, which the new method cannot decode, so it is reset; the API reseeds every user
+# from users.json on its next start (traffic counters restart from zero).
+if [ ! -f "$ROOT/server/.ss2022" ]; then
+    method=$(jq -r '.inbounds[0].method' "$DEFAULTS/server/inbounds.json")
+    jqi "$SERVER_IN" --arg m "$method" --arg pw "$SHADOWSOCKS_PASSWORD" \
+        '(.inbounds[] | select(.tag == "shadowsocks")) |= (.method = $m | .password = $pw)'
+    jqi "$CLIENT_OUT" --arg m "$method" --arg pw "$SHADOWSOCKS_PASSWORD" \
+        '(.outbounds[] | select(.type == "shadowsocks")) |= (.method = $m | .password = $pw)'
+    cp "$DEFAULTS/cache/ssm-cache.json" "$ROOT/cache/ssm-cache.json"
+    touch "$ROOT/server/.ss2022"
+    echo "entrypoint: configured shadowsocks method=$method"
 fi
 
 # ---- every start: public IPv4 ----

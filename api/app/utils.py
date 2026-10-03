@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
 import json
+import re
 import logging
 import os
 import time
@@ -33,6 +36,30 @@ USER_RULES_MAX_BYTES = 64 * 1024
 PROXY_OUTBOUNDS = ("Proxy",)
 
 logger = logging.getLogger(__name__)
+
+
+# A user's `k`: 20 base64 characters plus `==`. It is not a valid SS-2022 key by itself.
+K_PATTERN = re.compile(r"^[A-Za-z0-9+/]{20}==$")
+SS_METHOD = "2022-blake3-aes-128-gcm"
+
+
+def ssm_key(k: str) -> str:
+    """The SS-2022 user key for a `k` (#24): drop `==`, append the first 4 characters.
+    24 base64 characters, 18 bytes; sing-box hashes keys longer than 16 bytes down to 16.
+    `k` stays what the user holds; this is what ssm-api and the client outbounds get."""
+    if not K_PATTERN.match(k):
+        raise ValueError("PSK must be 20 base64 characters followed by '=='")
+    key = k[:-2] + k[:4]
+    assert len(base64.b64decode(key, validate=True)) == 18
+    return key
+
+
+def client_key(k: str) -> str:
+    """The key the client outbounds get for a `k` (#24). sing-box's server (sing-shadowsocks) reduces
+    the 18-byte ssm_key to 16 bytes with SHA-256; its client (sing-shadowsocks2) takes exactly
+    16 bytes and nothing else, so the API applies the same reduction (verified, sing-box 1.14.2)."""
+    raw = base64.b64decode(ssm_key(k))
+    return base64.b64encode(hashlib.sha256(raw).digest()[:16]).decode()
 
 
 def load_json(path: str) -> Dict[str, Any]:
@@ -176,7 +203,7 @@ class Checker:
             response.raise_for_status()
             data = response.json()
 
-            if data.get("uPSK") != self.psk:
+            if data.get("uPSK") != ssm_key(self.psk):
                 raise ValueError("User or PSK mismatch")
 
             used_bytes = data.get("uplinkBytes", 0) + data.get("downlinkBytes", 0)
@@ -261,7 +288,8 @@ class Reader(Checker):
         for ob in outbounds:
             if ob.get("type") != "shadowsocks":
                 continue  # ShadowTLS password and Hysteria2 secrets are shared, set by Init
-            ob["password"] = self.psk
+            # SIP022 `iPSK:uPSK`; Init wrote the server PSK into the template's `password`
+            ob["password"] = f"{ob['password']}:{client_key(self.psk)}"
         return outbounds
 
     def unwarp(self) -> Dict[str, Any]:

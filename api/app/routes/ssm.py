@@ -7,7 +7,7 @@ from typing import Annotated, Any, Dict, List
 
 import httpx
 from app.auth import require_admin
-from app.utils import get_stats
+from app.utils import get_stats, ssm_key
 from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse
@@ -131,9 +131,14 @@ async def seed_users_from_file() -> None:
         for u in users:
             if u["name"] in existing:
                 continue
+            try:
+                key = ssm_key(u["password"])
+            except ValueError as exc:  # ssm-api keeps a user whose key fails to apply: never post it
+                logging.error(f"users.json seed: skipping {u['name']}: {exc}")
+                continue
             r = await client.post(
                 f"{APP_SSM_UPSTREAM}/server/v1/users",
-                json={"username": u["name"], "uPSK": u["password"]},
+                json={"username": u["name"], "uPSK": key},
             )
             r.raise_for_status()
             added.append(u["name"])
@@ -160,8 +165,8 @@ async def create_user(request: Request, username: Username):
     if await _user_exists(username):
         raise HTTPException(status_code=409, detail=f"User '{username}' already exists")
 
-    uPSK = create_upsk()
-    await create_user_in_memory(username, uPSK)
+    uPSK = create_upsk()  # what the user holds; ssm-api gets the derived SS-2022 key (#24)
+    await create_user_in_memory(username, ssm_key(uPSK))
     await create_user_in_file(username, uPSK)
 
     import_url = f"https://{APP_HOST}/i?j={username}&k={uPSK}"
