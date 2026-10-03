@@ -44,6 +44,9 @@ Edit `.env`:
 | `SHADOWTLS_PASSWORD` | yes | Shared handshake password |
 | `PUBLIC_IP` | no | Skips auto-detection |
 | `APP_HOST` | yes | Public hostname of the API, used in import links and Caddy |
+| `APP_ADMIN_PASSWORD` | yes | HTTP Basic password for `/ssm/*`. Unset = every admin request refused |
+| `APP_ADMIN_USER` | no | HTTP Basic username, default `admin` |
+| `APP_CORS_ORIGINS` | no | Extra browser origins allowed to call the API, comma-separated |
 | `APP_DEFAULT_*` | no | Defaults for `/c` query parameters |
 
 Then:
@@ -91,9 +94,11 @@ A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username,
 
 - Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
-- Create: form at `/ssm/form`, or `POST /ssm/create`
-- Delete: `POST /ssm/delete` with form field `username`
+- Create: form at `/ssm/form`, or `POST /ssm/create` with form field `username` (409 if it exists)
+- Delete: `POST /ssm/delete` with form field `username` (404 if unknown)
 - Stats: `/ssm/server/v1/users`
+
+Everything under `/ssm` needs HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD`). Full reference for integrating a frontend: [docs/api.md](docs/api.md), or `/docs` on a running instance.
 
 Changes made through `/ssm/create` and `/ssm/delete` take effect immediately. No restart needed.
 
