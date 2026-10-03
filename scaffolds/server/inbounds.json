@@ -3,7 +3,7 @@
     {
       "type": "shadowsocks",
       "tag": "shadowsocks",
-      "listen": "0.0.0.0",
+      "listen": "127.0.0.1",
       "listen_port": 0,
       "method": "xchacha20-ietf-poly1305",
       "users": [],

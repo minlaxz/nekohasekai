@@ -47,4 +47,4 @@ def test_full_mode_admin_only():
     assert len(route["rules"]) == n
     apply_full_mode(route, admin=False)
     assert all(r.get("clash_mode") != "Full" for r in route["rules"])
-    assert len(route["rules"]) == n - 2
+    assert len(route["rules"]) == n - 1

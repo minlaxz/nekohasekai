@@ -67,7 +67,7 @@ def test_fetch_rejects_disallowed_urls_without_network(url):
     assert exc.value.status_code == 400
 
 
-def test_apply_extends_exactly_the_tcp_and_udp_rules():
+def test_apply_extends_exactly_the_proxy_rule():
     route = _route()
     apply_user_rules(
         route,
@@ -84,10 +84,10 @@ def test_apply_extends_exactly_the_tcp_and_udp_rules():
     for rule in route["rules"]:
         walk(rule)
     want = {"domain_suffix": ["gstatic.com", "x.com"], "domain_keyword": ["google"]}
-    assert hits == [want, want]
+    assert hits == [want]
 
 
 def test_apply_without_target_list_is_500():
     with pytest.raises(HTTPException) as exc:
-        apply_user_rules({"rules": [{"outbound": "TCP", "clash_mode": "Full"}]}, {"domain_suffix": ["x.com"]})
+        apply_user_rules({"rules": [{"outbound": "Proxy", "clash_mode": "Full"}]}, {"domain_suffix": ["x.com"]})
     assert exc.value.status_code == 500

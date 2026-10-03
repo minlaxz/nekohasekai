@@ -6,7 +6,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/mm.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -14,7 +14,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/minlaxz/nekohasekai@route-rules/my-rules.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "10m"
       },
       {
@@ -22,7 +22,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -30,7 +30,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/whatsapp.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -38,7 +38,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/messenger.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -46,7 +46,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/instagram.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -54,7 +54,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/threads.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -62,7 +62,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/notion.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -70,7 +70,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/anthropic.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -78,7 +78,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/viber.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -86,7 +86,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -94,7 +94,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/tailscale.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -102,7 +102,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/stripe.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -110,7 +110,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/slack.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -118,7 +118,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/signal.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -126,7 +126,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/manus.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -134,7 +134,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/jquery.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -142,7 +142,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/huggingface.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -150,7 +150,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/google-gemini.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -158,7 +158,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/docker.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -166,7 +166,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/bluesky.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -174,7 +174,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/figma.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -182,7 +182,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/paypal.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -190,7 +190,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -198,7 +198,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/vercel.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       },
       {
@@ -206,7 +206,7 @@
         "type": "remote",
         "format": "binary",
         "url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/bytedance.srs",
-        "http_client": { "detour": "TCP" },
+        "http_client": { "detour": "Proxy" },
         "update_interval": "1d"
       }
     ],
@@ -240,13 +240,7 @@
       },
       {
         "clash_mode": "Full",
-        "network": "tcp",
-        "outbound": "TCP"
-      },
-      {
-        "clash_mode": "Full",
-        "network": "udp",
-        "outbound": "UDP"
+        "outbound": "Proxy"
       },
       {
         "action": "sniff"
@@ -256,9 +250,6 @@
         "mode": "and",
         "rules": [
           {
-            "network": "tcp"
-          },
-          {
             "type": "logical",
             "mode": "or",
             "rules": [
@@ -300,58 +291,7 @@
             "clash_mode": "Partial"
           }
         ],
-        "outbound": "TCP"
-      },
-      {
-        "type": "logical",
-        "mode": "and",
-        "rules": [
-          {
-            "network": "udp"
-          },
-          {
-            "type": "logical",
-            "mode": "or",
-            "rules": [
-              {
-                "rule_set": [
-                  "my-rules",
-                  "facebook",
-                  "whatsapp",
-                  "messenger",
-                  "instagram",
-                  "threads",
-                  "notion",
-                  "anthropic",
-                  "viber",
-                  "twitter",
-                  "tailscale",
-                  "stripe",
-                  "slack",
-                  "signal",
-                  "manus",
-                  "jquery",
-                  "huggingface",
-                  "google-gemini",
-                  "docker",
-                  "bluesky",
-                  "figma",
-                  "paypal",
-                  "github",
-                  "vercel",
-                  "bytedance"
-                ]
-              },
-              {
-                "domain_suffix": ["gstatic.com"]
-              }
-            ]
-          },
-          {
-            "clash_mode": "Partial"
-          }
-        ],
-        "outbound": "UDP"
+        "outbound": "Proxy"
       }
     ],
     "final": "direct",

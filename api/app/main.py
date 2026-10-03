@@ -168,8 +168,6 @@ def read_config(
     df: str = os.getenv("APP_DEFAULT_DNS_FINAL", ""),
     dr: str = os.getenv("APP_DEFAULT_DNS_RESOLVER", ""),
     dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 0)),
-    # Experimental options
-    mx: bool = os.getenv("APP_DEFAULT_MULTIPLEX_ENABLED") == "true",
     # User rule set URL (optional)
     r: str = "",
 ) -> dict[str, Any]:
@@ -212,7 +210,6 @@ def read_config(
         dns_final=df,
         dns_resolver=dr,
         dns_version=dv,
-        multiplex=mx,
         rules_url=r,
     ).unwarp()
 

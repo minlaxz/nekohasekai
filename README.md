@@ -1,6 +1,6 @@
 # nekohasekai
 
-Self-hosted [sing-box](https://github.com/SagerNet/sing-box) server plus a small API that hands out per-user client profiles. Built to get around Myanmar internet restrictions. Transport is Shadowsocks over ShadowTLS v3 (TCP) or over Hysteria2 (UDP).
+Self-hosted [sing-box](https://github.com/SagerNet/sing-box) server plus a small API that hands out per-user client profiles. Built to get around Myanmar internet restrictions. Clients reach it through two Transports, ShadowTLS v3 (TCP) and Hysteria2 (UDP), each carrying Shadowsocks for both TCP and UDP. Shadowsocks itself is never exposed on the internet.
 
 The repository name comes from the author of sing-box. Please consider supporting the original project ❤️
 
@@ -18,7 +18,7 @@ Images are built by GitHub Actions on push to `master`.
 
 ## How it works
 
-- **Server** runs three inbounds: Shadowsocks (per-user PSK, managed by sing-box's ssm-api), ShadowTLS v3 (one shared handshake password, detours into Shadowsocks), and Hysteria2 (QUIC with Salamander obfuscation, one shared password, routed to the Shadowsocks inbound and nowhere else). ShadowTLS and Hysteria2 are transport only. All user identity lives in Shadowsocks.
+- **Server** runs three inbounds: Shadowsocks (loopback only; per-user PSK, managed by sing-box's ssm-api), ShadowTLS v3 (one shared handshake password, detours into Shadowsocks), and Hysteria2 (QUIC with Salamander obfuscation, one shared password, routed to the Shadowsocks inbound and nowhere else). ShadowTLS and Hysteria2 are transport only. All user identity lives in Shadowsocks.
 - **Client profile** (`/c`) is built from `scaffolds/client/*.json`. The API fills in log level, DNS, and the user's PSK. Everything else is served as-is. `/i` wraps that into a `sing-box://import-remote-profile` link.
 - **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. It also writes the Hysteria2 passwords once and generates a self-signed certificate once; the client template carries that certificate as its trust anchor. Every start re-detects the public IPv4 and writes it into the client template.
 - **Users** live in `users.json`. The API seeds them into ssm-api at startup (add-only) and keeps the file in sync through `/ssm/create` and `/ssm/delete`.
@@ -38,7 +38,7 @@ Edit `.env`:
 
 | Variable | Required | Meaning |
 |---|---|---|
-| `SHADOWSOCKS_PORT` | yes | Shadowsocks inbound, published TCP and UDP |
+| `SHADOWSOCKS_PORT` | yes | Shadowsocks inbound, loopback only, not published |
 | `SHADOWTLS_PORT` | yes | ShadowTLS inbound, published TCP |
 | `HYSTERIA2_PORT` | yes | Hysteria2 inbound, published UDP only |
 | `HYSTERIA2_PASSWORD` | yes | Shared Hysteria2 password |
@@ -64,8 +64,7 @@ Then:
 
 ```sh
 docker compose pull
-docker compose up -d                       # sing-box + API
-docker compose --profile with-caddy up -d  # also Caddy with automatic TLS
+docker compose up -d                       # sing-box + API; TLS ingress is the separate caddy-ingress deployment
 docker compose logs sing-box | grep entrypoint
 ```
 
@@ -120,12 +119,12 @@ Editing `users.json` by hand is picked up only at API startup, and the seed is a
 | Hand edit | Apply with |
 |---|---|
 | Added user | `docker compose up -d --force-recreate sing-box-api` |
-| Changed password | `curl -X DELETE http://127.0.0.1:8888/server/v1/users/<name>`, then the recreate above |
-| Removed user | `curl -X DELETE http://127.0.0.1:8888/server/v1/users/<name>` |
+| Changed password | `docker compose exec sing-box wget -qO- --method=DELETE http://127.0.0.1:8888/server/v1/users/<name>`, then the recreate above |
+| Removed user | `docker compose exec sing-box wget -qO- --method=DELETE http://127.0.0.1:8888/server/v1/users/<name>` |
 
 `--force-recreate` (not `restart`) because editors replace the file, and a running container keeps the old single-file bind mount.
 
-`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6, `mx` multiplex.
+`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6.
 
 ## Develop
 
