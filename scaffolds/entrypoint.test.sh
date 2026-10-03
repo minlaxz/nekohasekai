@@ -78,7 +78,7 @@ done
 
 run "$root" 1111 3333
 is "$out" "$(ob shadowtls) | [.server, .server_port, .tls.server_name, .password]" '[1.2.3.4,2222,x.org,pw]'
-is "$out" '[.outbounds[].tag]' '[shadowsocks-uot,shadowtls,shadowsocks-hy2,hysteria2,direct,Proxy,Remote DNS Detour]'
+is "$out" '[.outbounds[].tag]' '[shadowsocks-uot,shadowtls,shadowsocks-hy2,hysteria2,direct,Proxy,All,Remote DNS Detour]'
 is "$root/server/inbounds.json" '.inbounds[0] | [.tag, .listen]' '[shadowsocks,127.0.0.1]'
 is "$root/server/route.json" '.route.rules[2]' '{inbound:shadowsocks,ip_is_private:true,action:reject}'
 hysteria2_ok "$root" 1111 3333

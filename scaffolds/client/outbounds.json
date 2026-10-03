@@ -68,6 +68,18 @@
       "tolerance": 100
     },
     {
+      "type": "urltest",
+      "tag": "All",
+      "outbounds": [
+        "direct",
+        "shadowsocks-uot",
+        "shadowsocks-hy2"
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "30s",
+      "tolerance": 100
+    },
+    {
       "type": "selector",
       "tag": "Remote DNS Detour",
       "outbounds": [
