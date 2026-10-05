@@ -1,9 +1,11 @@
+import calendar
 import json
 import logging
 import os
 import secrets
 import string
-from typing import Annotated, Any, Dict, List
+from datetime import datetime, timedelta, timezone
+from typing import Annotated, Any, Dict, List, Optional
 
 import httpx
 from app.auth import require_admin
@@ -25,13 +27,23 @@ templates = Jinja2Templates(directory="templates")
 USERNAME_PATTERN = r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,31}$"
 # Invalid names fail request validation and surface through main.py's 400 handler.
 Username = Annotated[str, Form(pattern=USERNAME_PATTERN)]
+# Whole calendar months of access. Create adds the Trial period on top; renew does not.
+Months = Annotated[int, Form(ge=0, le=6)]
+RenewMonths = Annotated[int, Form(ge=1, le=6)]
+TRIAL_DAYS = 3
 
 
 class CreatedUser(BaseModel):
     username: str
     uPSK: str
+    expires_at: str
     import_url: str
     config_url: str
+
+
+class RenewedUser(BaseModel):
+    username: str
+    expires_at: str
 
 
 class DeletedUser(BaseModel):
@@ -46,17 +58,65 @@ def wants_html(request: Request) -> bool:
     return "text/html" in request.headers.get("accept", "")
 
 
+# --- Expiry -------------------------------------------------------------------
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def add_months(dt: datetime, months: int) -> datetime:
+    """Calendar months; the day clamps to the target month (Jan 31 + 1 = Feb 28)."""
+    month0 = dt.month - 1 + months
+    year, month = dt.year + month0 // 12, month0 % 12 + 1
+    return dt.replace(year=year, month=month, day=min(dt.day, calendar.monthrange(year, month)[1]))
+
+
+def _expiry_of(entry: Dict[str, Any]) -> Optional[datetime]:
+    at = entry.get("expires_at")
+    if not at:
+        return None
+    dt = datetime.fromisoformat(at)
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)  # hand-edited value without zone
+
+
+def is_expired(entry: Dict[str, Any], now: datetime) -> bool:
+    at = _expiry_of(entry)
+    return at is not None and at <= now
+
+
+# --- Stats ------------------------------------------------------------------
+
+
 @router.get(
     "/server/v1/users",
     response_model=Stats,
     summary="Per-user traffic stats",
-    description="HTML table for browsers; JSON with `Accept: application/json`.",
+    description=(
+        "HTML table for browsers; JSON with `Accept: application/json`. Every row carries "
+        "`expires_at` (null = never) and `expired`; Expired users are listed from users.json with no traffic."
+    ),
 )
 async def proxy_server_users(request: Request):
     stats: List[Dict[str, Any]] = await get_stats()
+    now = _now()
+    by_name = {u["name"]: u for u in _read_users()["users"]}
+    for row in stats:
+        entry = by_name.get(row["username"], {})
+        row["expires_at"] = entry.get("expires_at")
+        row["expired"] = is_expired(entry, now)
+    seen = {row["username"] for row in stats}
+    stats += [
+        {"username": u["name"], "uPSK": u["password"], "expires_at": u["expires_at"], "expired": True}
+        for u in by_name.values()
+        if u["name"] not in seen and is_expired(u, now)
+    ]
     if wants_html(request):
         return templates.TemplateResponse(request, "users.html", {"users": stats})
     return {"users": stats}
+
+
+# --- ssm-api and Users file -------------------------------------------------
 
 
 def create_upsk() -> str:
@@ -100,9 +160,9 @@ def _write_users(users: Dict[str, Any]) -> None:
         json.dump(users, f, indent=2)
 
 
-async def create_user_in_file(username: str, uPSK: str):
+async def create_user_in_file(username: str, uPSK: str, expires_at: str):
     users = _read_users()
-    users["users"].append({"name": username, "password": uPSK, "admin": False})
+    users["users"].append({"name": username, "password": uPSK, "admin": False, "expires_at": expires_at})
     _write_users(users)
 
 
@@ -122,27 +182,30 @@ async def delete_user_in_file(username: str):
     _write_users(users)
 
 
-async def seed_users_from_file() -> None:
-    """Add-only: every user in users.json exists in ssm-api. Never deletes."""
+async def reconcile_users() -> None:
+    """ssm-api mirrors users.json: Expired users out, live users in. Users unknown to the file are left alone."""
+    now = _now()
     users = _read_users()["users"]
     existing = await _upstream_usernames()
-    async with httpx.AsyncClient(timeout=5) as client:
-        added = []
-        for u in users:
+    added, removed = [], []
+    for u in users:
+        if is_expired(u, now):
             if u["name"] in existing:
-                continue
+                await delete_user_in_memory(u["name"])
+                removed.append(u["name"])
+        elif u["name"] not in existing:
             try:
                 key = ssm_key(u["password"])
             except ValueError as exc:  # ssm-api keeps a user whose key fails to apply: never post it
-                logging.error(f"users.json seed: skipping {u['name']}: {exc}")
+                logging.error(f"users.json reconcile: skipping {u['name']}: {exc}")
                 continue
-            r = await client.post(
-                f"{APP_SSM_UPSTREAM}/server/v1/users",
-                json={"username": u["name"], "uPSK": key},
-            )
-            r.raise_for_status()
+            await create_user_in_memory(u["name"], key)
             added.append(u["name"])
-        logging.info(f"users.json seed: {len(added)} added {added}, {len(existing)} existing")
+    if added or removed:
+        logging.info(f"users.json reconcile: added {added}, removed {removed}")
+
+
+# --- Admin routes -----------------------------------------------------------
 
 
 @router.get("/form", include_in_schema=False)
@@ -155,27 +218,64 @@ async def get_form(request: Request):
     response_model=CreatedUser,
     summary="Create a Managed user",
     description=(
-        "Form-encoded `username` only; the PSK is generated. "
+        "Form-encoded `username`, optional `months` (0 to 6, default 0); the PSK is generated. "
+        "Expiry is now plus `months` calendar months plus a 3-day Trial period. "
         "HTML result page for browsers; JSON with `Accept: application/json`. "
         "409 if the username already exists (delete first to rotate the PSK)."
     ),
-    responses={400: {"description": "Invalid username"}, 409: {"description": "Username exists"}},
+    responses={400: {"description": "Invalid username or months"}, 409: {"description": "Username exists"}},
 )
-async def create_user(request: Request, username: Username):
+async def create_user(request: Request, username: Username, months: Months = 0):
     if await _user_exists(username):
         raise HTTPException(status_code=409, detail=f"User '{username}' already exists")
 
     uPSK = create_upsk()  # what the user holds; ssm-api gets the derived SS-2022 key (#24)
+    expires_at = (add_months(_now(), months) + timedelta(days=TRIAL_DAYS)).isoformat()
     await create_user_in_memory(username, ssm_key(uPSK))
-    await create_user_in_file(username, uPSK)
+    await create_user_in_file(username, uPSK, expires_at)
 
     import_url = f"https://{APP_HOST}/i?j={username}&k={uPSK}"
     config_url = f"https://{APP_HOST}/c?j={username}&k={uPSK}"
     if wants_html(request):
         return templates.TemplateResponse(
-            request, "form.html", {"import_url": import_url, "config_url": config_url}
+            request,
+            "form.html",
+            {"import_url": import_url, "config_url": config_url, "expires_at": expires_at},
         )
-    return CreatedUser(username=username, uPSK=uPSK, import_url=import_url, config_url=config_url)
+    return CreatedUser(
+        username=username, uPSK=uPSK, expires_at=expires_at, import_url=import_url, config_url=config_url
+    )
+
+
+@router.post(
+    "/renew",
+    response_model=RenewedUser,
+    summary="Renew a Managed user",
+    description=(
+        "Form-encoded `username` and `months` (1 to 6). Pushes Expiry forward by that many calendar months, "
+        "counted from the current Expiry, or from now if the user is expired or has no Expiry. No Trial period. "
+        "An Expired user is put back into ssm-api with the same PSK. 404 if the user is not in users.json."
+    ),
+    responses={400: {"description": "Invalid username or months"}, 404: {"description": "Unknown username"}},
+)
+async def renew_user(request: Request, username: Username, months: RenewMonths):
+    users = _read_users()
+    entry = next((u for u in users["users"] if u.get("name") == username), None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+
+    now = _now()
+    current = _expiry_of(entry)
+    start = current if current is not None and current > now else now
+    entry["expires_at"] = add_months(start, months).isoformat()
+    _write_users(users)
+    await reconcile_users()
+
+    if wants_html(request):
+        return templates.TemplateResponse(
+            request, "form.html", {"renewed": {"username": username, "expires_at": entry["expires_at"]}}
+        )
+    return RenewedUser(username=username, expires_at=entry["expires_at"])
 
 
 @router.post(

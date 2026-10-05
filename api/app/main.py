@@ -14,9 +14,9 @@ from fastapi.responses import JSONResponse, Response, HTMLResponse
 # from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 
-from .routes.ssm import router as ssm_router, seed_users_from_file
+from .routes.ssm import router as ssm_router, reconcile_users
 from .routes.ssm_transparent import router as ssm_transparent_router
-from .utils import Reader, get_stats
+from .utils import Reader
 
 scheduler: AsyncIOScheduler = AsyncIOScheduler()
 
@@ -58,29 +58,17 @@ exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
 }
 
 
-async def check_quota_exceeded_task() -> None:
-    """Pretend this function notify via Telegram when quota is exceeded"""
-    stats = await get_stats()
-    if len(stats) > 10:  # Arbitrary threshold for demonstration
-        logging.info(f"Top 5 users: {stats[:5]}")
-    else:
-        logging.info("Quota check omitted.")
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run once at startup
     if not os.getenv("APP_ADMIN_PASSWORD"):
         logging.critical("APP_ADMIN_PASSWORD is not set: every /ssm request will be refused")
     try:
-        await seed_users_from_file()
+        await reconcile_users()
     except Exception as exc:  # ssm-api not up yet, or users.json missing
-        logging.warning(f"users.json seed skipped: {exc}")
-    scheduler.add_job(  # type: ignore
-        check_quota_exceeded_task,
-        "interval",
-        seconds=60,
-    )
+        logging.warning(f"users.json reconcile skipped: {exc}")
+    # Expiry enforcement (ADR 0003): ssm-api mirrors users.json every minute.
+    scheduler.add_job(reconcile_users, "interval", seconds=60)  # type: ignore
     scheduler.start()  # type: ignore
 
     yield  # App runs here

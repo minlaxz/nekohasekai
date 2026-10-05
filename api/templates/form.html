@@ -5,23 +5,41 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Create SSM User</title>
+    <title>SSM Users</title>
   </head>
   <body>
-    {% if not config_url or not import_url %}
+    {% if renewed %}
+    <h2>SSM User Renewed</h2>
+    <hr />
+    <p><b>{{ renewed.username }}</b> now expires at <code>{{ renewed.expires_at }}</code></p>
+    <a href="/ssm/form">Back</a>
+    {% elif config_url and import_url %}
+    <h2>SSM User Created Successfully!</h2>
+    <hr />
+    <p>Expires at <code>{{ expires_at }}</code></p>
+    <h3>Generated Link:</h3>
+    <pre>{{ config_url }}</pre>
+    <a href="{{ import_url }}">Redirect to import link</a>
+    {% else %}
     <h2>Create SSM User</h2>
 
     <form method="POST" action="/ssm/create">
       <label>Username:</label><br />
       <input type="text" name="username" required pattern="{{ pattern[1:-1] }}" /><br /><br />
+      <label>Months (0 = 3-day trial only):</label><br />
+      <input type="number" name="months" min="0" max="6" value="0" required /><br /><br />
       <button type="submit">Submit</button>
     </form>
-    {% else %}
-    <h2>SSM User Created Successfully!</h2>
-    <hr />
-    <h3>Generated Link:</h3>
-    <pre>{{ config_url }}</pre>
-    <a href="{{ import_url }}">Redirect to import link</a>
+
+    <h2>Renew SSM User</h2>
+
+    <form method="POST" action="/ssm/renew">
+      <label>Username:</label><br />
+      <input type="text" name="username" required pattern="{{ pattern[1:-1] }}" /><br /><br />
+      <label>Months:</label><br />
+      <input type="number" name="months" min="1" max="6" value="1" required /><br /><br />
+      <button type="submit">Renew</button>
+    </form>
     {% endif %}
   </body>
 </html>
