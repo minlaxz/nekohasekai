@@ -97,7 +97,7 @@ docker compose down && docker volume rm sing-box_sing-box-configs && docker comp
 { "users": [ { "name": "alice", "password": "20-random-chars==", "admin": false, "expires_at": "2026-10-08T12:00:00+00:00" } ] }
 ```
 
-Optional `expires_at` (Expiry, ISO 8601 UTC): past it the user is removed from ssm-api within a minute and can no longer connect or fetch a profile; the entry, name and password stay. No `expires_at` means never. Created users get the months chosen at create plus a 3-day Trial period; `/ssm/renew` pushes it forward.
+Passwords must be unique per user; a shared one makes sing-box treat the entries as one user, and the API logs `duplicate PSK shared by [...]` every minute until fixed. Optional `expires_at` (Expiry, ISO 8601 UTC): past it the user is removed from ssm-api within a minute and can no longer connect or fetch a profile; the entry, name and password stay. No `expires_at` means never. Created users get the months chosen at create plus a 3-day Trial period; `/ssm/renew` pushes it forward.
 
 Optional `ts_auth_key` (Mesh key): a reusable headscale pre-auth key for that user. Mint it by hand:
 

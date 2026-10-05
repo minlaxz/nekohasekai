@@ -337,6 +337,16 @@ def test_stats_lists_expired_users(client, monkeypatch, frozen):
     assert 'action="/ssm/expiry"' in html and 'value="2026-12-01T00:00"' in html
 
 
+def test_reconcile_warns_on_duplicate_psk(client, frozen, caplog):
+    _add_entry(client, "alice-mac")
+    users = json.loads(client.users_path.read_text())
+    next(u for u in users["users"] if u["name"] == "alice-mac")["password"] = "a" * 20 + "=="
+    client.users_path.write_text(json.dumps(users))
+    with caplog.at_level("WARNING"):
+        asyncio.run(ssm.reconcile_users())
+    assert "duplicate PSK shared by ['alice', 'alice-mac']" in caplog.text
+
+
 # --- set expiry -------------------------------------------------------------
 
 
