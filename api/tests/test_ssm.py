@@ -75,7 +75,7 @@ def test_unset_password_fails_closed(client, monkeypatch):
 def test_form_page_with_credentials(client):
     r = client.get("/ssm/form", headers=ADMIN)
     assert r.status_code == 200
-    assert 'name="username"' in r.text
+    assert 'name="username"' in r.text and 'name="months"' in r.text
     assert "custom_upsk" not in r.text and "platform" not in r.text
 
 
@@ -144,7 +144,7 @@ def test_stats_json(client, monkeypatch):
 
     monkeypatch.setattr(ssm, "get_stats", stats)
     r = client.get("/ssm/server/v1/users", headers=JSON)
-    assert r.json() == {"users": [{"username": "alice", "downlinkBytes": 1}]}
+    assert r.json() == {"users": [{"username": "alice", "downlinkBytes": 1, "expires_at": None, "expired": False}]}
     r = client.get("/ssm/server/v1/users", headers=HTML)
     assert r.headers["content-type"].startswith("text/html")
 
@@ -183,52 +183,154 @@ def test_transparent_proxy_strips_admin_credential(client, monkeypatch):
     assert "host" not in {k.lower() for k in seen}
 
 
-# --- seed -------------------------------------------------------------------
+# --- reconcile --------------------------------------------------------------
 
 
-class _FakeClient:
-    """httpx.AsyncClient stand-in: records POSTed users, lists `existing` on GET."""
-
-    existing = ["alice"]
-    posted = []
-
-    def __init__(self, *a, **kw):
-        pass
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *a):
-        pass
-
-    async def get(self, url):
-        return _FakeResp({"users": [{"username": n} for n in self.existing]})
-
-    async def post(self, url, json):
-        self.posted.append(json)
-        return _FakeResp({})
-
-
-class _FakeResp:
-    def __init__(self, data):
-        self._data = data
-
-    def raise_for_status(self):
-        pass
-
-    def json(self):
-        return self._data
-
-
-def test_seed_posts_derived_keys_and_skips_bad_entries(client, monkeypatch):
+def test_reconcile_posts_derived_keys_and_skips_bad_entries(client, monkeypatch):
     k = "nj75pm4nlaslo8xm8xtK=="
     client.users_path.write_text(json.dumps({"users": [
         {"name": "alice", "password": "a" * 20 + "==", "admin": False},
         {"name": "bad", "password": "insecure-user123==", "admin": False},
         {"name": "bob", "password": k, "admin": False},
     ]}))
-    _FakeClient.posted = []
-    monkeypatch.setattr(ssm.httpx, "AsyncClient", _FakeClient)
+    posted = []
+
+    async def add(username, upsk):
+        posted.append({"username": username, "uPSK": upsk})
+
+    monkeypatch.setattr(ssm, "create_user_in_memory", add)
     import asyncio
-    asyncio.run(ssm.seed_users_from_file())
-    assert _FakeClient.posted == [{"username": "bob", "uPSK": "nj75pm4nlaslo8xm8xtKnj75"}]
+    asyncio.run(ssm.reconcile_users())
+    assert posted == [{"username": "bob", "uPSK": "nj75pm4nlaslo8xm8xtKnj75"}]
+
+# --- expiry -----------------------------------------------------------------
+
+import asyncio  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+
+NOW = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def frozen(monkeypatch):
+    monkeypatch.setattr(ssm, "_now", lambda: NOW)
+    return NOW
+
+
+def _entry(client, name):
+    return next(u for u in json.loads(client.users_path.read_text())["users"] if u["name"] == name)
+
+
+def _set_expiry(client, name, expires_at):
+    users = json.loads(client.users_path.read_text())
+    next(u for u in users["users"] if u["name"] == name)["expires_at"] = expires_at
+    client.users_path.write_text(json.dumps(users))
+
+
+def _add_entry(client, name, **extra):
+    users = json.loads(client.users_path.read_text())
+    users["users"].append({"name": name, "password": name[0] * 20 + "==", "admin": False, **extra})
+    client.users_path.write_text(json.dumps(users))
+
+
+def test_create_default_is_trial_only(client, frozen):
+    body = client.post("/ssm/create", data={"username": "bob"}, headers=JSON).json()
+    assert body["expires_at"] == "2026-10-08T12:00:00+00:00"
+    assert _entry(client, "bob")["expires_at"] == body["expires_at"]
+
+
+def test_create_months_adds_trial(client, frozen):
+    body = client.post("/ssm/create", data={"username": "bob", "months": 3}, headers=JSON).json()
+    assert body["expires_at"] == "2027-01-08T12:00:00+00:00"
+
+
+def test_create_html_shows_expiry(client, frozen):
+    r = client.post("/ssm/create", data={"username": "bob", "months": 1}, headers=HTML)
+    assert "2026-11-08T12:00:00+00:00" in r.text
+
+
+@pytest.mark.parametrize("months", [-1, 7, "x"])
+def test_create_months_out_of_range_is_400(client, months):
+    r = client.post("/ssm/create", data={"username": "bob", "months": months}, headers=JSON)
+    assert r.status_code == 400
+    assert "bob" not in client.upstream
+
+
+@pytest.mark.parametrize(
+    "start,months,end",
+    [
+        ("2026-01-31", 1, "2026-02-28"),
+        ("2028-01-31", 1, "2028-02-29"),
+        ("2026-10-31", 4, "2027-02-28"),
+        ("2026-05-15", 6, "2026-11-15"),
+        ("2026-12-01", 1, "2027-01-01"),
+    ],
+)
+def test_add_months_is_calendar(start, months, end):
+    dt = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
+    assert ssm.add_months(dt, months).date().isoformat() == end
+
+
+def test_reconcile_removes_expired_and_adds_live(client, frozen):
+    _set_expiry(client, "alice", "2026-10-05T11:59:00+00:00")  # expired, still in ssm-api
+    _add_entry(client, "carol", expires_at="2026-12-01T00:00:00+00:00")  # live, missing from ssm-api
+    _add_entry(client, "dan")  # no Expiry: never expires
+    _add_entry(client, "eve", expires_at="2026-01-01")  # hand-edited, no zone: still expired
+    client.upstream.add("stranger")  # in ssm-api only: left alone
+    asyncio.run(ssm.reconcile_users())
+    assert client.upstream == {"carol", "dan", "stranger"}
+    assert _file_names(client) == ["alice", "carol", "dan", "eve"]
+
+
+def test_renew_expired_counts_from_now(client, frozen):
+    _set_expiry(client, "alice", "2026-09-01T00:00:00+00:00")
+    client.upstream.discard("alice")
+    r = client.post("/ssm/renew", data={"username": "alice", "months": 1}, headers=JSON)
+    assert r.status_code == 200, r.text
+    assert r.json() == {"username": "alice", "expires_at": "2026-11-05T12:00:00+00:00"}
+    assert "alice" in client.upstream
+    assert _entry(client, "alice")["password"] == "a" * 20 + "=="
+
+
+def test_renew_live_extends_current_expiry(client, frozen):
+    _set_expiry(client, "alice", "2026-10-20T00:00:00+00:00")
+    r = client.post("/ssm/renew", data={"username": "alice", "months": 2}, headers=JSON)
+    assert r.json()["expires_at"] == "2026-12-20T00:00:00+00:00"
+
+
+def test_renew_without_expiry_starts_now(client, frozen):
+    r = client.post("/ssm/renew", data={"username": "alice", "months": 1}, headers=JSON)
+    assert r.json()["expires_at"] == "2026-11-05T12:00:00+00:00"
+
+
+def test_renew_html_for_browser(client, frozen):
+    r = client.post("/ssm/renew", data={"username": "alice", "months": 1}, headers=HTML)
+    assert r.status_code == 200 and "2026-11-05T12:00:00+00:00" in r.text
+
+
+@pytest.mark.parametrize("months", [0, 7, ""])
+def test_renew_months_out_of_range_is_400(client, months):
+    r = client.post("/ssm/renew", data={"username": "alice", "months": months}, headers=JSON)
+    assert r.status_code == 400
+    assert "expires_at" not in _entry(client, "alice")
+
+
+def test_renew_unknown_is_404(client):
+    assert client.post("/ssm/renew", data={"username": "ghost", "months": 1}, headers=JSON).status_code == 404
+
+
+def test_stats_lists_expired_users(client, monkeypatch, frozen):
+    _set_expiry(client, "alice", "2026-12-01T00:00:00+00:00")
+    _add_entry(client, "old", expires_at="2026-01-01T00:00:00+00:00")
+
+    async def stats():
+        return [{"username": "alice", "downlinkBytes": 1}]
+
+    monkeypatch.setattr(ssm, "get_stats", stats)
+    rows = client.get("/ssm/server/v1/users", headers=JSON).json()["users"]
+    assert rows == [
+        {"username": "alice", "downlinkBytes": 1, "expires_at": "2026-12-01T00:00:00+00:00", "expired": False},
+        {"username": "old", "uPSK": "o" * 20 + "==", "expires_at": "2026-01-01T00:00:00+00:00", "expired": True},
+    ]
+    html = client.get("/ssm/server/v1/users", headers=HTML).text
+    assert "old" in html and "(expired)" in html and html.count("(expired)") == 1
