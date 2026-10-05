@@ -111,18 +111,20 @@ A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username,
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
 - Create: form at `/ssm/form`, or `POST /ssm/create` with form fields `username` and optional `months` 0 to 6 (409 if it exists)
 - Renew: `POST /ssm/renew` with `username` and `months` 1 to 6 (404 if unknown)
+- Set or clear Expiry: per-row form on the stats page, or `POST /ssm/expiry` with `username` and `expires_at` (ISO 8601 UTC, empty = never)
 - Delete: `POST /ssm/delete` with form field `username` (404 if unknown)
 - Stats: `/ssm/server/v1/users`
 
 Everything under `/ssm` needs HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD`). Full reference for integrating a frontend: [docs/api.md](docs/api.md), or `/docs` on a running instance.
 
-Changes made through `/ssm/create`, `/ssm/renew` and `/ssm/delete` take effect immediately. No restart needed.
+Changes made through `/ssm/create`, `/ssm/renew`, `/ssm/expiry` and `/ssm/delete` take effect immediately. No restart needed.
 
 Editing `users.json` by hand is picked up at API startup and by the minute sweep, but only for a file edited in place: most editors replace the file, and the container keeps the old one (see below). The sweep adds live users and removes expired ones; it never deletes ssm-api users the file does not know and never changes a password. Don't use `down -v`: it wipes the volume (traffic stats, ssm cache).
 
 | Hand edit | Apply with |
 |---|---|
-| Added user, changed `expires_at` | `docker compose up -d --force-recreate sing-box-api` |
+| Added user | `docker compose up -d --force-recreate sing-box-api` |
+| Changed `expires_at` | prefer the stats page form or `/ssm/expiry`; by hand, the recreate above |
 | Changed password | `docker compose exec sing-box wget -qO- --method=DELETE http://127.0.0.1:8888/server/v1/users/<name>`, then the recreate above |
 | Removed user | `docker compose exec sing-box wget -qO- --method=DELETE http://127.0.0.1:8888/server/v1/users/<name>` |
 

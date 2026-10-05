@@ -334,3 +334,51 @@ def test_stats_lists_expired_users(client, monkeypatch, frozen):
     ]
     html = client.get("/ssm/server/v1/users", headers=HTML).text
     assert "old" in html and "(expired)" in html and html.count("(expired)") == 1
+    assert 'action="/ssm/expiry"' in html and 'value="2026-12-01T00:00"' in html
+
+
+# --- set expiry -------------------------------------------------------------
+
+
+def test_set_expiry_past_removes_user(client, frozen):
+    r = client.post("/ssm/expiry", data={"username": "alice", "expires_at": "2026-01-01T00:00"}, headers=JSON)
+    assert r.status_code == 200, r.text
+    assert r.json() == {"username": "alice", "expires_at": "2026-01-01T00:00:00+00:00"}
+    assert "alice" not in client.upstream
+
+
+def test_set_expiry_empty_means_never_and_restores(client, frozen):
+    _set_expiry(client, "alice", "2026-01-01T00:00:00+00:00")
+    client.upstream.discard("alice")
+    r = client.post("/ssm/expiry", data={"username": "alice", "expires_at": ""}, headers=JSON)
+    assert r.json() == {"username": "alice", "expires_at": None}
+    assert "expires_at" not in _entry(client, "alice") and "alice" in client.upstream
+
+
+def test_set_expiry_keeps_explicit_zone(client, frozen):
+    r = client.post(
+        "/ssm/expiry", data={"username": "alice", "expires_at": "2027-01-01T09:00:00+09:00"}, headers=JSON
+    )
+    assert r.json()["expires_at"] == "2027-01-01T09:00:00+09:00"
+
+
+def test_set_expiry_bad_value_is_400(client):
+    r = client.post("/ssm/expiry", data={"username": "alice", "expires_at": "tomorrow"}, headers=JSON)
+    assert r.status_code == 400 and "expires_at" in r.text
+    assert "expires_at" not in _entry(client, "alice")
+
+
+def test_set_expiry_unknown_is_404(client):
+    r = client.post("/ssm/expiry", data={"username": "ghost", "expires_at": ""}, headers=JSON)
+    assert r.status_code == 404
+
+
+def test_set_expiry_html_redirects_to_stats(client, frozen):
+    r = client.post(
+        "/ssm/expiry",
+        data={"username": "alice", "expires_at": "2027-01-01T00:00"},
+        headers=HTML,
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and r.headers["location"] == "/ssm/server/v1/users"
+    assert _entry(client, "alice")["expires_at"] == "2027-01-01T00:00:00+00:00"
