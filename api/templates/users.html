@@ -43,7 +43,7 @@
           <th>Upload</th>
           <th>TCP Sessions</th>
           <th>UDP Sessions</th>
-          <th>Expires</th>
+          <th>Expires (UTC, empty = never)</th>
         </tr>
       </thead>
       <tbody>
@@ -55,7 +55,14 @@
           <td class="mono">{{ user.uplinkBytesHuman or "0 B" }}</td>
           <td class="mono">{{ user.tcpSessions or 0 }}</td>
           <td class="mono">{{ user.udpSessions or 0 }}</td>
-          <td class="mono">{{ user.expires_at or "never" }}{% if user.expired %} (expired){% endif %}</td>
+          <td class="mono">
+            <form method="POST" action="/ssm/expiry" style="display: flex; gap: 4px">
+              <input type="hidden" name="username" value="{{ user.username }}" />
+              <input type="datetime-local" name="expires_at" value="{{ (user.expires_at or '')[:16] }}" />
+              <button type="submit">Set</button>
+            </form>
+            {% if user.expired %}(expired){% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

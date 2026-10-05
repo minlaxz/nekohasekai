@@ -11,8 +11,9 @@ import httpx
 from app.auth import require_admin
 from app.utils import get_stats, ssm_key
 from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
@@ -44,6 +45,11 @@ class CreatedUser(BaseModel):
 class RenewedUser(BaseModel):
     username: str
     expires_at: str
+
+
+class ExpirySet(BaseModel):
+    username: str
+    expires_at: Optional[str]  # null = never expires
 
 
 class DeletedUser(BaseModel):
@@ -276,6 +282,46 @@ async def renew_user(request: Request, username: Username, months: RenewMonths):
             request, "form.html", {"renewed": {"username": username, "expires_at": entry["expires_at"]}}
         )
     return RenewedUser(username=username, expires_at=entry["expires_at"])
+
+
+@router.post(
+    "/expiry",
+    response_model=ExpirySet,
+    summary="Set a Managed user's Expiry",
+    description=(
+        "Form-encoded `username` and `expires_at`: an ISO 8601 instant (no zone = UTC), or empty to never expire. "
+        "Takes effect at once: a past instant removes the user from ssm-api, a future one or empty puts them back "
+        "with the same PSK. Browser form submits are redirected to the stats page. 404 if the user is not in users.json."
+    ),
+    responses={400: {"description": "Invalid username or expires_at"}, 404: {"description": "Unknown username"}},
+)
+async def set_expiry(request: Request, username: Username, expires_at: Annotated[str, Form()] = ""):
+    users = _read_users()
+    entry = next((u for u in users["users"] if u.get("name") == username), None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+
+    value = expires_at.strip()
+    if value:
+        try:
+            dt = datetime.fromisoformat(value)
+        except ValueError:
+            raise RequestValidationError([
+                {
+                    "loc": ["body", "expires_at"],
+                    "msg": "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)",
+                    "type": "value_error.invalid",
+                }
+            ])
+        entry["expires_at"] = (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
+    else:
+        entry.pop("expires_at", None)
+    _write_users(users)
+    await reconcile_users()
+
+    if wants_html(request):
+        return RedirectResponse("/ssm/server/v1/users", status_code=303)
+    return ExpirySet(username=username, expires_at=entry.get("expires_at"))
 
 
 @router.post(

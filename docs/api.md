@@ -7,7 +7,7 @@ Two surfaces:
 | Surface | Routes | Auth |
 |---|---|---|
 | Profile | `GET /c`, `GET /i` | per-user: `j` username + `k` PSK |
-| Admin | `POST /ssm/create`, `POST /ssm/renew`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
+| Admin | `POST /ssm/create`, `POST /ssm/renew`, `POST /ssm/expiry`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
 
 Terms (`CONTEXT.md`): a **Managed user** is one Shadowsocks identity; the **PSK** is their password; the **Admin credential** gates every admin route. The PSK is what users hold and what `k` carries; ssm-api itself holds the derived **SSM key** (so the raw ssm-api proxy and stats show `uPSK` in that form, not `k`). **Expiry** is when access ends, enforced by the API within a minute (ADR 0003).
 
@@ -68,6 +68,21 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 
 `200 {"username": "alice", "expires_at": "..."}`. Expiry moves forward by `months` calendar months from the current Expiry, or from now if the user is already expired or has none. No Trial period. An Expired user is back in ssm-api before the response returns, with the same PSK, so devices reconnect without re-importing. `400` bad `months`, `404` if the name is not in `users.json`.
 
+### Set a Managed user's Expiry
+
+```
+POST /ssm/expiry
+username=<name>
+expires_at=<ISO 8601 | empty>
+```
+
+```sh
+curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
+  -d 'username=alice' -d 'expires_at=2026-12-31T00:00' https://$APP_HOST/ssm/expiry
+```
+
+`200 {"username": "alice", "expires_at": "2026-12-31T00:00:00+00:00"}`. Sets the exact Expiry; no zone means UTC. Empty `expires_at` removes it (`"expires_at": null`, never expires). Applied before the response returns: a past instant removes the user from ssm-api, a future one or empty puts them back with the same PSK. A browser form submit (the stats page has one per row) is answered with `303` to `/ssm/server/v1/users`. `400` unparsable value, `404` if the name is not in `users.json`.
+
 ### Delete a Managed user
 
 ```
@@ -88,7 +103,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 GET /ssm/server/v1/users
 ```
 
-`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never) and `expired`. Expired users are no longer in ssm-api, so they are appended from `users.json` with `expired: true` and no traffic fields.
+`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never) and `expired`. The HTML table has a per-row form that posts to `/ssm/expiry`. Expired users are no longer in ssm-api, so they are appended from `users.json` with `expired: true` and no traffic fields.
 
 ## Profile routes
 
@@ -102,7 +117,7 @@ No admin credential. Identity is the `j`/`k` pair from the create response.
 1. Admin frontend calls `POST /ssm/create` with the Admin credential.
 2. Show or send `import_url` to the end user.
 3. The user's sing-box fetches `/c` through that link; nothing else to do.
-4. Access ends at `expires_at` on its own; the user keeps the same link. To extend: `POST /ssm/renew`.
+4. Access ends at `expires_at` on its own; the user keeps the same link. To extend by months: `POST /ssm/renew`; to set an exact date or clear it: `POST /ssm/expiry`.
 5. To revoke for good: `POST /ssm/delete`.
 
 ## Not public
