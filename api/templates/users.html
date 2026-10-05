@@ -43,6 +43,7 @@
           <th>Upload</th>
           <th>TCP Sessions</th>
           <th>UDP Sessions</th>
+          <th>Expires</th>
         </tr>
       </thead>
       <tbody>
@@ -50,10 +51,11 @@
         <tr>
           <td class="mono username">{{ user.username }}</td>
           <td class="psk">{{ user.uPSK }}</td>
-          <td class="mono">{{ user.downlinkBytesHuman }}</td>
-          <td class="mono">{{ user.uplinkBytesHuman }}</td>
-          <td class="mono">{{ user.tcpSessions }}</td>
-          <td class="mono">{{ user.udpSessions }}</td>
+          <td class="mono">{{ user.downlinkBytesHuman or "0 B" }}</td>
+          <td class="mono">{{ user.uplinkBytesHuman or "0 B" }}</td>
+          <td class="mono">{{ user.tcpSessions or 0 }}</td>
+          <td class="mono">{{ user.udpSessions or 0 }}</td>
+          <td class="mono">{{ user.expires_at or "never" }}{% if user.expired %} (expired){% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
