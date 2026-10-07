@@ -158,7 +158,7 @@ def read_config(
     dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 0)),
     # User rule set URL (optional)
     r: str = "",
-    # Rule set download detour: outbound tag, e.g. `direct` (optional)
+    # Rule set download HTTP client tag: `proxy` (default) or `direct` (optional)
     rd: str = "",
 ) -> dict[str, Any]:
 

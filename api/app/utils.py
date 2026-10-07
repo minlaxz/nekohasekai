@@ -26,7 +26,7 @@ APP_TS_CONTROL_URL = os.getenv("APP_TS_CONTROL_URL", "")
 HTTP_TIMEOUT = 5  # seconds
 
 # Sections copied verbatim from APP_CLIENT_DIR; log/dns/outbounds/endpoints get injected.
-STATIC_SECTIONS = ("inbounds", "experimental", "services", "route")
+STATIC_SECTIONS = ("inbounds", "experimental", "services", "route", "http_clients")
 MESH_ENDPOINT_TAG = "ts-ep"
 MESH_DNS_TAG = "dns-mesh"  # tailscale DNS server: resolves MagicDNS names via ts-ep
 FULL_MODE = "Full"  # clash_mode that proxies everything; admin-only
@@ -84,20 +84,10 @@ def apply_full_mode(route: Dict[str, Any], admin: bool) -> None:
         ]
 
 
-def apply_rules_detour(route: Dict[str, Any], detour: str, direct: bool) -> None:
-    """Point every remote rule set's download at `detour` (an outbound tag). Lets a
-    client whose proxy stream dies mid-download fetch rule sets direct. sing-box refuses
-    a detour to a plain `direct` outbound ("detour to an empty direct outbound makes no
-    sense"), so for one of those the detour is dropped and the system dialer is used.
-    Mutates `route`."""
-    for rs in route.get("rule_set", []):
-        if rs.get("type") != "remote":
-            continue
-        http_client = rs.setdefault("http_client", {})
-        if direct:
-            http_client.pop("detour", None)
-        else:
-            http_client["detour"] = detour
+def apply_rules_detour(route: Dict[str, Any], http_client: str) -> None:
+    """Download every remote rule set through the top-level HTTP client tagged
+    `http_client` (`proxy` or `direct` in the template). Mutates `route`."""
+    route["default_http_client"] = http_client
 
 
 def apply_mesh(
@@ -325,12 +315,9 @@ class Reader(Checker):
         if self.rules_url:
             apply_user_rules(config["route"], fetch_user_rules(self.rules_url))
         if self.rules_detour:
-            by_tag = {ob["tag"]: ob for ob in config["outbounds"]}
-            if self.rules_detour not in by_tag:
-                raise HTTPException(status_code=400, detail=f"rd: no outbound tagged {self.rules_detour!r}")
-            apply_rules_detour(
-                config["route"], self.rules_detour, by_tag[self.rules_detour].get("type") == "direct"
-            )
+            if self.rules_detour not in {hc["tag"] for hc in config["http_clients"]}:
+                raise HTTPException(status_code=400, detail=f"rd: no HTTP client tagged {self.rules_detour!r}")
+            apply_rules_detour(config["route"], self.rules_detour)
         key = user.get("ts_auth_key") or ""
         if key and not APP_TS_CONTROL_URL:
             logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", self.username)

@@ -93,16 +93,9 @@ def test_apply_without_target_list_is_500():
     assert exc.value.status_code == 500
 
 
-def test_apply_rules_detour_repoints_every_remote_rule_set():
+def test_apply_rules_detour_sets_the_default_http_client():
     route = _route()
-    apply_rules_detour(route, "All", direct=False)
-    remote = [rs for rs in route["rule_set"] if rs["type"] == "remote"]
-    assert remote and all(rs["http_client"]["detour"] == "All" for rs in remote)
-
-
-def test_apply_rules_detour_direct_drops_the_detour():
-    # sing-box: "detour to an empty direct outbound makes no sense"
-    route = _route()
-    apply_rules_detour(route, "direct", direct=True)
-    remote = [rs for rs in route["rule_set"] if rs["type"] == "remote"]
-    assert remote and all("detour" not in rs["http_client"] for rs in remote)
+    assert route["default_http_client"] == "proxy"
+    assert not any("http_client" in rs for rs in route["rule_set"])  # all via default
+    apply_rules_detour(route, "direct")
+    assert route["default_http_client"] == "direct"
