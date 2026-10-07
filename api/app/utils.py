@@ -84,12 +84,20 @@ def apply_full_mode(route: Dict[str, Any], admin: bool) -> None:
         ]
 
 
-def apply_rules_detour(route: Dict[str, Any], detour: str) -> None:
+def apply_rules_detour(route: Dict[str, Any], detour: str, direct: bool) -> None:
     """Point every remote rule set's download at `detour` (an outbound tag). Lets a
-    client whose proxy stream dies mid-download fetch rule sets direct. Mutates `route`."""
+    client whose proxy stream dies mid-download fetch rule sets direct. sing-box refuses
+    a detour to a plain `direct` outbound ("detour to an empty direct outbound makes no
+    sense"), so for one of those the detour is dropped and the system dialer is used.
+    Mutates `route`."""
     for rs in route.get("rule_set", []):
-        if rs.get("type") == "remote":
-            rs.setdefault("http_client", {})["detour"] = detour
+        if rs.get("type") != "remote":
+            continue
+        http_client = rs.setdefault("http_client", {})
+        if direct:
+            http_client.pop("detour", None)
+        else:
+            http_client["detour"] = detour
 
 
 def apply_mesh(
@@ -317,9 +325,12 @@ class Reader(Checker):
         if self.rules_url:
             apply_user_rules(config["route"], fetch_user_rules(self.rules_url))
         if self.rules_detour:
-            if self.rules_detour not in {ob["tag"] for ob in config["outbounds"]}:
+            by_tag = {ob["tag"]: ob for ob in config["outbounds"]}
+            if self.rules_detour not in by_tag:
                 raise HTTPException(status_code=400, detail=f"rd: no outbound tagged {self.rules_detour!r}")
-            apply_rules_detour(config["route"], self.rules_detour)
+            apply_rules_detour(
+                config["route"], self.rules_detour, by_tag[self.rules_detour].get("type") == "direct"
+            )
         key = user.get("ts_auth_key") or ""
         if key and not APP_TS_CONTROL_URL:
             logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", self.username)
