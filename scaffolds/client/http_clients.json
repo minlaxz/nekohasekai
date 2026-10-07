@@ -1,0 +1,11 @@
+{
+  "http_clients": [
+    {
+      "tag": "proxy",
+      "detour": "Proxy"
+    },
+    {
+      "tag": "direct"
+    }
+  ]
+}
