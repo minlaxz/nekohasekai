@@ -109,7 +109,7 @@ GET /ssm/server/v1/users
 
 No admin credential. Identity is the `j`/`k` pair from the create response.
 
-- `GET /c?j=<name>&k=<psk>`: full sing-box client config as JSON. `k` is verified against ssm-api; a wrong pair fails. Optional overrides: `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name, `dp` DoH path prefix, `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6, `r` User rule set URL.
+- `GET /c?j=<name>&k=<psk>`: full sing-box client config as JSON. `k` is verified against ssm-api; a wrong pair fails. Optional overrides: `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name, `dp` DoH path prefix, `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6, `r` User rule set URL, `rd` outbound tag the remote rule sets are downloaded through (default `Proxy`; use `direct` when the proxy stream dies mid-download).
 - `GET /i?j=<name>&k=<psk>`: HTML page with a `sing-box://import-remote-profile` link that points at `/c`. `p` and `v` are accepted for old links and ignored.
 
 ## Integration flow

@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from app.utils import apply_user_rules, fetch_user_rules, parse_user_rules  # noqa: E402
+from app.utils import apply_rules_detour, apply_user_rules, fetch_user_rules, parse_user_rules  # noqa: E402
 
 CLIENT = os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client")
 
@@ -91,3 +91,10 @@ def test_apply_without_target_list_is_500():
     with pytest.raises(HTTPException) as exc:
         apply_user_rules({"rules": [{"outbound": "Proxy", "clash_mode": "Full"}]}, {"domain_suffix": ["x.com"]})
     assert exc.value.status_code == 500
+
+
+def test_apply_rules_detour_repoints_every_remote_rule_set():
+    route = _route()
+    apply_rules_detour(route, "direct")
+    remote = [rs for rs in route["rule_set"] if rs["type"] == "remote"]
+    assert remote and all(rs["http_client"]["detour"] == "direct" for rs in remote)
