@@ -158,6 +158,8 @@ def read_config(
     dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 0)),
     # User rule set URL (optional)
     r: str = "",
+    # Rule set download detour: outbound tag, e.g. `direct` (optional)
+    rd: str = "",
 ) -> dict[str, Any]:
 
     # Nothing to check if `j` and `k` aren't provided.
@@ -199,6 +201,7 @@ def read_config(
         dns_resolver=dr,
         dns_version=dv,
         rules_url=r,
+        rules_detour=rd,
     ).unwarp()
 
 

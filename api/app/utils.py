@@ -84,6 +84,14 @@ def apply_full_mode(route: Dict[str, Any], admin: bool) -> None:
         ]
 
 
+def apply_rules_detour(route: Dict[str, Any], detour: str) -> None:
+    """Point every remote rule set's download at `detour` (an outbound tag). Lets a
+    client whose proxy stream dies mid-download fetch rule sets direct. Mutates `route`."""
+    for rs in route.get("rule_set", []):
+        if rs.get("type") == "remote":
+            rs.setdefault("http_client", {})["detour"] = detour
+
+
 def apply_mesh(
     endpoints: List[Dict[str, Any]],
     route: Dict[str, Any],
@@ -237,9 +245,11 @@ class Reader(Checker):
         dns_resolver: str,
         dns_version: int,
         rules_url: str = "",
+        rules_detour: str = "",
     ) -> None:
         super().__init__(username, psk)
         self.rules_url = rules_url
+        self.rules_detour = rules_detour
         self.log_level = log_level
         self.dns_host = dns_host
         self.dns_sni = dns_sni
@@ -306,6 +316,10 @@ class Reader(Checker):
         apply_full_mode(config["route"], bool(user.get("admin")))
         if self.rules_url:
             apply_user_rules(config["route"], fetch_user_rules(self.rules_url))
+        if self.rules_detour:
+            if self.rules_detour not in {ob["tag"] for ob in config["outbounds"]}:
+                raise HTTPException(status_code=400, detail=f"rd: no outbound tagged {self.rules_detour!r}")
+            apply_rules_detour(config["route"], self.rules_detour)
         key = user.get("ts_auth_key") or ""
         if key and not APP_TS_CONTROL_URL:
             logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", self.username)
