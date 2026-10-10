@@ -144,7 +144,7 @@ def test_stats_json(client, monkeypatch):
 
     monkeypatch.setattr(ssm, "get_stats", stats)
     r = client.get("/ssm/server/v1/users", headers=JSON)
-    assert r.json() == {"users": [{"username": "alice", "downlinkBytes": 1, "expires_at": None, "expired": False}]}
+    assert r.json() == {"users": [{"username": "alice", "downlinkBytes": 1, "expires_at": None, "expired": False, "disabled": False}]}
     r = client.get("/ssm/server/v1/users", headers=HTML)
     assert r.headers["content-type"].startswith("text/html")
 
@@ -329,8 +329,10 @@ def test_stats_lists_expired_users(client, monkeypatch, frozen):
     monkeypatch.setattr(ssm, "get_stats", stats)
     rows = client.get("/ssm/server/v1/users", headers=JSON).json()["users"]
     assert rows == [
-        {"username": "alice", "downlinkBytes": 1, "expires_at": "2026-12-01T00:00:00+00:00", "expired": False},
-        {"username": "old", "uPSK": "o" * 20 + "==", "expires_at": "2026-01-01T00:00:00+00:00", "expired": True},
+        {"username": "alice", "downlinkBytes": 1, "expires_at": "2026-12-01T00:00:00+00:00", "expired": False,
+         "disabled": False},
+        {"username": "old", "uPSK": "o" * 20 + "==", "expires_at": "2026-01-01T00:00:00+00:00", "expired": True,
+         "disabled": False},
     ]
     html = client.get("/ssm/server/v1/users", headers=HTML).text
     assert "old" in html and "(expired)" in html and html.count("(expired)") == 1
@@ -392,3 +394,106 @@ def test_set_expiry_html_redirects_to_stats(client, frozen):
     )
     assert r.status_code == 303 and r.headers["location"] == "/ssm/server/v1/users"
     assert _entry(client, "alice")["expires_at"] == "2027-01-01T00:00:00+00:00"
+
+
+# --- disable / enable -------------------------------------------------------
+
+
+def test_reconcile_keeps_disabled_users_out(client, frozen):
+    _add_entry(client, "bob", disabled=True)
+    client.upstream.add("bob")
+    _add_entry(client, "carol", disabled=True, expires_at="2026-01-01T00:00:00+00:00")
+    _add_entry(client, "dan", disabled=False)
+    asyncio.run(ssm.reconcile_users())
+    assert client.upstream == {"alice", "dan"}
+
+
+def test_disable_removes_user_and_keeps_expiry(client, frozen):
+    _set_expiry(client, "alice", "2026-12-01T00:00:00+00:00")
+    r = client.post("/ssm/disable", data={"username": "alice"}, headers=JSON)
+    assert r.status_code == 200, r.text
+    assert r.json() == {"username": "alice", "disabled": True}
+    assert "alice" not in client.upstream
+    assert _entry(client, "alice")["disabled"] is True
+    assert _entry(client, "alice")["expires_at"] == "2026-12-01T00:00:00+00:00"
+    # idempotent
+    assert client.post("/ssm/disable", data={"username": "alice"}, headers=JSON).status_code == 200
+
+
+def test_enable_restores_user(client, frozen):
+    client.post("/ssm/disable", data={"username": "alice"}, headers=JSON)
+    r = client.post("/ssm/enable", data={"username": "alice"}, headers=JSON)
+    assert r.json() == {"username": "alice", "disabled": False}
+    assert "alice" in client.upstream and "disabled" not in _entry(client, "alice")
+    assert client.post("/ssm/enable", data={"username": "alice"}, headers=JSON).status_code == 200
+
+
+def test_enable_expired_user_stays_out(client, frozen):
+    _set_expiry(client, "alice", "2026-01-01T00:00:00+00:00")
+    client.post("/ssm/disable", data={"username": "alice"}, headers=JSON)
+    client.post("/ssm/enable", data={"username": "alice"}, headers=JSON)
+    assert "alice" not in client.upstream
+
+
+def test_set_expiry_does_not_enable(client, frozen):
+    client.post("/ssm/disable", data={"username": "alice"}, headers=JSON)
+    client.post("/ssm/expiry", data={"username": "alice", "expires_at": ""}, headers=JSON)
+    assert "alice" not in client.upstream and _entry(client, "alice")["disabled"] is True
+
+
+def test_delete_memory_only_user(client):
+    client.upstream.add("stranger")
+    assert client.post("/ssm/delete", data={"username": "stranger"}, headers=JSON).status_code == 200
+    assert "stranger" not in client.upstream and _file_names(client) == ["alice"]
+
+
+def test_delete_admin_not_in_ssm_api_is_403(client):
+    _add_entry(client, "root", admin=True)
+    assert client.post("/ssm/delete", data={"username": "root"}, headers=JSON).status_code == 403
+
+
+def test_renew_does_not_enable(client, frozen):
+    client.post("/ssm/disable", data={"username": "alice"}, headers=JSON)
+    client.post("/ssm/renew", data={"username": "alice", "months": 1}, headers=JSON)
+    assert "alice" not in client.upstream and _entry(client, "alice")["disabled"] is True
+
+
+@pytest.mark.parametrize("path", ["/ssm/disable", "/ssm/enable"])
+def test_disable_enable_unknown_or_memory_only_is_404(client, path):
+    client.upstream.add("stranger")
+    assert client.post(path, data={"username": "ghost"}, headers=JSON).status_code == 404
+    assert client.post(path, data={"username": "stranger"}, headers=JSON).status_code == 404
+
+
+@pytest.mark.parametrize("path", ["/ssm/disable", "/ssm/delete"])
+def test_admin_entry_is_403(client, path):
+    _add_entry(client, "root", admin=True)
+    client.upstream.add("root")
+    assert client.post(path, data={"username": "root"}, headers=JSON).status_code == 403
+    assert "root" in client.upstream and "root" in _file_names(client)
+
+
+@pytest.mark.parametrize("path", ["/ssm/disable", "/ssm/enable", "/ssm/delete"])
+def test_disable_enable_delete_html_redirects_to_stats(client, frozen, path):
+    r = client.post(path, data={"username": "alice"}, headers=HTML, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/ssm/server/v1/users"
+
+
+def test_stats_lists_disabled_users_with_buttons(client, monkeypatch, frozen):
+    _add_entry(client, "bob", disabled=True)
+    _add_entry(client, "root", admin=True)
+
+    async def stats():
+        return [{"username": "alice"}, {"username": "root"}, {"username": "stranger"}]
+
+    monkeypatch.setattr(ssm, "get_stats", stats)
+    rows = client.get("/ssm/server/v1/users", headers=JSON).json()["users"]
+    assert [(r["username"], r["disabled"]) for r in rows] == [
+        ("alice", False), ("root", False), ("stranger", False), ("bob", True)
+    ]
+    html = client.get("/ssm/server/v1/users", headers=HTML).text
+    assert "(disabled)" in html
+    assert html.count('action="/ssm/disable"') == 1  # alice; not root (admin), not stranger (memory only)
+    assert html.count('action="/ssm/enable"') == 1  # bob
+    assert html.count('action="/ssm/delete"') == 3  # alice, stranger, bob; not root
+    assert "confirm(" in html
