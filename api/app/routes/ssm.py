@@ -188,10 +188,22 @@ async def delete_user_in_file(username: str):
     _write_users(users)
 
 
+def _warn_duplicate_psks(users: List[Dict[str, Any]]) -> None:
+    """SS-2022 identifies a user by key, not by name: two entries with one PSK are one user to
+    sing-box (last name wins, stats merge, Expiry on one does nothing). Rotate one of them."""
+    by_psk: Dict[str, List[str]] = {}
+    for u in users:
+        by_psk.setdefault(u["password"], []).append(u["name"])
+    for names in by_psk.values():
+        if len(names) > 1:
+            logging.warning(f"users.json: duplicate PSK shared by {names}; sing-box treats them as one user")
+
+
 async def reconcile_users() -> None:
     """ssm-api mirrors users.json: Expired users out, live users in. Users unknown to the file are left alone."""
     now = _now()
     users = _read_users()["users"]
+    _warn_duplicate_psks(users)
     existing = await _upstream_usernames()
     added, removed = [], []
     for u in users:
