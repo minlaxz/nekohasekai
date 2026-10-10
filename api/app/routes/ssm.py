@@ -56,6 +56,11 @@ class DeletedUser(BaseModel):
     deleted: str
 
 
+class DisabledSet(BaseModel):
+    username: str
+    disabled: bool
+
+
 class Stats(BaseModel):
     users: List[Dict[str, Any]]
 
@@ -91,6 +96,11 @@ def is_expired(entry: Dict[str, Any], now: datetime) -> bool:
     return at is not None and at <= now
 
 
+def is_out(entry: Dict[str, Any], now: datetime) -> bool:
+    """Kept out of ssm-api: Expired or Disabled."""
+    return bool(entry.get("disabled")) or is_expired(entry, now)
+
+
 # --- Stats ------------------------------------------------------------------
 
 
@@ -100,7 +110,8 @@ def is_expired(entry: Dict[str, Any], now: datetime) -> bool:
     summary="Per-user traffic stats",
     description=(
         "HTML table for browsers; JSON with `Accept: application/json`. Every row carries "
-        "`expires_at` (null = never) and `expired`; Expired users are listed from users.json with no traffic."
+        "`expires_at` (null = never), `expired` and `disabled`; Expired and Disabled users are listed from "
+        "users.json with no traffic."
     ),
 )
 async def proxy_server_users(request: Request):
@@ -111,14 +122,21 @@ async def proxy_server_users(request: Request):
         entry = by_name.get(row["username"], {})
         row["expires_at"] = entry.get("expires_at")
         row["expired"] = is_expired(entry, now)
+        row["disabled"] = bool(entry.get("disabled"))
     seen = {row["username"] for row in stats}
     stats += [
-        {"username": u["name"], "uPSK": u["password"], "expires_at": u["expires_at"], "expired": True}
+        {
+            "username": u["name"],
+            "uPSK": u["password"],
+            "expires_at": u.get("expires_at"),
+            "expired": is_expired(u, now),
+            "disabled": bool(u.get("disabled")),
+        }
         for u in by_name.values()
-        if u["name"] not in seen and is_expired(u, now)
+        if u["name"] not in seen and is_out(u, now)
     ]
     if wants_html(request):
-        return templates.TemplateResponse(request, "users.html", {"users": stats})
+        return templates.TemplateResponse(request, "users.html", {"users": stats, "entries": by_name})
     return {"users": stats}
 
 
@@ -200,14 +218,14 @@ def _warn_duplicate_psks(users: List[Dict[str, Any]]) -> None:
 
 
 async def reconcile_users() -> None:
-    """ssm-api mirrors users.json: Expired users out, live users in. Users unknown to the file are left alone."""
+    """ssm-api mirrors users.json: Expired and Disabled users out, live users in. Users unknown to the file are left alone."""
     now = _now()
     users = _read_users()["users"]
     _warn_duplicate_psks(users)
     existing = await _upstream_usernames()
     added, removed = [], []
     for u in users:
-        if is_expired(u, now):
+        if is_out(u, now):
             if u["name"] in existing:
                 await delete_user_in_memory(u["name"])
                 removed.append(u["name"])
@@ -336,16 +354,76 @@ async def set_expiry(request: Request, username: Username, expires_at: Annotated
     return ExpirySet(username=username, expires_at=entry.get("expires_at"))
 
 
+def _refuse_admin(entry: Optional[Dict[str, Any]], username: str) -> None:
+    if entry is not None and entry.get("admin"):
+        raise HTTPException(status_code=403, detail=f"User '{username}' is an admin entry")
+
+
+async def _set_disabled(request: Request, username: str, disabled: bool):
+    users = _read_users()
+    entry = next((u for u in users["users"] if u.get("name") == username), None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+    if disabled:
+        _refuse_admin(entry, username)
+        entry["disabled"] = True
+    else:
+        entry.pop("disabled", None)
+    _write_users(users)
+    await reconcile_users()
+
+    if wants_html(request):
+        return RedirectResponse("/ssm/server/v1/users", status_code=303)
+    return DisabledSet(username=username, disabled=disabled)
+
+
+@router.post(
+    "/disable",
+    response_model=DisabledSet,
+    summary="Disable a Managed user",
+    description=(
+        "Form-encoded `username`. Removes the user from ssm-api and keeps them out until enabled; "
+        "the users.json entry, PSK and Expiry are kept. Renewal does not enable. Repeat calls are no-ops. "
+        "Browser form submits are redirected to the stats page. 404 if the user is not in users.json, "
+        "403 for an admin entry."
+    ),
+    responses={403: {"description": "Admin entry"}, 404: {"description": "Unknown username"}},
+)
+async def disable_user(request: Request, username: Username):
+    return await _set_disabled(request, username, True)
+
+
+@router.post(
+    "/enable",
+    response_model=DisabledSet,
+    summary="Enable a Disabled user",
+    description=(
+        "Form-encoded `username`. Puts the user back into ssm-api with the same PSK, unless they are Expired. "
+        "Repeat calls are no-ops. Browser form submits are redirected to the stats page. "
+        "404 if the user is not in users.json."
+    ),
+    responses={404: {"description": "Unknown username"}},
+)
+async def enable_user(request: Request, username: Username):
+    return await _set_disabled(request, username, False)
+
+
 @router.post(
     "/delete",
     response_model=DeletedUser,
     summary="Delete a Managed user",
-    description="Form-encoded `username`. 404 if the user is unknown.",
-    responses={404: {"description": "Unknown username"}},
+    description=(
+        "Form-encoded `username`. Removes the user from ssm-api and users.json; the PSK is gone. "
+        "Browser form submits are redirected to the stats page. 404 if the user is unknown, 403 for an admin entry."
+    ),
+    responses={403: {"description": "Admin entry"}, 404: {"description": "Unknown username"}},
 )
-async def delete_user(username: Username):
+async def delete_user(request: Request, username: Username):
+    _refuse_admin(next((u for u in _read_users()["users"] if u.get("name") == username), None), username)
     if not await _user_exists(username):
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     await delete_user_in_memory(username)
     await delete_user_in_file(username)
+    if wants_html(request):
+        return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return {"deleted": username}
