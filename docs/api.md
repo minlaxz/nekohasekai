@@ -7,7 +7,7 @@ Two surfaces:
 | Surface | Routes | Auth |
 |---|---|---|
 | Profile | `GET /c`, `GET /i` | per-user: `j` username + `k` PSK |
-| Admin | `POST /ssm/create`, `POST /ssm/renew`, `POST /ssm/expiry`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
+| Admin | `POST /ssm/create`, `POST /ssm/renew`, `POST /ssm/expiry`, `POST /ssm/disable`, `POST /ssm/enable`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
 
 Terms (`CONTEXT.md`): a **Managed user** is one Shadowsocks identity; the **PSK** is their password; the **Admin credential** gates every admin route. The PSK is what users hold and what `k` carries; ssm-api itself holds the derived **SSM key** (so the raw ssm-api proxy and stats show `uPSK` in that form, not `k`). **Expiry** is when access ends, enforced by the API within a minute (ADR 0003).
 
@@ -83,6 +83,21 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 
 `200 {"username": "alice", "expires_at": "2026-12-31T00:00:00+00:00"}`. Sets the exact Expiry; no zone means UTC. Empty `expires_at` removes it (`"expires_at": null`, never expires). Applied before the response returns: a past instant removes the user from ssm-api, a future one or empty puts them back with the same PSK. A browser form submit (the stats page has one per row) is answered with `303` to `/ssm/server/v1/users`. `400` unparsable value, `404` if the name is not in `users.json`.
 
+### Disable or enable a Managed user
+
+```
+POST /ssm/disable
+POST /ssm/enable
+username=<name>
+```
+
+```sh
+curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
+  -d 'username=alice' https://$APP_HOST/ssm/disable
+```
+
+`200 {"username": "alice", "disabled": true}` (or `false` for enable). Disable removes the user from ssm-api before the response returns and keeps them out until enabled; the `users.json` entry, PSK and Expiry are kept, and Renewal does not enable. Enable puts them back with the same PSK, unless they are Expired. Repeat calls are no-ops. A browser form submit is answered with `303` to `/ssm/server/v1/users`. `404` if the name is not in `users.json`, `403` to disable an admin entry.
+
 ### Delete a Managed user
 
 ```
@@ -95,7 +110,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
   -d 'username=alice' https://$APP_HOST/ssm/delete
 ```
 
-`200 {"deleted": "alice"}`, or `404` if the name is unknown.
+`200 {"deleted": "alice"}`. Removes the user from ssm-api and `users.json`; the PSK is gone, so a re-create issues a new one. A browser form submit is answered with `303` to `/ssm/server/v1/users`. `404` if the name is unknown, `403` for an admin entry.
 
 ### Traffic stats
 
@@ -103,7 +118,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 GET /ssm/server/v1/users
 ```
 
-`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never) and `expired`. The HTML table has a per-row form that posts to `/ssm/expiry`. Expired users are no longer in ssm-api, so they are appended from `users.json` with `expired: true` and no traffic fields.
+`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never), `expired` and `disabled`. The HTML table has a per-row form that posts to `/ssm/expiry`, plus Disable/Enable and Delete buttons on every non-admin row (users not in `users.json` get Delete only). Expired and Disabled users are no longer in ssm-api, so they are appended from `users.json` with no traffic fields.
 
 ## Profile routes
 

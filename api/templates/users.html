@@ -44,6 +44,7 @@
           <th>TCP Sessions</th>
           <th>UDP Sessions</th>
           <th>Expires (UTC, empty = never)</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -62,6 +63,22 @@
               <button type="submit">Set</button>
             </form>
             {% if user.expired %}(expired){% endif %}
+            {% if user.disabled %}(disabled){% endif %}
+          </td>
+          {% set entry = entries.get(user.username) %}
+          <td style="display: flex; gap: 4px">
+            {% if not (entry and entry.admin) %}
+            {% if entry %}
+            <form method="POST" action="/ssm/{{ 'enable' if user.disabled else 'disable' }}">
+              <input type="hidden" name="username" value="{{ user.username }}" />
+              <button type="submit">{{ "Enable" if user.disabled else "Disable" }}</button>
+            </form>
+            {% endif %}
+            <form method="POST" action="/ssm/delete" onsubmit='return confirm({{ ("Delete " ~ user.username ~ "? The PSK is gone for good.") | tojson }})'>
+              <input type="hidden" name="username" value="{{ user.username }}" />
+              <button type="submit">Delete</button>
+            </form>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

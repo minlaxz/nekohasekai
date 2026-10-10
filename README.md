@@ -21,7 +21,7 @@ Images are built by GitHub Actions on push to `master`.
 - **Server** runs three inbounds: Shadowsocks (loopback only; per-user PSK, managed by sing-box's ssm-api), ShadowTLS v3 (one shared handshake password, detours into Shadowsocks), and Hysteria2 (QUIC with Salamander obfuscation, one shared password, routed to the Shadowsocks inbound and nowhere else). ShadowTLS and Hysteria2 are transport only. All user identity lives in Shadowsocks.
 - **Client profile** (`/c`) is built from `scaffolds/client/*.json`. The API fills in log level, DNS, and the user's PSK. Everything else is served as-is. `/i` wraps that into a `sing-box://import-remote-profile` link.
 - **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. It also writes the Hysteria2 passwords once and generates a self-signed certificate once; the client template carries that certificate as its trust anchor. Every start re-detects the public IPv4 and writes it into the client template.
-- **Users** live in `users.json`. The API mirrors them into ssm-api at startup and every minute (expired users out, live users in) and keeps the file in sync through `/ssm/create`, `/ssm/renew` and `/ssm/delete`.
+- **Users** live in `users.json`. The API mirrors them into ssm-api at startup and every minute (expired and disabled users out, live users in) and keeps the file in sync through `/ssm/create`, `/ssm/renew`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete`.
 
 ## Deploy
 
@@ -97,7 +97,7 @@ docker compose down && docker volume rm sing-box_sing-box-configs && docker comp
 { "users": [ { "name": "alice", "password": "20-random-chars==", "admin": false, "expires_at": "2026-10-08T12:00:00+00:00" } ] }
 ```
 
-Optional `expires_at` (Expiry, ISO 8601 UTC): past it the user is removed from ssm-api within a minute and can no longer connect or fetch a profile; the entry, name and password stay. No `expires_at` means never. Created users get the months chosen at create plus a 3-day Trial period; `/ssm/renew` pushes it forward.
+Passwords must be unique per user; a shared one makes sing-box treat the entries as one user, and the API logs `duplicate PSK shared by [...]` every minute until fixed. Optional `expires_at` (Expiry, ISO 8601 UTC): past it the user is removed from ssm-api within a minute and can no longer connect or fetch a profile; the entry, name and password stay. No `expires_at` means never. Created users get the months chosen at create plus a 3-day Trial period; `/ssm/renew` pushes it forward. Optional `disabled: true`: the user is kept out of ssm-api like an expired one, whatever the Expiry; `/ssm/enable` clears it.
 
 Optional `ts_auth_key` (Mesh key): a reusable headscale pre-auth key for that user. Mint it by hand:
 
@@ -112,12 +112,13 @@ A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username,
 - Create: form at `/ssm/form`, or `POST /ssm/create` with form fields `username` and optional `months` 0 to 6 (409 if it exists)
 - Renew: `POST /ssm/renew` with `username` and `months` 1 to 6 (404 if unknown)
 - Set or clear Expiry: per-row form on the stats page, or `POST /ssm/expiry` with `username` and `expires_at` (ISO 8601 UTC, empty = never)
-- Delete: `POST /ssm/delete` with form field `username` (404 if unknown)
+- Disable / enable: per-row button on the stats page, or `POST /ssm/disable` / `POST /ssm/enable` with `username` (404 if not in `users.json`)
+- Delete: per-row button on the stats page, or `POST /ssm/delete` with form field `username` (404 if unknown). Admin entries cannot be disabled or deleted (403).
 - Stats: `/ssm/server/v1/users`
 
 Everything under `/ssm` needs HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD`). Full reference for integrating a frontend: [docs/api.md](docs/api.md), or `/docs` on a running instance.
 
-Changes made through `/ssm/create`, `/ssm/renew`, `/ssm/expiry` and `/ssm/delete` take effect immediately. No restart needed.
+Changes made through `/ssm/create`, `/ssm/renew`, `/ssm/expiry`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete` take effect immediately. No restart needed.
 
 Editing `users.json` by hand is picked up at API startup and by the minute sweep, but only for a file edited in place: most editors replace the file, and the container keeps the old one (see below). The sweep adds live users and removes expired ones; it never deletes ssm-api users the file does not know and never changes a password. Don't use `down -v`: it wipes the volume (traffic stats, ssm cache).
 
