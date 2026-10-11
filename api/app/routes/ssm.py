@@ -25,6 +25,27 @@ APP_USERS_PATH = os.getenv("APP_INTERNAL_USERS_PATH", "/users.json")
 
 templates = Jinja2Templates(directory="templates")
 
+# Last fetch: username -> ISO UTC instant of the last Profile config delivered by /c.
+# In memory only; lost on restart (never written to users.json).
+LAST_FETCH: Dict[str, str] = {}
+
+
+def record_fetch(username: str) -> None:
+    LAST_FETCH[username] = _now().isoformat()
+
+
+def _ago(iso: Optional[str]) -> str:
+    if not iso:
+        return "never"
+    s = int((_now() - datetime.fromisoformat(iso)).total_seconds())
+    for unit, size in (("d", 86400), ("h", 3600), ("m", 60)):
+        if s >= size:
+            return f"{s // size}{unit} ago"
+    return "just now"
+
+
+templates.env.filters["ago"] = _ago
+
 USERNAME_PATTERN = r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,31}$"
 # Invalid names fail request validation and surface through main.py's 400 handler.
 Username = Annotated[str, Form(pattern=USERNAME_PATTERN)]
@@ -110,7 +131,7 @@ def is_out(entry: Dict[str, Any], now: datetime) -> bool:
     summary="Per-user traffic stats",
     description=(
         "HTML table for browsers; JSON with `Accept: application/json`. Every row carries "
-        "`expires_at` (null = never), `expired` and `disabled`; Expired and Disabled users are listed from "
+        "`expires_at` (null = never), `expired`, `disabled` and `last_fetch` (null = no fetch since API start); Expired and Disabled users are listed from "
         "users.json with no traffic."
     ),
 )
@@ -123,6 +144,7 @@ async def proxy_server_users(request: Request):
         row["expires_at"] = entry.get("expires_at")
         row["expired"] = is_expired(entry, now)
         row["disabled"] = bool(entry.get("disabled"))
+        row["last_fetch"] = LAST_FETCH.get(row["username"])
     seen = {row["username"] for row in stats}
     stats += [
         {
@@ -131,6 +153,7 @@ async def proxy_server_users(request: Request):
             "expires_at": u.get("expires_at"),
             "expired": is_expired(u, now),
             "disabled": bool(u.get("disabled")),
+            "last_fetch": LAST_FETCH.get(u["name"]),
         }
         for u in by_name.values()
         if u["name"] not in seen and is_out(u, now)
@@ -424,6 +447,7 @@ async def delete_user(request: Request, username: Username):
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     await delete_user_in_memory(username)
     await delete_user_in_file(username)
+    LAST_FETCH.pop(username, None)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return {"deleted": username}

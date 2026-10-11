@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse, Response, HTMLResponse
 # from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 
-from .routes.ssm import router as ssm_router, reconcile_users
+from .routes.ssm import router as ssm_router, reconcile_users, record_fetch
 from .routes.ssm_transparent import router as ssm_transparent_router
 from .utils import Reader
 
@@ -189,7 +189,7 @@ def read_config(
     logging.info(f"Received request: {j}-{real_ip}")
 
     # p / v accepted for URL compatibility with /i; config no longer depends on them.
-    return Reader(
+    config = Reader(
         username=j,  # Required
         psk=k,  # Required
         log_level=ll,
@@ -203,6 +203,8 @@ def read_config(
         rules_url=r,
         rules_detour=rd,
     ).unwarp()
+    record_fetch(j)
+    return config
 
 
 @app.get(

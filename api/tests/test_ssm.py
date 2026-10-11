@@ -144,9 +144,34 @@ def test_stats_json(client, monkeypatch):
 
     monkeypatch.setattr(ssm, "get_stats", stats)
     r = client.get("/ssm/server/v1/users", headers=JSON)
-    assert r.json() == {"users": [{"username": "alice", "downlinkBytes": 1, "expires_at": None, "expired": False, "disabled": False}]}
+    assert r.json() == {"users": [{"username": "alice", "downlinkBytes": 1, "expires_at": None, "expired": False, "disabled": False, "last_fetch": None}]}
     r = client.get("/ssm/server/v1/users", headers=HTML)
     assert r.headers["content-type"].startswith("text/html")
+
+
+def test_last_fetch_set_on_success_cleared_on_delete(client, monkeypatch, frozen):
+    import app.main as main
+    from fastapi import HTTPException
+
+    class FakeReader:
+        def __init__(self, username, psk, **_):
+            if psk != "good":
+                raise HTTPException(status_code=403, detail="bad PSK")
+
+        def unwarp(self):
+            return {}
+
+    monkeypatch.setattr(main, "Reader", FakeReader)
+    monkeypatch.setattr(ssm, "LAST_FETCH", {})
+
+    assert client.get("/c?j=alice&k=bad&dp=/q").status_code == 403
+    assert ssm.LAST_FETCH == {}
+    assert client.get("/c?j=alice&k=good&dp=/q").status_code == 200
+    assert ssm.LAST_FETCH == {"alice": NOW.isoformat()}
+    assert ssm._ago(NOW.isoformat()) == "just now" and ssm._ago(None) == "never"
+
+    assert client.post("/ssm/delete", data={"username": "alice"}, headers=JSON).status_code == 200
+    assert ssm.LAST_FETCH == {}
 
 
 # --- docs -------------------------------------------------------------------
@@ -330,9 +355,9 @@ def test_stats_lists_expired_users(client, monkeypatch, frozen):
     rows = client.get("/ssm/server/v1/users", headers=JSON).json()["users"]
     assert rows == [
         {"username": "alice", "downlinkBytes": 1, "expires_at": "2026-12-01T00:00:00+00:00", "expired": False,
-         "disabled": False},
+         "disabled": False, "last_fetch": None},
         {"username": "old", "uPSK": "o" * 20 + "==", "expires_at": "2026-01-01T00:00:00+00:00", "expired": True,
-         "disabled": False},
+         "disabled": False, "last_fetch": None},
     ]
     html = client.get("/ssm/server/v1/users", headers=HTML).text
     assert "old" in html and "(expired)" in html and html.count("(expired)") == 1
