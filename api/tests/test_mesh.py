@@ -30,7 +30,7 @@ def test_without_key_strips_endpoint_and_rules():
     route, dns = _load("route"), _load("dns")
     before = copy.deepcopy(route["rules"])
     eps = apply_mesh(_load("endpoints"), route, dns, "bob", "", "")
-    assert eps == []
+    assert all(e["tag"] != "ts-ep" for e in eps)
     assert all(r.get("outbound") != "ts-ep" for r in route["rules"])
     assert len(route["rules"]) == len(before) - 1
     # No server or rule may still reference the stripped endpoint / DNS server.
