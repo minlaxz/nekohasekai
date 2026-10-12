@@ -15,7 +15,7 @@
       "advertise_tags": [],
       "system_interface": false,
       "udp_timeout": "5m",
-      "detour": "shadowsocks-uot"
+      "detour": "Proxy"
     }
   ]
 }
