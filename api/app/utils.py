@@ -29,6 +29,7 @@ HTTP_TIMEOUT = 5  # seconds
 STATIC_SECTIONS = ("inbounds", "experimental", "services", "route", "http_clients")
 MESH_ENDPOINT_TAG = "ts-ep"
 MESH_DNS_TAG = "dns-mesh"  # tailscale DNS server: resolves MagicDNS names via ts-ep
+WARP_ENDPOINT_TAG = "warp-ep"
 FULL_MODE = "Full"  # clash_mode that proxies everything; admin-only
 # User rule set fetch limits: fixed hosts keep the API from reaching internal services (SSRF).
 USER_RULES_HOSTS = ("gist.githubusercontent.com", "raw.githubusercontent.com")
@@ -114,6 +115,27 @@ def apply_mesh(
             ep["auth_key"] = key
             ep["hostname"] = username
             ep["control_url"] = control_url
+    return endpoints
+
+
+def apply_warp(
+    endpoints: List[Dict[str, Any]],
+    route: Dict[str, Any],
+    key: str,
+    ipv6: str,
+) -> List[Dict[str, Any]]:
+    """Fill the WARP endpoint for a user with a WARP key; strip it (and every
+    route rule pointing at it) for a user without one. Mutates `route`."""
+    if not key:
+        route["rules"] = [
+            r for r in route.get("rules", []) if r.get("outbound") != WARP_ENDPOINT_TAG
+        ]
+        return [ep for ep in endpoints if ep.get("tag") != WARP_ENDPOINT_TAG]
+    for ep in endpoints:
+        if ep.get("tag") == WARP_ENDPOINT_TAG:
+            ep["private_key"] = key
+            if ipv6:  # WARP assigns each account its own IPv6; IPv4 is the same for all
+                ep["address"].append(ipv6)
     return endpoints
 
 
@@ -330,6 +352,9 @@ class Reader(Checker):
             key,
             APP_TS_CONTROL_URL,
         )
+        # WARP needs AAAA answers to be useful, so it only ships with dv=6.
+        warp_key = (user.get("warp_key") or "") if self.dns_version == 6 else ""
+        endpoints = apply_warp(endpoints, config["route"], warp_key, user.get("warp_ipv6") or "")
         if endpoints:
             config["endpoints"] = endpoints
         return config

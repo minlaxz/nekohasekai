@@ -4,7 +4,9 @@
       "name": "user1",
       "password": "exampleuser1key00000==",
       "admin": false,
-      "expires_at": "2026-10-08T12:00:00+00:00"
+      "expires_at": "2026-10-08T12:00:00+00:00",
+      "warp_key": "wireguard-private-key-for-user1=",
+      "warp_ipv6": "2606:4700:110:8000::1/128"
     },
     {
       "name": "user2",

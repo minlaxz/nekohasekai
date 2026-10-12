@@ -8,7 +8,7 @@ x-logging: &default-logging
 
 services:
   sing-box-api:
-    image: ghcr.io/minlaxz/nekohasekai:neko-api
+    image: ghcr.io/minlaxz/nekohasekai:${NEKO_API_IMAGE_TAG?}
     # Resource limits
     mem_limit: 128m
     mem_reservation: 64m
@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
 
   sing-box:
-    image: ghcr.io/minlaxz/nekohasekai:neko
+    image: ghcr.io/minlaxz/nekohasekai:${NEKO_IMAGE_TAG?}
     # Resource limits
     mem_limit: 128m
     mem_reservation: 64m

@@ -221,6 +221,10 @@
         "action": "sniff"
       },
       {
+        "domain_suffix": ["ipv4.rip"],
+        "outbound": "warp-ep"
+      },
+      {
         "type": "logical",
         "mode": "and",
         "rules": [

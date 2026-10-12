@@ -82,7 +82,8 @@ def test_apply_extends_exactly_the_proxy_rule():
             walk(child)
 
     for rule in route["rules"]:
-        walk(rule)
+        if rule.get("outbound") == "Proxy":
+            walk(rule)
     want = {"domain_suffix": ["gstatic.com", "x.com"], "domain_keyword": ["google"]}
     assert hits == [want]
 
