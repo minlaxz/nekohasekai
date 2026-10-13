@@ -121,15 +121,18 @@ def apply_mesh(
 def apply_warp(
     endpoints: List[Dict[str, Any]],
     route: Dict[str, Any],
+    dns: Dict[str, Any],
     key: str,
     ipv6: str,
 ) -> List[Dict[str, Any]]:
-    """Fill the WARP endpoint for a user with a WARP key; strip it (and every
-    route rule pointing at it) for a user without one. Mutates `route`."""
+    """Fill the WARP endpoint for a user with a WARP key; strip it, every route
+    rule pointing at it, and the DNS rules that answer AAAA for its domains, for
+    a user without one. Mutates `route` and `dns`."""
     if not key:
-        route["rules"] = [
-            r for r in route.get("rules", []) if r.get("outbound") != WARP_ENDPOINT_TAG
-        ]
+        warp_rules = [r for r in route.get("rules", []) if r.get("outbound") == WARP_ENDPOINT_TAG]
+        route["rules"] = [r for r in route.get("rules", []) if r not in warp_rules]
+        domains = [r["domain_suffix"] for r in warp_rules if "domain_suffix" in r]
+        dns["rules"] = [r for r in dns.get("rules", []) if r.get("domain_suffix") not in domains]
         return [ep for ep in endpoints if ep.get("tag") != WARP_ENDPOINT_TAG]
     for ep in endpoints:
         if ep.get("tag") == WARP_ENDPOINT_TAG:
@@ -290,10 +293,8 @@ class Reader(Checker):
 
     def _dns(self) -> Dict[str, Any]:
         dns = self._section("dns")
-        strategy = "prefer_ipv4" if self.dns_version == 6 else "ipv4_only"
         if self.dns_final:
             dns["final"] = self.dns_final
-        dns["strategy"] = strategy
 
         for server in dns.get("servers", []):
             match server.get("tag"):
@@ -302,10 +303,6 @@ class Reader(Checker):
                     server["path"] = f"{self.dns_path}{self.username}"
                     if self.dns_sni:  # host is a pinned IP; SNI + cert check need the name
                         server["tls"] = {"enabled": True, "server_name": self.dns_sni}
-                    server["domain_resolver"] = {
-                        "server": "dns-resolver",
-                        "strategy": strategy,
-                    }
                 case "dns-resolver":
                     server["server"] = self.dns_resolver
                     server["detour"] = self.dns_detour
@@ -352,9 +349,9 @@ class Reader(Checker):
             key,
             APP_TS_CONTROL_URL,
         )
-        # WARP needs AAAA answers to be useful, so it only ships with dv=6.
+        # dv=6 turns WARP on: its domains get AAAA answers and IPv6 goes to warp-ep.
         warp_key = (user.get("warp_key") or "") if self.dns_version == 6 else ""
-        endpoints = apply_warp(endpoints, config["route"], warp_key, user.get("warp_ipv6") or "")
+        endpoints = apply_warp(endpoints, config["route"], config["dns"], warp_key, user.get("warp_ipv6") or "")
         if endpoints:
             config["endpoints"] = endpoints
         return config

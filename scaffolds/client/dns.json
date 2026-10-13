@@ -35,6 +35,12 @@
         "preferred_by": "dns-mesh",
         "action": "route",
         "server": "dns-mesh"
+      },
+      {
+        "domain_suffix": ["ip6only.me", "test-ipv6.com"],
+        "action": "route",
+        "server": "dns-remote",
+        "strategy": "prefer_ipv4"
       }
     ],
     "strategy": "ipv4_only",

@@ -107,7 +107,7 @@ headscale preauthkeys create --user alice --reusable --expiration 1y
 
 A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username, `control_url` from `APP_TS_CONTROL_URL`) and `100.64.0.0/10` routed into it. A user without one gets no endpoint and no such rule.
 
-Optional `warp_key` and `warp_ipv6` (WARP key): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `Proxy`, since WireGuard and Cloudflare are blocked locally) and `ipv4.rip` routed into it. Without `dv=6` or without a key, no endpoint and no such rule.
+Optional `warp_key` and `warp_ipv6` (WARP key): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `Proxy`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for `ip6only.me` and `test-ipv6.com`, which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `dv=6` or without a key, no endpoint and none of these rules.
 
 - Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
@@ -133,7 +133,7 @@ Editing `users.json` by hand is picked up at API startup and by the minute sweep
 
 `--force-recreate` (not `restart`) because editors replace the file, and a running container keeps the old single-file bind mount.
 
-`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6.
+`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6 (6 turns on WARP for users with a WARP key; DNS stays `ipv4_only` either way).
 
 ## Develop
 
