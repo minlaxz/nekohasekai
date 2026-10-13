@@ -138,7 +138,7 @@ def read_root(request: Request):
     description=(
         "Full sing-box client config for one user. `j` username, `k` PSK (both required, "
         "checked against ssm-api). Other params override the `APP_DEFAULT_*` values; "
-        "`r` is an optional User rule set URL."
+        "`r` is an optional User rule set URL; `r6` the same for WARP domains (needs `dv=6`)."
     ),
 )
 def read_config(
@@ -158,6 +158,8 @@ def read_config(
     dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 0)),
     # User rule set URL (optional)
     r: str = "",
+    # WARP domain rule set URL (optional, used with dv=6)
+    r6: str = "",
     # Rule set download HTTP client tag: `proxy` (default) or `direct` (optional)
     rd: str = "",
 ) -> dict[str, Any]:
@@ -188,7 +190,6 @@ def read_config(
     )
     logging.info(f"Received request: {j}-{real_ip}")
 
-    # p / v accepted for URL compatibility with /i; config no longer depends on them.
     config = Reader(
         username=j,  # Required
         psk=k,  # Required
@@ -202,6 +203,7 @@ def read_config(
         dns_version=dv,
         rules_url=r,
         rules_detour=rd,
+        rules_v6_url=r6,
     ).unwarp()
     record_fetch(j)
     return config
@@ -212,10 +214,10 @@ def read_config(
     response_class=HTMLResponse,
     tags=["profile"],
     summary="Profile import page",
-    description="Wraps the `/c` URL for `j`/`k` in a `sing-box://import-remote-profile` link. `p`/`v` are accepted for old links and ignored.",
+    description="Wraps the `/c` URL for `j`/`k` in a `sing-box://import-remote-profile` link. Unknown params (e.g. `p`/`v` from old links) are ignored.",
 )
-def read_user(request: Request, p: str = "a", v: int = 12, j: str = "", k: str = ""):
-    url = "https://" + APP_HOST + f"/c?p={p}&v={v}&j={j}&k={k}"
+def read_user(request: Request, j: str = "", k: str = ""):
+    url = "https://" + APP_HOST + f"/c?j={j}&k={k}"
     encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"
     return templates.TemplateResponse(
         request, "render.html", {"j": j, "encoded_url": encoded_url}
