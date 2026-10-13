@@ -210,6 +210,10 @@
         "method": "drop"
       },
       {
+        "ip_version": 6,
+        "outbound": "warp-ep"
+      },
+      {
         "rule_set": ["mm-ip-rules"],
         "outbound": "direct"
       },
