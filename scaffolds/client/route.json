@@ -225,7 +225,7 @@
         "action": "sniff"
       },
       {
-        "domain_suffix": ["ip6only.me", "test-ipv6.com"],
+        "domain_suffix": [],
         "outbound": "warp-ep"
       },
       {

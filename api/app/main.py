@@ -138,7 +138,7 @@ def read_root(request: Request):
     description=(
         "Full sing-box client config for one user. `j` username, `k` PSK (both required, "
         "checked against ssm-api). Other params override the `APP_DEFAULT_*` values; "
-        "`r` is an optional User rule set URL."
+        "`r` is an optional User rule set URL; `r6` the same for WARP domains (needs `dv=6`)."
     ),
 )
 def read_config(
@@ -158,6 +158,8 @@ def read_config(
     dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 0)),
     # User rule set URL (optional)
     r: str = "",
+    # WARP domain rule set URL (optional, used with dv=6)
+    r6: str = "",
     # Rule set download HTTP client tag: `proxy` (default) or `direct` (optional)
     rd: str = "",
 ) -> dict[str, Any]:
@@ -202,6 +204,7 @@ def read_config(
         dns_version=dv,
         rules_url=r,
         rules_detour=rd,
+        rules_v6_url=r6,
     ).unwarp()
     record_fetch(j)
     return config

@@ -142,6 +142,25 @@ def apply_warp(
     return endpoints
 
 
+def apply_warp_rules(
+    route: Dict[str, Any], dns: Dict[str, Any], matchers: Dict[str, List[str]]
+) -> None:
+    """Fill the WARP domains (the warp-ep route rule and the DNS rule with the same
+    domain_suffix, both empty in the template) from an `r6` rule set; strip both
+    when there is none, since an empty rule would match everything. Mutates both."""
+    routes = [r for r in route.get("rules", []) if r.get("outbound") == WARP_ENDPOINT_TAG and "domain_suffix" in r]
+    domains = [r["domain_suffix"] for r in routes]
+    dnses = [r for r in dns.get("rules", []) if r.get("domain_suffix") in domains]
+    if not matchers:
+        route["rules"] = [r for r in route.get("rules", []) if r not in routes]
+        dns["rules"] = [r for r in dns.get("rules", []) if r not in dnses]
+        return
+    for target in routes + dnses:
+        for field, values in matchers.items():
+            existing = target.setdefault(field, [])
+            existing.extend(v for v in dict.fromkeys(values) if v not in existing)
+
+
 def _bad_rules(detail: str) -> HTTPException:
     return HTTPException(status_code=400, detail=f"User rule set: {detail}")
 
@@ -269,10 +288,12 @@ class Reader(Checker):
         dns_version: int,
         rules_url: str = "",
         rules_detour: str = "",
+        rules_v6_url: str = "",
     ) -> None:
         super().__init__(username, psk)
         self.rules_url = rules_url
         self.rules_detour = rules_detour
+        self.rules_v6_url = rules_v6_url
         self.log_level = log_level
         self.dns_host = dns_host
         self.dns_sni = dns_sni
@@ -351,6 +372,9 @@ class Reader(Checker):
         )
         # dv=6 turns WARP on: its domains get AAAA answers and IPv6 goes to warp-ep.
         warp_key = (user.get("warp_key") or "") if self.dns_version == 6 else ""
+        # r6 lists the WARP domains; fetched only when WARP is on.
+        warp_domains = fetch_user_rules(self.rules_v6_url) if warp_key and self.rules_v6_url else {}
+        apply_warp_rules(config["route"], config["dns"], warp_domains)
         endpoints = apply_warp(endpoints, config["route"], config["dns"], warp_key, user.get("warp_ipv6") or "")
         if endpoints:
             config["endpoints"] = endpoints
