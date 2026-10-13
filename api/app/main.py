@@ -190,7 +190,6 @@ def read_config(
     )
     logging.info(f"Received request: {j}-{real_ip}")
 
-    # p / v accepted for URL compatibility with /i; config no longer depends on them.
     config = Reader(
         username=j,  # Required
         psk=k,  # Required
@@ -215,10 +214,10 @@ def read_config(
     response_class=HTMLResponse,
     tags=["profile"],
     summary="Profile import page",
-    description="Wraps the `/c` URL for `j`/`k` in a `sing-box://import-remote-profile` link. `p`/`v` are accepted for old links and ignored.",
+    description="Wraps the `/c` URL for `j`/`k` in a `sing-box://import-remote-profile` link. Unknown params (e.g. `p`/`v` from old links) are ignored.",
 )
-def read_user(request: Request, p: str = "a", v: int = 12, j: str = "", k: str = ""):
-    url = "https://" + APP_HOST + f"/c?p={p}&v={v}&j={j}&k={k}"
+def read_user(request: Request, j: str = "", k: str = ""):
+    url = "https://" + APP_HOST + f"/c?j={j}&k={k}"
     encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"
     return templates.TemplateResponse(
         request, "render.html", {"j": j, "encoded_url": encoded_url}
