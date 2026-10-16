@@ -178,7 +178,7 @@ def test_last_fetch_set_on_success_cleared_on_delete(client, monkeypatch, frozen
 
 
 def test_openapi_hides_transparent_proxy(client):
-    paths = client.get("/openapi.json").json()["paths"]
+    paths = app.openapi()["paths"]  # schema is not served, but still built
     assert "/ssm/create" in paths and "/c" in paths
     assert not any(p.startswith("/ssm-transparent") for p in paths)
 

@@ -118,7 +118,7 @@ Optional `warp_key` and `warp_ipv6` (WARP key): the `PrivateKey` and the IPv6 `A
 - Delete: per-row button on the stats page, or `POST /ssm/delete` with form field `username` (404 if unknown). Admin entries cannot be disabled or deleted (403).
 - Stats: `/ssm/server/v1/users`
 
-Everything under `/ssm` needs HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD`). Full reference for integrating a frontend: [docs/api.md](docs/api.md), or `/docs` on a running instance.
+Everything under `/ssm` needs HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD`). Full reference for integrating a frontend: [docs/api.md](docs/api.md). End users: `/help?j=<name>&k=<psk>`.
 
 Changes made through `/ssm/create`, `/ssm/renew`, `/ssm/expiry`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete` take effect immediately. No restart needed.
 
