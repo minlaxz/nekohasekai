@@ -1,3 +1,4 @@
+import inspect
 import logging
 import os
 import urllib.parse
@@ -5,7 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Callable, Dict, Type, Union
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
@@ -16,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 
 from .routes.ssm import router as ssm_router, reconcile_users, record_fetch
 from .routes.ssm_transparent import router as ssm_transparent_router
-from .utils import Reader
+from .utils import Checker, Reader
 
 scheduler: AsyncIOScheduler = AsyncIOScheduler()
 
@@ -84,6 +85,10 @@ app = FastAPI(
         "Admin routes under `/ssm` need HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD`). "
         "See docs/api.md in the repo for the integration flow."
     ),
+    # No public schema: it would tell a prober what `/` (a fake nginx page) hides.
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
     exception_handlers=exceptions,
     lifespan=lifespan,
 )
@@ -220,5 +225,24 @@ def read_user(request: Request, j: str = "", k: str = ""):
     url = "https://" + APP_HOST + f"/c?j={j}&k={k}"
     encoded_url = f"sing-box://import-remote-profile?url={urllib.parse.quote(url)}#{j}"
     return templates.TemplateResponse(
-        request, "render.html", {"j": j, "encoded_url": encoded_url}
+        request, "render.html", {"j": j, "k": k, "encoded_url": encoded_url}
+    )
+
+
+@app.get("/help", response_class=HTMLResponse)
+def read_help(request: Request, j: str = "", k: str = ""):
+    """Help page: every `/c` param with its meaning and default. Valid `j`/`k`
+    only; anyone else gets the same 404 as an unknown path."""
+    try:
+        Checker(j, k)
+    except HTTPException:
+        raise HTTPException(status_code=404)
+    defaults = {
+        name: p.default
+        for name, p in inspect.signature(read_config).parameters.items()
+        if name not in ("request", "j", "k")
+    }
+    config_url = f"https://{APP_HOST}/c?" + urllib.parse.urlencode({"j": j, "k": k})
+    return templates.TemplateResponse(
+        request, "help.html", {"defaults": defaults, "config_url": config_url}
     )

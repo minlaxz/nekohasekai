@@ -1,6 +1,6 @@
 # API
 
-Base URL: `https://<APP_HOST>`. Interactive schema: `/docs` (Swagger) and `/openapi.json`.
+Base URL: `https://<APP_HOST>`. No public schema: `/docs`, `/redoc` and `/openapi.json` are off. This file is the reference.
 
 Two surfaces:
 
@@ -125,7 +125,8 @@ GET /ssm/server/v1/users
 No admin credential. Identity is the `j`/`k` pair from the create response.
 
 - `GET /c?j=<name>&k=<psk>`: full sing-box client config as JSON. `k` is verified against ssm-api; a wrong pair fails. Optional overrides: `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name, `dp` DoH path prefix, `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6 (6 turns on WARP for users with a WARP key), `r` User rule set URL, `r6` WARP domain rule set URL (same format as `r`; used only with `dv=6` and a WARP key), `rd` HTTP client the remote rule sets are downloaded through: `proxy` (default) or `direct` (when the proxy stream dies mid-download).
-- `GET /i?j=<name>&k=<psk>`: HTML page with a `sing-box://import-remote-profile` link that points at `/c`. `p` and `v` from old links are ignored (both on `/i` and `/c`).
+- `GET /i?j=<name>&k=<psk>`: HTML page with a `sing-box://import-remote-profile` link that points at `/c`. `p` and `v` from old links are ignored (both on `/i` and `/c`). Links to `/help`.
+- `GET /help?j=<name>&k=<psk>`: HTML Help page listing every `/c` param, its meaning, and this server's default. A wrong pair gets the same 404 as an unknown path. Add every new `/c` param here and to `api/templates/help.html`; `tests/test_help.py` fails otherwise.
 
 ## Integration flow
 
@@ -137,4 +138,4 @@ No admin credential. Identity is the `j`/`k` pair from the create response.
 
 ## Not public
 
-`/ssm-transparent/*` raw-proxies the internal ssm-api. It is behind the same Admin credential, hidden from `/docs`, and may change without notice.
+`/ssm-transparent/*` raw-proxies the internal ssm-api. It is behind the same Admin credential, undocumented, and may change without notice.

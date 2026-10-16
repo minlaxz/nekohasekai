@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help</title>
+</head>
+<body>
+    <h3>Profile config URL</h3>
+    <pre>{{ config_url }}</pre>
+    <p>Add any param below as <code>&amp;name=value</code> to change your config.
+       "Default" is what this server uses when you leave the param out.</p>
+
+    <h3>Required</h3>
+    <table border="1" cellpadding="4">
+        <tr><th>Param</th><th>Meaning</th></tr>
+        <tr><td><code>j</code></td><td>Your username.</td></tr>
+        <tr><td><code>k</code></td><td>Your PSK (password).</td></tr>
+    </table>
+
+    <h3>Optional</h3>
+    <table border="1" cellpadding="4">
+        <tr><th>Param</th><th>Meaning</th><th>Default</th></tr>
+        <tr><td><code>ll</code></td><td>Log level: <code>trace</code>, <code>debug</code>, <code>info</code>, <code>warn</code>, <code>error</code>.</td><td>{{ defaults.ll or "(none)" }}</td></tr>
+        <tr><td><code>dh</code></td><td>DoH server host or IP.</td><td>{{ defaults.dh or "(none)" }}</td></tr>
+        <tr><td><code>dn</code></td><td>DoH TLS server name (SNI).</td><td>{{ defaults.dn or "(none)" }}</td></tr>
+        <tr><td><code>dp</code></td><td>DoH path prefix. Must start with <code>/</code>.</td><td>{{ defaults.dp or "(none)" }}</td></tr>
+        <tr><td><code>dr</code></td><td>Resolver IP, used to look up the DoH host.</td><td>{{ defaults.dr or "(none)" }}</td></tr>
+        <tr><td><code>dd</code></td><td>Outbound the resolver goes through.</td><td>{{ defaults.dd or "(none)" }}</td></tr>
+        <tr><td><code>df</code></td><td>DNS server used when no DNS rule matches.</td><td>{{ defaults.df or "(none)" }}</td></tr>
+        <tr><td><code>dv</code></td><td>IP version: <code>4</code> or <code>6</code>. <code>6</code> turns on WARP (IPv6) if your account has a WARP key.</td><td>{{ defaults.dv }}</td></tr>
+        <tr><td><code>r</code></td><td>URL of your own rule set (domains to proxy). GitHub raw or gist URLs only.</td><td>(none)</td></tr>
+        <tr><td><code>r6</code></td><td>URL of a rule set listing domains to reach over WARP IPv6. Same format as <code>r</code>. Used only with <code>dv=6</code>.</td><td>(none)</td></tr>
+        <tr><td><code>rd</code></td><td>How remote rule sets are downloaded: <code>proxy</code> or <code>direct</code>. Try <code>direct</code> if downloads fail.</td><td>proxy</td></tr>
+    </table>
+
+    <h3>Example</h3>
+    <pre>{{ config_url }}&amp;dv=6&amp;r6=https://gist.githubusercontent.com/you/id/raw/rules-v6.json</pre>
+</body>
+</html>
