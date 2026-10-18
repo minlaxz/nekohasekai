@@ -2,7 +2,7 @@
 
 Research note, 2026-09-29. Checked against these pinned versions:
 
-- **sing-box v1.14.0**, the version pinned in `tailscale-nodes/docker-compose.yaml` and used in `magicdns-headscale.md`, commit `0b899587`. Prefix: `https://github.com/SagerNet/sing-box/blob/v1.14.0/`
+- **sing-box v1.14.0**, the version used in `magicdns-headscale.md`, commit `0b899587`. Prefix: `https://github.com/SagerNet/sing-box/blob/v1.14.0/`
 - **SagerNet/sing-tun v0.9.0-beta.4**, the version pinned in sing-box `go.mod:58`, commit `f4c1f3a`. Prefix: `https://github.com/SagerNet/sing-tun/blob/v0.9.0-beta.4/`
 - **SagerNet/sing v0.9.0-beta.4**, pinned in sing-box `go.mod:48`, commit `3f8f790`. Prefix: `https://github.com/SagerNet/sing/blob/v0.9.0-beta.4/`
 - **SagerNet/gvisor v0.0.0-20260727.0-sing-box-mod.1**, pinned in sing-tun `go.mod:11`. Prefix: `https://github.com/SagerNet/gvisor/blob/v0.0.0-20260727.0-sing-box-mod.1/`

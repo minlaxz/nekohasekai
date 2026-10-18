@@ -1,9 +1,9 @@
-# MagicDNS on headscale: ephemeral nodes, sing-box, and a stable name for `tailscale-nodes/`
+# MagicDNS on headscale: ephemeral nodes, sing-box, and a stable name for the vLLM node
 
 Research note, 2026-09-14, for issue #19. Checked against these pinned versions, the same ones the repo runs:
 
 - **headscale v0.29.3** (`scales/docker-compose.yaml`), commit `5aff68b5`. Prefix: `https://github.com/juanfont/headscale/blob/v0.29.3/`
-- **sing-box v1.14.0** (`tailscale-nodes/docker-compose.yaml`), commit `0b899587`. Prefix: `https://github.com/SagerNet/sing-box/blob/v1.14.0/`
+- **sing-box v1.14.0** (the vLLM node's `docker-compose.yaml`, now `vllm/` in [minlaxz/my-nodes](https://github.com/minlaxz/my-nodes)), commit `0b899587`. Prefix: `https://github.com/SagerNet/sing-box/blob/v1.14.0/`
 - **SagerNet/tailscale v1.102.1-sing-box-1.14-mod.4**, the fork pinned in sing-box `go.mod:62`, commit `c8e28eef`. Prefix: `https://github.com/SagerNet/tailscale/blob/v1.102.1-sing-box-1.14-mod.4/`. Where the fork and upstream share code, the fork is what both the node and the sing-box clients actually run.
 - Tailscale KB pages, fetched 2026-09-14.
 
@@ -70,7 +70,7 @@ Repo observations:
 
 ### 3.1 Each boot is a brand-new node
 
-- `tailscale-nodes/` stores state on tmpfs (`docker-compose.yaml`, `tmpfs: /var/lib/tailscale`) and sets `"ephemeral": true` (`config.json:11`). tsnet logs in with `LoginEphemeral` ([`tsnet/tsnet.go:952-953`](https://github.com/SagerNet/tailscale/blob/v1.102.1-sing-box-1.14-mod.4/tsnet/tsnet.go#L952-L953)).
+- The vLLM node stored state on tmpfs (`docker-compose.yaml`, `tmpfs: /var/lib/tailscale`) and set `"ephemeral": true` (`config.json`). tsnet logs in with `LoginEphemeral` ([`tsnet/tsnet.go:952-953`](https://github.com/SagerNet/tailscale/blob/v1.102.1-sing-box-1.14-mod.4/tsnet/tsnet.go#L952-L953)).
 - With no saved state, every start has fresh keys, so headscale takes the new-node path. That path allocates new IPs and seeds `GivenName` from the sanitised hostname ([`hscontrol/state/state.go:1915-1929`](https://github.com/juanfont/headscale/blob/v0.29.3/hscontrol/state/state.go#L1915-L1929)).
 
 ### 3.2 Name collision: the new node becomes `vllm-1`
@@ -142,10 +142,10 @@ Repo observations:
 | **C. `extra_records_path` record, e.g. `llm.minlaxz.internal → <current IP>`** | Yes, if you pick a label no node will ever take. `Hosts` wins over node names (§2). | No, but the record can follow the IP. | Something **on the headscale host** must rewrite the JSON after each boot, with the IP read via `headscale nodes list`. Nothing in headscale does this. The record also goes stale for the whole time the node is off. Only sing-box clients with a `tailscale` DNS server, and official clients, see it. Remove `extra_records: []` first (§2). |
 | **D. Non-ephemeral node, state persisted on `/data` (EBS)** | **Yes, `vllm`.** Same node on every boot, so no collision and no GC. | **Yes.** Headscale's re-register path updates the existing node in place instead of allocating ([`state.go:2488-2520`](https://github.com/juanfont/headscale/blob/v0.29.3/hscontrol/state/state.go#L2488-L2520), existing-node branch). | The node key sits on disk; protect `/data`. It shows as offline in `headscale nodes list` while EC2 is off, which is harmless. Node key expiry: **tagged nodes never expire** ([`state.go:1899-1903`](https://github.com/juanfont/headscale/blob/v0.29.3/hscontrol/state/state.go#L1899-L1903)), so register with a tagged, non-ephemeral key. EBS snapshots copied to another AZ carry the same identity, so never run two copies at once. |
 
-**Recommendation for `tailscale-nodes/`:** option D. Applied after this note (steps 1-3 and 5, sing-box profile variant). A tag turned out unnecessary: headscale 0.29.3 defaults `node.expiry` to `0`, "no default expiry (nodes never expire)" ([`config.go:83-87`](https://github.com/juanfont/headscale/blob/v0.29.3/hscontrol/types/config.go#L83-L87), [`:446`](https://github.com/juanfont/headscale/blob/v0.29.3/hscontrol/types/config.go#L446)).
+**Recommendation for the vLLM node:** option D. Applied after this note (steps 1-3 and 5, sing-box profile variant). A tag turned out unnecessary: headscale 0.29.3 defaults `node.expiry` to `0`, "no default expiry (nodes never expire)" ([`config.go:83-87`](https://github.com/juanfont/headscale/blob/v0.29.3/hscontrol/types/config.go#L83-L87), [`:446`](https://github.com/juanfont/headscale/blob/v0.29.3/hscontrol/types/config.go#L446)).
 
 1. Set `"ephemeral": false` in `config.json`.
-2. Replace the `tmpfs` with a bind mount such as `/data/tailscale-nodes/state:/var/lib/tailscale`. `/data` is the hand-attached EBS volume from `userdata.sh`.
+2. Replace the `tmpfs` with a bind mount such as `/data/tailscale:/var/lib/tailscale`. `/data` is the hand-attached EBS volume.
 3. Mint a non-ephemeral pre-auth key with a tag. The key is only needed on first registration.
 4. Delete the stale `vllm`/`vllm-N` nodes once, so the fresh registration gets the plain `vllm` label.
 5. On the client side, a Mesh user can then use `http://vllm.minlaxz.internal:8000` in one of two ways:
@@ -203,4 +203,4 @@ Tailscale KB (primary, vendor docs):
 - Linux DNS: https://tailscale.com/kb/1188/linux-dns
 - CLI: https://tailscale.com/kb/1080/cli
 
-Repo files read: `scales/headscale-config.yaml`, `scales/docker-compose.yaml`, `scales/NOTES.md`, `scales/headscale-dns_records.json` (empty), `tailscale-nodes/{config.json,docker-compose.yaml,entrypoint.sh,README.md}`, `scaffolds/client/{endpoints,dns,route}.json`, `api/app/utils.py`, `CONTEXT.md`.
+Repo files read: `scales/headscale-config.yaml`, `scales/docker-compose.yaml`, `scales/NOTES.md`, `scales/headscale-dns_records.json` (empty), the vLLM node's `{config.json,docker-compose.yaml,entrypoint.sh,README.md}` (now `vllm/` in [minlaxz/my-nodes](https://github.com/minlaxz/my-nodes)), `scaffolds/client/{endpoints,dns,route}.json`, `api/app/utils.py`, `CONTEXT.md`.

@@ -187,6 +187,3 @@ git-ignored
 # Runtime user store (see example-users.json)
 *.users.json
 scales
-
-# multiplexers runtime state (tailscale state, usage stats)
-multiplexers/data/
