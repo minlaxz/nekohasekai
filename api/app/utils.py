@@ -142,6 +142,14 @@ def apply_warp(
     return endpoints
 
 
+def strip_tun_ipv6(inbounds: List[Dict[str, Any]]) -> None:
+    """Drop the IPv6 addresses from the tun inbound. Without WARP the profile has no
+    IPv6 path, and a tun IPv6 address makes apps try IPv6 and stall. Mutates `inbounds`."""
+    for ib in inbounds:
+        if ib.get("type") == "tun":
+            ib["address"] = [a for a in ib.get("address", []) if ":" not in a]
+
+
 def apply_warp_rules(
     route: Dict[str, Any], dns: Dict[str, Any], matchers: Dict[str, List[str]]
 ) -> None:
@@ -376,6 +384,8 @@ class Reader(Checker):
         warp_domains = fetch_user_rules(self.rules_v6_url) if warp_key and self.rules_v6_url else {}
         apply_warp_rules(config["route"], config["dns"], warp_domains)
         endpoints = apply_warp(endpoints, config["route"], config["dns"], warp_key, user.get("warp_ipv6") or "")
+        if not warp_key:
+            strip_tun_ipv6(config["inbounds"])
         if endpoints:
             config["endpoints"] = endpoints
         return config

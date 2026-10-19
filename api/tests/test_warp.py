@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from app.utils import apply_warp, apply_warp_rules  # noqa: E402
+from app.utils import apply_warp, apply_warp_rules, strip_tun_ipv6  # noqa: E402
 
 CLIENT = os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client")
 
@@ -49,3 +49,10 @@ def test_no_r6_strips_empty_domain_rules():
     assert not any(r.get("outbound") == "warp-ep" and "domain_suffix" in r for r in route["rules"])
     assert "prefer_ipv4" not in json.dumps(dns)
     assert any(r.get("ip_version") == 6 for r in route["rules"])
+
+
+def test_strip_tun_ipv6_keeps_ipv4_only():
+    inbounds = _load("inbounds")
+    strip_tun_ipv6(inbounds)
+    tun = next(i for i in inbounds if i["type"] == "tun")
+    assert tun["address"] == ["10.10.10.1/30"]
