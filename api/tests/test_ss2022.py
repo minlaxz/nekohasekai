@@ -47,6 +47,8 @@ def _outbounds(tmp_path, monkeypatch):
     for ob in template["outbounds"]:
         if ob["type"] == "shadowsocks":
             ob["password"] = "server-psk"
+        elif ob["tag"] == "shadowtls":
+            ob["password"] = "shared-pw"
     (tmp_path / "outbounds.json").write_text(json.dumps(template))
     monkeypatch.setattr(utils, "APP_CLIENT_DIR", str(tmp_path))
     reader = utils.Reader.__new__(utils.Reader)  # skip the ssm-api PSK check
@@ -59,6 +61,21 @@ def test_profile_outbounds_carry_server_and_derived_key(tmp_path, monkeypatch):
     ss = obs["shadowsocks-uot"]
     assert ss["method"] == "2022-blake3-aes-128-gcm"
     assert ss["password"] == "server-psk:+sA1Rl+PHSeeDd8nD0MlIg=="
+
+
+def test_profile_uses_shadowtls_only(tmp_path, monkeypatch):
+    obs = _outbounds(tmp_path, monkeypatch)
+    assert "hysteria2" not in obs and "shadowsocks-hy2" not in obs
+    assert obs["Proxy"]["outbounds"] == ["shadowsocks-uot"]
+    assert obs["All"]["outbounds"] == ["direct", "shadowsocks-uot"]
+    assert [t for t, o in obs.items() if o["type"] == "shadowsocks"] == ["shadowsocks-uot"]
+    assert obs["shadowsocks-uot"]["detour"] == "shadowtls"
+    assert obs["shadowsocks-uot"]["udp_over_tcp"] == {"enabled": True, "version": 2}
+    assert obs["shadowtls"]["password"] == "shared-pw"  # shared, not the user's key
+    for ob in obs.values():
+        assert all(tag in obs for tag in ob.get("outbounds", []))
+        if "detour" in ob:
+            assert ob["detour"] in obs
 
 
 class _Resp:
