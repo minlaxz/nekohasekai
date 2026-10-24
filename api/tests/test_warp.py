@@ -19,7 +19,7 @@ def test_with_key_fills_endpoint():
     ep = next(e for e in eps if e["tag"] == "warp-ep")
     assert ep["private_key"] == "wg-key"
     assert ep["address"] == ["172.16.0.2/32", "2606:4700::1/128"]
-    assert ep["detour"] == "Proxy"
+    assert ep["detour"] == "shadowsocks-uot"
     assert any(r.get("ip_version") == 6 and r.get("outbound") == "warp-ep" for r in route["rules"])
     assert any(r.get("strategy") == "prefer_ipv4" for r in dns["rules"])
 

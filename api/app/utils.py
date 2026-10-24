@@ -34,7 +34,7 @@ FULL_MODE = "Full"  # clash_mode that proxies everything; admin-only
 # User rule set fetch limits: fixed hosts keep the API from reaching internal services (SSRF).
 USER_RULES_HOSTS = ("gist.githubusercontent.com", "raw.githubusercontent.com")
 USER_RULES_MAX_BYTES = 64 * 1024
-PROXY_OUTBOUNDS = ("Proxy",)
+PROXY_OUTBOUND = "shadowsocks-uot"
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +221,7 @@ def fetch_user_rules(url: str) -> Dict[str, List[str]]:
 
 def apply_user_rules(route: Dict[str, Any], matchers: Dict[str, List[str]]) -> None:
     """Add a User rule set's matchers to every rule holding a domain_suffix list under
-    the proxied (`Proxy` outbound) rules. sing-box ORs the domain_* fields within one
+    the proxied (`shadowsocks-uot` outbound) rules. sing-box ORs the domain_* fields within one
     rule, so keywords and regexes sit beside the suffixes. Mutates `route`."""
     targets: List[Dict[str, Any]] = []
 
@@ -232,7 +232,7 @@ def apply_user_rules(route: Dict[str, Any], matchers: Dict[str, List[str]]) -> N
             walk(child)
 
     for rule in route.get("rules", []):
-        if rule.get("outbound") in PROXY_OUTBOUNDS:
+        if rule.get("outbound") == PROXY_OUTBOUND:
             walk(rule)
     if not targets:
         logger.error("Client template route has no proxied domain_suffix list")
@@ -343,7 +343,7 @@ class Reader(Checker):
         outbounds = self._section("outbounds")
         for ob in outbounds:
             if ob.get("type") != "shadowsocks":
-                continue  # ShadowTLS password and Hysteria2 secrets are shared, set by Init
+                continue  # ShadowTLS password is shared, set by Init
             # SIP022 `iPSK:uPSK`; Init wrote the server PSK into the template's `password`
             ob["password"] = f"{ob['password']}:{client_key(self.psk)}"
         return outbounds

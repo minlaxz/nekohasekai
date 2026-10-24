@@ -1,5 +1,7 @@
 # Hysteria2 is transport only; Shadowsocks runs inside it
 
+Superseded for the active deployment by [ADR 0005](0005-retire-hysteria2.md). This design is preserved for the deferred investigation in [issue #65](https://github.com/minlaxz/nekohasekai/issues/65).
+
 The Hysteria2 transport (#22) has one shared password and carries Shadowsocks inside it. On the server, traffic from the Hysteria2 inbound may reach only the local Shadowsocks inbound; everything else is rejected. We chose this so that the PSK stays the gate and Managed users stay the only per-user identity: quota, user create and user delete keep working through ssm-api with no sing-box restart. This is the same pattern as ShadowTLS.
 
 The cost is deliberate: traffic is encrypted twice, and each UDP packet loses about 55 bytes to the Shadowsocks header. Do not "simplify" the path by removing the inner Shadowsocks layer.

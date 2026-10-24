@@ -1,6 +1,6 @@
 # nekohasekai
 
-Self-hosted [sing-box](https://github.com/SagerNet/sing-box) server plus a small API that hands out per-user client profiles. Built to get around Myanmar internet restrictions. Clients reach it through two Transports, ShadowTLS v3 (TCP) and Hysteria2 (UDP), each carrying Shadowsocks for both TCP and UDP. Shadowsocks itself is never exposed on the internet.
+Self-hosted [sing-box](https://github.com/SagerNet/sing-box) server plus a small API that hands out per-user client profiles. Built to get around Myanmar internet restrictions. Clients reach it through ShadowTLS v3 (TCP), carrying Shadowsocks for both TCP and UDP. Shadowsocks itself is never exposed on the internet.
 
 The repository name comes from the author of sing-box. Please consider supporting the original project ❤️
 
@@ -18,10 +18,12 @@ Images are built by GitHub Actions on push to `master`.
 
 ## How it works
 
-- **Server** runs three inbounds: Shadowsocks (loopback only; per-user PSK, managed by sing-box's ssm-api), ShadowTLS v3 (one shared handshake password, detours into Shadowsocks), and Hysteria2 (QUIC with Salamander obfuscation, one shared password, routed to the Shadowsocks inbound and nowhere else). ShadowTLS and Hysteria2 are transport only. All user identity lives in Shadowsocks.
+- **Server** runs two inbounds: Shadowsocks (loopback only; per-user PSK, managed by sing-box's ssm-api) and ShadowTLS v3 (one shared handshake password, detours into Shadowsocks). ShadowTLS is transport only. All user identity lives in Shadowsocks.
 - **Client profile** (`/c`) is built from `scaffolds/client/*.json`. The API fills in log level, DNS, and the user's PSK. Everything else is served as-is. `/i` wraps that into a `sing-box://import-remote-profile` link.
-- **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. It also writes the Hysteria2 passwords once and generates a self-signed certificate once; the client template carries that certificate as its trust anchor. Every start re-detects the public IPv4 and writes it into the client template.
+- **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. Every start re-detects the public IPv4 and writes it into the client template.
 - **Users** live in `users.json`. The API mirrors them into ssm-api at startup and every minute (expired and disabled users out, live users in) and keeps the file in sync through `/ssm/create`, `/ssm/renew`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete`.
+
+Client profiles keep the `shadowsocks-uot` outbound for Shadowsocks over ShadowTLS with UDP-over-TCP. They expose two groups: `All Outbounds`, a URL test over `direct` and `shadowsocks-uot`, and `Remote DNS Detour`, a selector over the same two options that defaults to `direct`. Proxied routes, rule-set downloads, Mesh, and WARP use `shadowsocks-uot` directly, so they cannot select the direct path through `All Outbounds`.
 
 ## Deploy
 
@@ -41,9 +43,6 @@ Edit `.env`:
 | `SHADOWSOCKS_PORT` | yes | Shadowsocks inbound, loopback only, not published |
 | `SHADOWSOCKS_PASSWORD` | yes | SS-2022 server PSK, exactly 16 bytes: `openssl rand -base64 16` |
 | `SHADOWTLS_PORT` | yes | ShadowTLS inbound, published TCP |
-| `HYSTERIA2_PORT` | yes | Hysteria2 inbound, published UDP only |
-| `HYSTERIA2_PASSWORD` | yes | Shared Hysteria2 password |
-| `HYSTERIA2_OBFS_PASSWORD` | yes | Shared Salamander obfuscation password |
 | `SHADOWTLS_SNI` | yes | Domain the handshake imitates, e.g. `mozilla.org` |
 | `SHADOWTLS_PASSWORD` | yes | Shared handshake password |
 | `PUBLIC_IP` | no | Skips auto-detection |
@@ -53,13 +52,13 @@ Edit `.env`:
 | `APP_CORS_ORIGINS` | no | Extra browser origins allowed to call the API, comma-separated |
 | `APP_DEFAULT_*` | no | Defaults for `/c` query parameters |
 
-The four `*_PASSWORD` values are shared by every client (per-user auth is the Shadowsocks PSK). Generate `SHADOWSOCKS_PASSWORD` with `openssl rand -base64 16` and the other three with:
+The server and ShadowTLS passwords are shared by every client (per-user auth is the Shadowsocks PSK). Generate `SHADOWSOCKS_PASSWORD` with `openssl rand -base64 16` and `SHADOWTLS_PASSWORD` with:
 
 ```sh
 openssl rand -base64 32
 ```
 
-`docker compose up` refuses to start sing-box while any of the seven required values is empty.
+`docker compose up` refuses to start sing-box while any of the five required transport values is empty.
 
 Then:
 
@@ -69,7 +68,7 @@ docker compose up -d                       # sing-box + API; TLS ingress is the 
 docker compose logs sing-box | grep entrypoint
 ```
 
-Expect `configured ports ...` and `configured hysteria2 ...` on first start and `public ip x.x.x.x` on every start.
+Expect `configured ports ...` on first start and `public ip x.x.x.x` on every start.
 
 ### Upgrade
 
@@ -77,13 +76,26 @@ Expect `configured ports ...` and `configured hysteria2 ...` on first start and 
 docker compose pull && docker compose up -d
 ```
 
-That is the whole upgrade path. The image carries the configs: every start copies the client template (`route.json`, `dns.json`, `inbounds.json`, ...) from the image into the volume, so rule and DNS changes land without touching it. `client/outbounds.json`, `server/`, and `cache/` persist; outbounds the image adds (new tags) are appended to `outbounds.json` on start, existing entries stay as they are.
+For deployments already using only ShadowTLS, that is the whole upgrade path. The image carries the configs: every start copies the client template (`route.json`, `dns.json`, `inbounds.json`, ...) from the image into the volume, so rule and DNS changes land without touching it. `client/outbounds.json`, `server/`, and `cache/` persist; outbounds the image adds (new tags) are appended to `outbounds.json` on start, existing entries stay as they are.
 
 `git pull` on the server is only needed when `docker-compose.yaml` changes or `.env` gains a new variable.
 
-**Upgrading a server deployed before Hysteria2:** add `HYSTERIA2_PORT`, `HYSTERIA2_PASSWORD` and `HYSTERIA2_OBFS_PASSWORD` to `.env`, open that UDP port in the VPS firewall, then `git pull && docker compose pull && docker compose up -d`. The next start adds the Hysteria2 inbound, its route rules, and the client outbounds to the existing volume and logs `configured hysteria2 ...`. Existing ports, SNI, and passwords stay as they are. Users get the new outbound when their client refreshes its profile.
+**Retiring Hysteria2 from an existing deployment:** use the updated Compose file and rebuild the config volume once after pulling images that include the retirement:
 
-Ports, SNI, the ShadowTLS and Hysteria2 passwords, and the Hysteria2 certificate are written once. To change them, remove the volume:
+```sh
+git pull
+docker compose pull
+docker compose down -v
+docker compose up -d
+```
+
+This resets generated configs, cached users, and traffic counters. The host's `.env` and `users.json` survive; the API restores users recorded in `users.json`, but users held only in the old cache are lost. Keep the same ShadowTLS and Shadowsocks values in `.env`. Remove the unused `HYSTERIA2_*` values and close the old UDP port in the VPS firewall. Clients pinned to Hysteria2 must switch to ShadowTLS or refresh their profile. Without the volume rebuild, persistent server and client configs retain the old transport entries.
+
+Hysteria2 was retired because the operator observed delayed or failed connections when first opening the VPN and lower stability than ShadowTLS. The cause is still unknown; follow-up is tracked in [issue #65](https://github.com/minlaxz/nekohasekai/issues/65). All Hysteria2 docs and research are retained, including the [previous deployment instructions](docs/research/hysteria2-deployment-before-retirement.md), for a possible return later.
+
+**Outbound naming cleanup ([issue #67](https://github.com/minlaxz/nekohasekai/issues/67)):** set `APP_DEFAULT_DNS_DETOUR=shadowsocks-uot` in the existing `.env`, and change any profile URL using `dd=Proxy` to `dd=shadowsocks-uot`. The `Proxy` group is removed and `All` is now `All Outbounds`. Rebuild the config volume with the procedure above, then refresh cached client profiles. If deploying both the Hysteria2 retirement and naming cleanup together, rebuild once using images containing both changes. Init only appends outbound tags to existing volumes; without the rebuild, the old groups and Remote DNS Detour options remain.
+
+Ports, SNI, the Server PSK, and the ShadowTLS password are written once. To change them, remove the volume:
 
 ```sh
 docker compose down && docker volume rm sing-box_sing-box-configs && docker compose up -d
@@ -107,7 +119,7 @@ headscale preauthkeys create --user alice --reusable --expiration 1y
 
 A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username, `control_url` from `APP_TS_CONTROL_URL`) and `100.64.0.0/10` routed into it. A user without one gets no endpoint and no such rule.
 
-Optional `warp_key` and `warp_ipv6` (WARP key): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `Proxy`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in the rule set at `r6` (same format and hosts as `r`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `dv=6` or without a key, no endpoint and none of these rules.
+Optional `warp_key` and `warp_ipv6` (WARP key): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `shadowsocks-uot`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in the rule set at `r6` (same format and hosts as `r`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `dv=6` or without a key, no endpoint and none of these rules.
 
 - Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
@@ -122,7 +134,7 @@ Everything under `/ssm` needs HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD
 
 Changes made through `/ssm/create`, `/ssm/renew`, `/ssm/expiry`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete` take effect immediately. No restart needed.
 
-Editing `users.json` by hand is picked up at API startup and by the minute sweep, but only for a file edited in place: most editors replace the file, and the container keeps the old one (see below). The sweep adds live users and removes expired ones; it never deletes ssm-api users the file does not know and never changes a password. Don't use `down -v`: it wipes the volume (traffic stats, ssm cache).
+Editing `users.json` by hand is picked up at API startup and by the minute sweep, but only for a file edited in place: most editors replace the file, and the container keeps the old one (see below). The sweep adds live users and removes expired ones; it never deletes ssm-api users the file does not know and never changes a password. For routine user edits, avoid `down -v`: it wipes traffic stats and the ssm cache. The one-time Hysteria2 retirement above deliberately rebuilds that volume.
 
 | Hand edit | Apply with |
 |---|---|
@@ -144,8 +156,8 @@ No Docker needed for the fast loop:
 cd api && uv run --with 'fastapi[standard]' --with httpx --with apscheduler fastapi dev app/main.py
 
 # Entrypoint, against a scratch dir with a stubbed sing-box
-SING_BOX_ROOT=/path/to/scratch SHADOWSOCKS_PORT=1 SHADOWSOCKS_PASSWORD=$(openssl rand -base64 16) SHADOWTLS_PORT=2 HYSTERIA2_PORT=3 \
-  SHADOWTLS_SNI=x SHADOWTLS_PASSWORD=y HYSTERIA2_PASSWORD=h HYSTERIA2_OBFS_PASSWORD=o \
+SING_BOX_ROOT=/path/to/scratch SHADOWSOCKS_PORT=1 SHADOWSOCKS_PASSWORD=$(openssl rand -base64 16) SHADOWTLS_PORT=2 \
+  SHADOWTLS_SNI=x SHADOWTLS_PASSWORD=y \
   PUBLIC_IP=1.2.3.4 sh scaffolds/entrypoint.sh
 
 # Tests. SING_BOX is optional; it adds `sing-box check` on the generated Server config.

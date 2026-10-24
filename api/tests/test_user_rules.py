@@ -82,7 +82,7 @@ def test_apply_extends_exactly_the_proxy_rule():
             walk(child)
 
     for rule in route["rules"]:
-        if rule.get("outbound") == "Proxy":
+        if rule.get("outbound") == "shadowsocks-uot":
             walk(rule)
     want = {"domain_suffix": ["gstatic.com", "x.com"], "domain_keyword": ["google"]}
     assert hits == [want]
@@ -90,7 +90,7 @@ def test_apply_extends_exactly_the_proxy_rule():
 
 def test_apply_without_target_list_is_500():
     with pytest.raises(HTTPException) as exc:
-        apply_user_rules({"rules": [{"outbound": "Proxy", "clash_mode": "Full"}]}, {"domain_suffix": ["x.com"]})
+        apply_user_rules({"rules": [{"outbound": "shadowsocks-uot", "clash_mode": "Full"}]}, {"domain_suffix": ["x.com"]})
     assert exc.value.status_code == 500
 
 
