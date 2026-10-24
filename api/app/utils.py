@@ -343,7 +343,7 @@ class Reader(Checker):
         outbounds = self._section("outbounds")
         for ob in outbounds:
             if ob.get("type") != "shadowsocks":
-                continue  # ShadowTLS password and Hysteria2 secrets are shared, set by Init
+                continue  # ShadowTLS password is shared, set by Init
             # SIP022 `iPSK:uPSK`; Init wrote the server PSK into the template's `password`
             ob["password"] = f"{ob['password']}:{client_key(self.psk)}"
         return outbounds

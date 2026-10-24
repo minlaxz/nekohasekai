@@ -56,9 +56,9 @@ def _outbounds(tmp_path, monkeypatch):
 
 def test_profile_outbounds_carry_server_and_derived_key(tmp_path, monkeypatch):
     obs = _outbounds(tmp_path, monkeypatch)
-    for tag in ("shadowsocks-uot", "shadowsocks-hy2"):
-        assert obs[tag]["method"] == "2022-blake3-aes-128-gcm"
-        assert obs[tag]["password"] == "server-psk:+sA1Rl+PHSeeDd8nD0MlIg=="
+    ss = obs["shadowsocks-uot"]
+    assert ss["method"] == "2022-blake3-aes-128-gcm"
+    assert ss["password"] == "server-psk:+sA1Rl+PHSeeDd8nD0MlIg=="
 
 
 class _Resp:
