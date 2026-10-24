@@ -23,6 +23,8 @@ Images are built by GitHub Actions on push to `master`.
 - **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. Every start re-detects the public IPv4 and writes it into the client template.
 - **Users** live in `users.json`. The API mirrors them into ssm-api at startup and every minute (expired and disabled users out, live users in) and keeps the file in sync through `/ssm/create`, `/ssm/renew`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete`.
 
+Client profiles keep the `shadowsocks-uot` outbound for Shadowsocks over ShadowTLS with UDP-over-TCP. They expose two groups: `All Outbounds`, a URL test over `direct` and `shadowsocks-uot`, and `Remote DNS Detour`, a selector over the same two options that defaults to `direct`. Proxied routes, rule-set downloads, Mesh, and WARP use `shadowsocks-uot` directly, so they cannot select the direct path through `All Outbounds`.
+
 ## Deploy
 
 Prerequisites: Docker with the Compose plugin. Swap is strongly recommended on a 512 MB VPS (see below).
@@ -91,6 +93,8 @@ This resets generated configs, cached users, and traffic counters. The host's `.
 
 Hysteria2 was retired because the operator observed delayed or failed connections when first opening the VPN and lower stability than ShadowTLS. The cause is still unknown; follow-up is tracked in [issue #65](https://github.com/minlaxz/nekohasekai/issues/65). All Hysteria2 docs and research are retained, including the [previous deployment instructions](docs/research/hysteria2-deployment-before-retirement.md), for a possible return later.
 
+**Outbound naming cleanup ([issue #67](https://github.com/minlaxz/nekohasekai/issues/67)):** set `APP_DEFAULT_DNS_DETOUR=shadowsocks-uot` in the existing `.env`, and change any profile URL using `dd=Proxy` to `dd=shadowsocks-uot`. The `Proxy` group is removed and `All` is now `All Outbounds`. Rebuild the config volume with the procedure above, then refresh cached client profiles. If deploying both the Hysteria2 retirement and naming cleanup together, rebuild once using images containing both changes. Init only appends outbound tags to existing volumes; without the rebuild, the old groups and Remote DNS Detour options remain.
+
 Ports, SNI, the Server PSK, and the ShadowTLS password are written once. To change them, remove the volume:
 
 ```sh
@@ -115,7 +119,7 @@ headscale preauthkeys create --user alice --reusable --expiration 1y
 
 A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username, `control_url` from `APP_TS_CONTROL_URL`) and `100.64.0.0/10` routed into it. A user without one gets no endpoint and no such rule.
 
-Optional `warp_key` and `warp_ipv6` (WARP key): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `Proxy`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in the rule set at `r6` (same format and hosts as `r`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `dv=6` or without a key, no endpoint and none of these rules.
+Optional `warp_key` and `warp_ipv6` (WARP key): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `shadowsocks-uot`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in the rule set at `r6` (same format and hosts as `r`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `dv=6` or without a key, no endpoint and none of these rules.
 
 - Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`

@@ -33,17 +33,7 @@
     },
     {
       "type": "urltest",
-      "tag": "Proxy",
-      "outbounds": [
-        "shadowsocks-uot"
-      ],
-      "url": "https://www.gstatic.com/generate_204",
-      "interval": "30s",
-      "tolerance": 100
-    },
-    {
-      "type": "urltest",
-      "tag": "All",
+      "tag": "All Outbounds",
       "outbounds": [
         "direct",
         "shadowsocks-uot"
@@ -57,7 +47,7 @@
       "tag": "Remote DNS Detour",
       "outbounds": [
         "direct",
-        "Proxy"
+        "shadowsocks-uot"
       ],
       "default": "direct",
       "interrupt_exist_connections": true
