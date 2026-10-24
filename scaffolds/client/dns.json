@@ -16,7 +16,7 @@
         "tag": "dns-resolver",
         "type": "udp",
         "server": "1.1.1.1",
-        "detour": "Proxy"
+        "detour": "shadowsocks-uot"
       },
       {
         "tag": "dns-resolver-bypass",

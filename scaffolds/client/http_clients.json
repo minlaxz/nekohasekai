@@ -2,7 +2,7 @@
   "http_clients": [
     {
       "tag": "proxy",
-      "detour": "Proxy"
+      "detour": "shadowsocks-uot"
     },
     {
       "tag": "direct"

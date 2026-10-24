@@ -15,7 +15,7 @@
       "advertise_tags": [],
       "system_interface": false,
       "udp_timeout": "5m",
-      "detour": "Proxy"
+      "detour": "shadowsocks-uot"
     },
     {
       "type": "wireguard",
@@ -36,7 +36,7 @@
           ]
         }
       ],
-      "detour": "Proxy"
+      "detour": "shadowsocks-uot"
     }
   ]
 }

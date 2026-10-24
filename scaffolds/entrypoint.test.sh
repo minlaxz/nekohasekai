@@ -63,12 +63,14 @@ grep -q "16 base64-encoded bytes" "$tmp/err" || { echo "entrypoint.test: FAIL wr
 
 run "$root" 1111
 is "$out" "$(ob shadowtls) | [.server, .server_port, .tls.server_name, .password]" '[1.2.3.4,2222,x.org,pw]'
-is "$out" '[.outbounds[].tag]' '[shadowsocks-uot,shadowtls,direct,Proxy,All,Remote DNS Detour]'
+is "$out" '[.outbounds[].tag]' '[shadowsocks-uot,shadowtls,direct,All Outbounds,Remote DNS Detour]'
 is "$root/server/inbounds.json" '.inbounds[0] | [.tag, .listen]' '[shadowsocks,127.0.0.1]'
 is "$root/server/route.json" '.route.rules[0]' '{inbound:shadowsocks,ip_is_private:true,action:reject}'
 is "$root/server/inbounds.json" '[.inbounds[].tag]' '[shadowsocks,shadowtls]'
-is "$out" "$(ob Proxy) | .outbounds" '[shadowsocks-uot]'
-is "$out" "$(ob All) | .outbounds" '[direct,shadowsocks-uot]'
+is "$out" "$(ob 'All Outbounds') | .outbounds" '[direct,shadowsocks-uot]'
+is "$out" "$(ob 'Remote DNS Detour') | [.outbounds, .default, .interrupt_exist_connections]" '[[direct,shadowsocks-uot],direct,true]'
+is "$root/client/dns.json" '.dns.servers[] | select(.tag == "dns-resolver").detour' shadowsocks-uot
+is "$root/client/http_clients.json" '.http_clients[] | select(.tag == "proxy").detour' shadowsocks-uot
 is "$out" "$(ob shadowsocks-uot) | [.detour, .udp_over_tcp.enabled]" '[shadowtls,true]'
 no hysteria2 "$root/server/inbounds.json" "$root/server/route.json" "$out"
 ss2022_ok "$root"
