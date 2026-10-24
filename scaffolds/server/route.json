@@ -2,17 +2,6 @@
   "route": {
     "rules": [
       {
-        "inbound": "hysteria2",
-        "ip_cidr": ["127.0.0.1/32"],
-        "port": 0,
-        "action": "route",
-        "outbound": "direct-out"
-      },
-      {
-        "inbound": "hysteria2",
-        "action": "reject"
-      },
-      {
         "inbound": "shadowsocks",
         "ip_is_private": true,
         "action": "reject"
