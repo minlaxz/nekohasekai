@@ -22,6 +22,7 @@ class User(SQLModel, table=True):
     ts_auth_key: Optional[str] = None  # Mesh key
     warp_key: Optional[str] = None
     warp_ipv6: Optional[str] = None
+    last_fetch: Optional[str] = None  # ISO UTC instant of the last Profile config delivered by /c
 
 
 # check_same_thread: async routes use it on the event loop, sync routes (/c) from the threadpool.
