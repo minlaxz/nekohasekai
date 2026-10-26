@@ -47,7 +47,7 @@ def client(monkeypatch, user_store):
 
 
 def _store_names(client):
-    return [u["name"] for u in store.all()]
+    return [u["name"] for u in store.records()]
 
 
 # --- auth -------------------------------------------------------------------

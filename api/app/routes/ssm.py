@@ -137,7 +137,7 @@ def is_out(entry: Dict[str, Any], now: datetime) -> bool:
 async def proxy_server_users(request: Request):
     stats: List[Dict[str, Any]] = await get_stats()
     now = _now()
-    by_name = {u["name"]: u for u in store.all()}
+    by_name = {u["name"]: u for u in store.records()}
     for row in stats:
         entry = by_name.get(row["username"], {})
         row["expires_at"] = entry.get("expires_at")
@@ -209,7 +209,7 @@ async def reconcile_users() -> None:
     """ssm-api mirrors the User records: Expired and Disabled users out, live users in.
     ssm-api users with no User record are left alone."""
     now = _now()
-    users = store.all()
+    users = store.records()
     existing = await _upstream_usernames()
     added, removed = [], []
     for u in users:
@@ -291,6 +291,8 @@ async def renew_user(request: Request, username: Username, months: RenewMonths):
     current = _expiry_of(entry)
     start = current if current is not None and current > now else now
     entry = store.update(username, expires_at=add_months(start, months).isoformat())
+    if entry is None:  # deleted meanwhile
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     await reconcile_users()
 
     if wants_html(request):
@@ -312,9 +314,6 @@ async def renew_user(request: Request, username: Username, months: RenewMonths):
     responses={400: {"description": "Invalid username or expires_at"}, 404: {"description": "Unknown username"}},
 )
 async def set_expiry(request: Request, username: Username, expires_at: Annotated[str, Form()] = ""):
-    if store.get(username) is None:
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
-
     value = expires_at.strip()
     if value:
         try:
@@ -329,6 +328,8 @@ async def set_expiry(request: Request, username: Username, expires_at: Annotated
             ])
         value = (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
     entry = store.update(username, expires_at=value or None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     await reconcile_users()
 
     if wants_html(request):
@@ -347,7 +348,8 @@ async def _set_disabled(request: Request, username: str, disabled: bool):
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     if disabled:
         _refuse_admin(entry, username)
-    store.update(username, disabled=disabled)
+    if store.update(username, disabled=disabled) is None:  # deleted meanwhile
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     await reconcile_users()
 
     if wants_html(request):

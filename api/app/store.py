@@ -38,7 +38,7 @@ def get(name: str) -> Optional[Dict[str, Any]]:
         return u.model_dump() if u else None
 
 
-def all() -> List[Dict[str, Any]]:
+def records() -> List[Dict[str, Any]]:
     with _session() as s:
         return [u.model_dump() for u in s.exec(select(User).order_by(User.name))]
 
