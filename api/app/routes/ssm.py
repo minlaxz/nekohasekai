@@ -1,5 +1,4 @@
 import calendar
-import json
 import logging
 import os
 import secrets
@@ -8,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Dict, List, Optional
 
 import httpx
+from app import store
 from app.auth import require_admin
 from app.utils import get_stats, ssm_key
 from fastapi import APIRouter, Depends, Form, HTTPException
@@ -21,12 +21,11 @@ router = APIRouter(dependencies=[Depends(require_admin)], tags=["admin"])
 
 APP_HOST: str = os.getenv("APP_HOST", "www.gstatic.com")
 APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
-APP_USERS_PATH = os.getenv("APP_INTERNAL_USERS_PATH", "/users.json")
 
 templates = Jinja2Templates(directory="templates")
 
 # Last fetch: username -> ISO UTC instant of the last Profile config delivered by /c.
-# In memory only; lost on restart (never written to users.json).
+# In memory only; lost on restart (never written to the User record).
 LAST_FETCH: Dict[str, str] = {}
 
 
@@ -132,13 +131,13 @@ def is_out(entry: Dict[str, Any], now: datetime) -> bool:
     description=(
         "HTML table for browsers; JSON with `Accept: application/json`. Every row carries "
         "`expires_at` (null = never), `expired`, `disabled` and `last_fetch` (null = no fetch since API start); Expired and Disabled users are listed from "
-        "users.json with no traffic."
+        "their User records with no traffic."
     ),
 )
 async def proxy_server_users(request: Request):
     stats: List[Dict[str, Any]] = await get_stats()
     now = _now()
-    by_name = {u["name"]: u for u in _read_users()["users"]}
+    by_name = {u["name"]: u for u in store.all()}
     for row in stats:
         entry = by_name.get(row["username"], {})
         row["expires_at"] = entry.get("expires_at")
@@ -163,7 +162,7 @@ async def proxy_server_users(request: Request):
     return {"users": stats}
 
 
-# --- ssm-api and Users file -------------------------------------------------
+# --- ssm-api and User records -------------------------------------------------
 
 
 def create_upsk() -> str:
@@ -182,8 +181,7 @@ async def _upstream_usernames() -> set[str]:
 
 
 async def _user_exists(username: str) -> bool:
-    in_file = any(u.get("name") == username for u in _read_users()["users"])
-    return in_file or username in await _upstream_usernames()
+    return store.get(username) is not None or username in await _upstream_usernames()
 
 
 async def create_user_in_memory(username: str, uPSK: str):
@@ -197,22 +195,6 @@ async def create_user_in_memory(username: str, uPSK: str):
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
 
 
-def _read_users() -> Dict[str, Any]:
-    with open(APP_USERS_PATH, "r") as f:
-        return json.load(f)
-
-
-def _write_users(users: Dict[str, Any]) -> None:
-    with open(APP_USERS_PATH, "w") as f:
-        json.dump(users, f, indent=2)
-
-
-async def create_user_in_file(username: str, uPSK: str, expires_at: str):
-    users = _read_users()
-    users["users"].append({"name": username, "password": uPSK, "admin": False, "expires_at": expires_at})
-    _write_users(users)
-
-
 async def delete_user_in_memory(username: str):
     async with httpx.AsyncClient(timeout=5) as client:
         try:
@@ -223,28 +205,11 @@ async def delete_user_in_memory(username: str):
             raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
 
 
-async def delete_user_in_file(username: str):
-    users = _read_users()
-    users["users"] = [u for u in users["users"] if u.get("name") != username]
-    _write_users(users)
-
-
-def _warn_duplicate_psks(users: List[Dict[str, Any]]) -> None:
-    """SS-2022 identifies a user by key, not by name: two entries with one PSK are one user to
-    sing-box (last name wins, stats merge, Expiry on one does nothing). Rotate one of them."""
-    by_psk: Dict[str, List[str]] = {}
-    for u in users:
-        by_psk.setdefault(u["password"], []).append(u["name"])
-    for names in by_psk.values():
-        if len(names) > 1:
-            logging.warning(f"users.json: duplicate PSK shared by {names}; sing-box treats them as one user")
-
-
 async def reconcile_users() -> None:
-    """ssm-api mirrors users.json: Expired and Disabled users out, live users in. Users unknown to the file are left alone."""
+    """ssm-api mirrors the User records: Expired and Disabled users out, live users in.
+    ssm-api users with no User record are left alone."""
     now = _now()
-    users = _read_users()["users"]
-    _warn_duplicate_psks(users)
+    users = store.all()
     existing = await _upstream_usernames()
     added, removed = [], []
     for u in users:
@@ -256,12 +221,12 @@ async def reconcile_users() -> None:
             try:
                 key = ssm_key(u["password"])
             except ValueError as exc:  # ssm-api keeps a user whose key fails to apply: never post it
-                logging.error(f"users.json reconcile: skipping {u['name']}: {exc}")
+                logging.error(f"reconcile: skipping {u['name']}: {exc}")
                 continue
             await create_user_in_memory(u["name"], key)
             added.append(u["name"])
     if added or removed:
-        logging.info(f"users.json reconcile: added {added}, removed {removed}")
+        logging.info(f"reconcile: added {added}, removed {removed}")
 
 
 # --- Admin routes -----------------------------------------------------------
@@ -291,7 +256,7 @@ async def create_user(request: Request, username: Username, months: Months = 0):
     uPSK = create_upsk()  # what the user holds; ssm-api gets the derived SS-2022 key (#24)
     expires_at = (add_months(_now(), months) + timedelta(days=TRIAL_DAYS)).isoformat()
     await create_user_in_memory(username, ssm_key(uPSK))
-    await create_user_in_file(username, uPSK, expires_at)
+    store.add(name=username, password=uPSK, expires_at=expires_at)
 
     import_url = f"https://{APP_HOST}/i?j={username}&k={uPSK}"
     config_url = f"https://{APP_HOST}/c?j={username}&k={uPSK}"
@@ -313,21 +278,19 @@ async def create_user(request: Request, username: Username, months: Months = 0):
     description=(
         "Form-encoded `username` and `months` (1 to 6). Pushes Expiry forward by that many calendar months, "
         "counted from the current Expiry, or from now if the user is expired or has no Expiry. No Trial period. "
-        "An Expired user is put back into ssm-api with the same PSK. 404 if the user is not in users.json."
+        "An Expired user is put back into ssm-api with the same PSK. 404 if the user has no User record."
     ),
     responses={400: {"description": "Invalid username or months"}, 404: {"description": "Unknown username"}},
 )
 async def renew_user(request: Request, username: Username, months: RenewMonths):
-    users = _read_users()
-    entry = next((u for u in users["users"] if u.get("name") == username), None)
+    entry = store.get(username)
     if entry is None:
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
 
     now = _now()
     current = _expiry_of(entry)
     start = current if current is not None and current > now else now
-    entry["expires_at"] = add_months(start, months).isoformat()
-    _write_users(users)
+    entry = store.update(username, expires_at=add_months(start, months).isoformat())
     await reconcile_users()
 
     if wants_html(request):
@@ -344,14 +307,12 @@ async def renew_user(request: Request, username: Username, months: RenewMonths):
     description=(
         "Form-encoded `username` and `expires_at`: an ISO 8601 instant (no zone = UTC), or empty to never expire. "
         "Takes effect at once: a past instant removes the user from ssm-api, a future one or empty puts them back "
-        "with the same PSK. Browser form submits are redirected to the stats page. 404 if the user is not in users.json."
+        "with the same PSK. Browser form submits are redirected to the stats page. 404 if the user has no User record."
     ),
     responses={400: {"description": "Invalid username or expires_at"}, 404: {"description": "Unknown username"}},
 )
 async def set_expiry(request: Request, username: Username, expires_at: Annotated[str, Form()] = ""):
-    users = _read_users()
-    entry = next((u for u in users["users"] if u.get("name") == username), None)
-    if entry is None:
+    if store.get(username) is None:
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
 
     value = expires_at.strip()
@@ -366,15 +327,13 @@ async def set_expiry(request: Request, username: Username, expires_at: Annotated
                     "type": "value_error.invalid",
                 }
             ])
-        entry["expires_at"] = (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
-    else:
-        entry.pop("expires_at", None)
-    _write_users(users)
+        value = (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
+    entry = store.update(username, expires_at=value or None)
     await reconcile_users()
 
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
-    return ExpirySet(username=username, expires_at=entry.get("expires_at"))
+    return ExpirySet(username=username, expires_at=entry["expires_at"])
 
 
 def _refuse_admin(entry: Optional[Dict[str, Any]], username: str) -> None:
@@ -383,16 +342,12 @@ def _refuse_admin(entry: Optional[Dict[str, Any]], username: str) -> None:
 
 
 async def _set_disabled(request: Request, username: str, disabled: bool):
-    users = _read_users()
-    entry = next((u for u in users["users"] if u.get("name") == username), None)
+    entry = store.get(username)
     if entry is None:
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     if disabled:
         _refuse_admin(entry, username)
-        entry["disabled"] = True
-    else:
-        entry.pop("disabled", None)
-    _write_users(users)
+    store.update(username, disabled=disabled)
     await reconcile_users()
 
     if wants_html(request):
@@ -406,8 +361,8 @@ async def _set_disabled(request: Request, username: str, disabled: bool):
     summary="Disable a Managed user",
     description=(
         "Form-encoded `username`. Removes the user from ssm-api and keeps them out until enabled; "
-        "the users.json entry, PSK and Expiry are kept. Renewal does not enable. Repeat calls are no-ops. "
-        "Browser form submits are redirected to the stats page. 404 if the user is not in users.json, "
+        "the User record, PSK and Expiry are kept. Renewal does not enable. Repeat calls are no-ops. "
+        "Browser form submits are redirected to the stats page. 404 if the user has no User record, "
         "403 for an admin entry."
     ),
     responses={403: {"description": "Admin entry"}, 404: {"description": "Unknown username"}},
@@ -423,7 +378,7 @@ async def disable_user(request: Request, username: Username):
     description=(
         "Form-encoded `username`. Puts the user back into ssm-api with the same PSK, unless they are Expired. "
         "Repeat calls are no-ops. Browser form submits are redirected to the stats page. "
-        "404 if the user is not in users.json."
+        "404 if the user has no User record."
     ),
     responses={404: {"description": "Unknown username"}},
 )
@@ -436,17 +391,17 @@ async def enable_user(request: Request, username: Username):
     response_model=DeletedUser,
     summary="Delete a Managed user",
     description=(
-        "Form-encoded `username`. Removes the user from ssm-api and users.json; the PSK is gone. "
+        "Form-encoded `username`. Removes the user from ssm-api and deletes the User record; the PSK is gone. "
         "Browser form submits are redirected to the stats page. 404 if the user is unknown, 403 for an admin entry."
     ),
     responses={403: {"description": "Admin entry"}, 404: {"description": "Unknown username"}},
 )
 async def delete_user(request: Request, username: Username):
-    _refuse_admin(next((u for u in _read_users()["users"] if u.get("name") == username), None), username)
+    _refuse_admin(store.get(username), username)
     if not await _user_exists(username):
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     await delete_user_in_memory(username)
-    await delete_user_in_file(username)
+    store.delete(username)
     LAST_FETCH.pop(username, None)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)

@@ -14,6 +14,8 @@ from typing import Any, Dict, List
 import httpx
 from fastapi import HTTPException
 
+from app import store
+
 # -------------------------------------------------------------------
 # Environment & Constants
 # -------------------------------------------------------------------
@@ -21,7 +23,6 @@ from fastapi import HTTPException
 APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
 APP_CLIENT_DIR = os.getenv("APP_INTERNAL_CLIENT_DIR", "/sing-box/client")
 APP_DEFAULT_QUOTA_IN_BYTES = int(os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "30000000000"))
-APP_USERS_PATH = os.getenv("APP_INTERNAL_USERS_PATH", "/users.json")
 APP_TS_CONTROL_URL = os.getenv("APP_TS_CONTROL_URL", "")
 HTTP_TIMEOUT = 5  # seconds
 
@@ -69,11 +70,8 @@ def load_json(path: str) -> Dict[str, Any]:
 
 
 def user_entry(username: str) -> Dict[str, Any]:
-    """The user's entry in the Users file; {} when absent."""
-    for u in load_json(APP_USERS_PATH).get("users", []):
-        if u.get("name") == username:
-            return u
-    return {}
+    """The user's User record; {} when absent."""
+    return store.get(username) or {}
 
 
 def apply_full_mode(route: Dict[str, Any], admin: bool) -> None:

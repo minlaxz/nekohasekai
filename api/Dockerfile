@@ -12,11 +12,14 @@ RUN pip install --no-cache-dir \
     uvicorn==0.40.0 \
     httpx==0.28.1 \
     python-dotenv==1.2.2 \
-    apscheduler==3.11.2
+    apscheduler==3.11.2 \
+    sqlmodel==0.0.48 \
+    alembic==1.20.1
 
 COPY . .
 
 EXPOSE 8000
 
 # See more options at https://fastapi.tiangolo.com/deployment/docker/
-CMD ["fastapi", "run", "app/main.py", "--port", "8000", "--proxy-headers"]
+# Migrations first (ADR 0006): the user store schema is current before the web server starts.
+CMD ["sh", "-c", "alembic upgrade head && exec fastapi run app/main.py --port 8000 --proxy-headers"]

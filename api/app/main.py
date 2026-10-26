@@ -66,9 +66,9 @@ async def lifespan(app: FastAPI):
         logging.critical("APP_ADMIN_PASSWORD is not set: every /ssm request will be refused")
     try:
         await reconcile_users()
-    except Exception as exc:  # ssm-api not up yet, or users.json missing
-        logging.warning(f"users.json reconcile skipped: {exc}")
-    # Expiry enforcement (ADR 0003): ssm-api mirrors users.json every minute.
+    except Exception as exc:  # ssm-api not up yet
+        logging.warning(f"reconcile skipped: {exc}")
+    # Expiry enforcement (ADR 0003): ssm-api mirrors the User records every minute.
     scheduler.add_job(reconcile_users, "interval", seconds=60)  # type: ignore
     scheduler.start()  # type: ignore
 
