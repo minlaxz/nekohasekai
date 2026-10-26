@@ -26,7 +26,7 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
     volumes:
       - sing-box-configs:/sing-box:ro
-      - ./users.json:/users.json
+      - ./data:/data  # User store (SQLite plus its journal files): back up with cp
     # Loggings and others
     labels:
       caddy: ${APP_HOST?}

@@ -184,6 +184,7 @@ git-ignored
 .DS_Store
 
 **/test_data/*
-# Runtime user store (see example-users.json)
+# Runtime users file, retired by ADR 0006 (see example-users.json)
 *.users.json
 scales
+/data/

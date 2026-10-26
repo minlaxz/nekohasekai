@@ -10,6 +10,8 @@ on:
       - "api/**/*.py"
       - "api/**/*.html"
       - "api/Dockerfile"
+      - "api/alembic.ini"
+      - "api/migrations/**"
 
 env:
   REGISTRY: ghcr.io
