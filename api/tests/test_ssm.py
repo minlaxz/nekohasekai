@@ -1,5 +1,4 @@
 import base64
-import json
 import os
 import sys
 
@@ -8,6 +7,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app.main import app  # noqa: E402
+from app import store  # noqa: E402
 from app.routes import ssm  # noqa: E402
 from app.utils import ssm_key  # noqa: E402
 
@@ -17,10 +17,8 @@ HTML = {**ADMIN, "Accept": "text/html,*/*;q=0.8"}
 
 
 @pytest.fixture
-def client(monkeypatch, tmp_path):
-    users = tmp_path / "users.json"
-    users.write_text(json.dumps({"users": [{"name": "alice", "password": "a" * 20 + "==", "admin": False}]}))
-    monkeypatch.setattr(ssm, "APP_USERS_PATH", str(users))
+def client(monkeypatch, user_store):
+    store.add(name="alice", password="a" * 20 + "==")
     monkeypatch.setattr(ssm, "APP_HOST", "vpn.example")
     monkeypatch.setenv("APP_ADMIN_PASSWORD", "secret")
     monkeypatch.delenv("APP_ADMIN_USER", raising=False)
@@ -43,14 +41,13 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setattr(ssm, "create_user_in_memory", add)
     monkeypatch.setattr(ssm, "delete_user_in_memory", remove)
     c = TestClient(app)
-    c.users_path = users
     c.upstream = upstream
     c.posted = posted
     return c
 
 
-def _file_names(client):
-    return [u["name"] for u in json.loads(client.users_path.read_text())["users"]]
+def _store_names(client):
+    return [u["name"] for u in store.records()]
 
 
 # --- auth -------------------------------------------------------------------
@@ -90,10 +87,10 @@ def test_create_json(client):
     assert len(body["uPSK"]) == 22 and body["uPSK"].endswith("==")
     assert body["import_url"] == f"https://vpn.example/i?j=bob&k={body['uPSK']}"
     assert body["config_url"] == f"https://vpn.example/c?j=bob&k={body['uPSK']}"
-    assert "bob" in client.upstream and "bob" in _file_names(client)
+    assert "bob" in client.upstream and "bob" in _store_names(client)
     # ssm-api gets the SS-2022 key; the file and the user keep `k` (#24)
     assert client.posted["bob"] == ssm_key(body["uPSK"])
-    assert json.loads(client.users_path.read_text())["users"][-1]["password"] == body["uPSK"]
+    assert store.get("bob")["password"] == body["uPSK"]
 
 
 def test_create_html_for_browser(client):
@@ -106,7 +103,7 @@ def test_create_html_for_browser(client):
 def test_create_duplicate_is_409(client):
     r = client.post("/ssm/create", data={"username": "alice"}, headers=JSON)
     assert r.status_code == 409
-    assert _file_names(client) == ["alice"]
+    assert _store_names(client) == ["alice"]
 
 
 @pytest.mark.parametrize("name", ["", "-bob", "bob!", "b" * 33, "a b"])
@@ -128,7 +125,7 @@ def test_delete(client):
     r = client.post("/ssm/delete", data={"username": "alice"}, headers=JSON)
     assert r.status_code == 200
     assert r.json() == {"deleted": "alice"}
-    assert "alice" not in client.upstream and _file_names(client) == []
+    assert "alice" not in client.upstream and _store_names(client) == []
 
 
 def test_delete_unknown_is_404(client):
@@ -213,11 +210,8 @@ def test_transparent_proxy_strips_admin_credential(client, monkeypatch):
 
 def test_reconcile_posts_derived_keys_and_skips_bad_entries(client, monkeypatch):
     k = "nj75pm4nlaslo8xm8xtK=="
-    client.users_path.write_text(json.dumps({"users": [
-        {"name": "alice", "password": "a" * 20 + "==", "admin": False},
-        {"name": "bad", "password": "insecure-user123==", "admin": False},
-        {"name": "bob", "password": k, "admin": False},
-    ]}))
+    store.add(name="bad", password="insecure-user123==")
+    store.add(name="bob", password=k)
     posted = []
 
     async def add(username, upsk):
@@ -243,19 +237,15 @@ def frozen(monkeypatch):
 
 
 def _entry(client, name):
-    return next(u for u in json.loads(client.users_path.read_text())["users"] if u["name"] == name)
+    return store.get(name)
 
 
 def _set_expiry(client, name, expires_at):
-    users = json.loads(client.users_path.read_text())
-    next(u for u in users["users"] if u["name"] == name)["expires_at"] = expires_at
-    client.users_path.write_text(json.dumps(users))
+    store.update(name, expires_at=expires_at)
 
 
 def _add_entry(client, name, **extra):
-    users = json.loads(client.users_path.read_text())
-    users["users"].append({"name": name, "password": name[0] * 20 + "==", "admin": False, **extra})
-    client.users_path.write_text(json.dumps(users))
+    store.add(name=name, password=name[0] * 20 + "==", **extra)
 
 
 def test_create_default_is_trial_only(client, frozen):
@@ -304,7 +294,7 @@ def test_reconcile_removes_expired_and_adds_live(client, frozen):
     client.upstream.add("stranger")  # in ssm-api only: left alone
     asyncio.run(ssm.reconcile_users())
     assert client.upstream == {"carol", "dan", "stranger"}
-    assert _file_names(client) == ["alice", "carol", "dan", "eve"]
+    assert _store_names(client) == ["alice", "carol", "dan", "eve"]
 
 
 def test_renew_expired_counts_from_now(client, frozen):
@@ -337,7 +327,7 @@ def test_renew_html_for_browser(client, frozen):
 def test_renew_months_out_of_range_is_400(client, months):
     r = client.post("/ssm/renew", data={"username": "alice", "months": months}, headers=JSON)
     assert r.status_code == 400
-    assert "expires_at" not in _entry(client, "alice")
+    assert _entry(client, "alice")["expires_at"] is None
 
 
 def test_renew_unknown_is_404(client):
@@ -364,14 +354,13 @@ def test_stats_lists_expired_users(client, monkeypatch, frozen):
     assert 'action="/ssm/expiry"' in html and 'value="2026-12-01T00:00"' in html
 
 
-def test_reconcile_warns_on_duplicate_psk(client, frozen, caplog):
-    _add_entry(client, "alice-mac")
-    users = json.loads(client.users_path.read_text())
-    next(u for u in users["users"] if u["name"] == "alice-mac")["password"] = "a" * 20 + "=="
-    client.users_path.write_text(json.dumps(users))
-    with caplog.at_level("WARNING"):
-        asyncio.run(ssm.reconcile_users())
-    assert "duplicate PSK shared by ['alice', 'alice-mac']" in caplog.text
+def test_store_refuses_duplicate_psk(client):
+    # SS-2022 identifies a user by key: two User records with one PSK would be one user to sing-box
+    from sqlalchemy.exc import IntegrityError
+
+    with pytest.raises(IntegrityError):
+        store.add(name="alice-mac", password="a" * 20 + "==")
+    assert _store_names(client) == ["alice"]
 
 
 # --- set expiry -------------------------------------------------------------
@@ -389,7 +378,7 @@ def test_set_expiry_empty_means_never_and_restores(client, frozen):
     client.upstream.discard("alice")
     r = client.post("/ssm/expiry", data={"username": "alice", "expires_at": ""}, headers=JSON)
     assert r.json() == {"username": "alice", "expires_at": None}
-    assert "expires_at" not in _entry(client, "alice") and "alice" in client.upstream
+    assert _entry(client, "alice")["expires_at"] is None and "alice" in client.upstream
 
 
 def test_set_expiry_keeps_explicit_zone(client, frozen):
@@ -402,7 +391,7 @@ def test_set_expiry_keeps_explicit_zone(client, frozen):
 def test_set_expiry_bad_value_is_400(client):
     r = client.post("/ssm/expiry", data={"username": "alice", "expires_at": "tomorrow"}, headers=JSON)
     assert r.status_code == 400 and "expires_at" in r.text
-    assert "expires_at" not in _entry(client, "alice")
+    assert _entry(client, "alice")["expires_at"] is None
 
 
 def test_set_expiry_unknown_is_404(client):
@@ -449,7 +438,7 @@ def test_enable_restores_user(client, frozen):
     client.post("/ssm/disable", data={"username": "alice"}, headers=JSON)
     r = client.post("/ssm/enable", data={"username": "alice"}, headers=JSON)
     assert r.json() == {"username": "alice", "disabled": False}
-    assert "alice" in client.upstream and "disabled" not in _entry(client, "alice")
+    assert "alice" in client.upstream and _entry(client, "alice")["disabled"] is False
     assert client.post("/ssm/enable", data={"username": "alice"}, headers=JSON).status_code == 200
 
 
@@ -469,7 +458,7 @@ def test_set_expiry_does_not_enable(client, frozen):
 def test_delete_memory_only_user(client):
     client.upstream.add("stranger")
     assert client.post("/ssm/delete", data={"username": "stranger"}, headers=JSON).status_code == 200
-    assert "stranger" not in client.upstream and _file_names(client) == ["alice"]
+    assert "stranger" not in client.upstream and _store_names(client) == ["alice"]
 
 
 def test_delete_admin_not_in_ssm_api_is_403(client):
@@ -495,7 +484,7 @@ def test_admin_entry_is_403(client, path):
     _add_entry(client, "root", admin=True)
     client.upstream.add("root")
     assert client.post(path, data={"username": "root"}, headers=JSON).status_code == 403
-    assert "root" in client.upstream and "root" in _file_names(client)
+    assert "root" in client.upstream and "root" in _store_names(client)
 
 
 @pytest.mark.parametrize("path", ["/ssm/disable", "/ssm/enable", "/ssm/delete"])

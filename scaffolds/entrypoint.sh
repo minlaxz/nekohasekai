@@ -75,7 +75,7 @@ fi
 # The server PSK comes from .env and is written to the inbound and to the client Shadowsocks
 # outbound; the API appends ":<user key>" per Profile config. The ssm-api cache holds users under
 # their old keys, which the new method cannot decode, so it is reset; the API reseeds every user
-# from users.json on its next start (traffic counters restart from zero).
+# from its User records on its next start (traffic counters restart from zero).
 if [ ! -f "$ROOT/server/.ss2022" ]; then
     method=$(jq -r '.inbounds[0].method' "$DEFAULTS/server/inbounds.json")
     jqi "$SERVER_IN" --arg m "$method" --arg pw "$SHADOWSOCKS_PASSWORD" \

@@ -86,13 +86,13 @@ def test_profile_uses_shadowtls_only(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("with_endpoints", [False, True])
-def test_profile_references_existing_outbounds_and_keeps_proxy_detours(monkeypatch, with_endpoints):
+def test_profile_references_existing_outbounds_and_keeps_proxy_detours(monkeypatch, user_store, with_endpoints):
     monkeypatch.setattr(utils, "APP_CLIENT_DIR", CLIENT)
     monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
     user = {"admin": True}
     if with_endpoints:
         user.update(ts_auth_key="ts-key", warp_key="wg-key", warp_ipv6="2606:4700::1/128")
-    monkeypatch.setattr(utils, "user_entry", lambda username: user)
+    user_store.add(name="alice", password="a" * 20 + "==", **user)
     monkeypatch.setattr(utils, "APP_TS_CONTROL_URL", "https://hs.example")
     reader = utils.Reader(
         username="alice", psk="a" * 20 + "==", log_level="warn",
@@ -120,6 +120,8 @@ def test_profile_references_existing_outbounds_and_keeps_proxy_detours(monkeypat
     full = next(r for r in config["route"]["rules"] if r.get("clash_mode") == "Full")
     assert full["outbound"] == "shadowsocks-uot"
     assert all(ep["detour"] == "shadowsocks-uot" for ep in config.get("endpoints", []))
+    # Mesh and WARP keys come from the User record
+    assert {ep["tag"] for ep in config.get("endpoints", [])} == ({"ts-ep", "warp-ep"} if with_endpoints else set())
 
 
 class _Resp:
