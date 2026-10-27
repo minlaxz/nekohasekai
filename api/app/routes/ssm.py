@@ -1,4 +1,6 @@
 import calendar
+import csv
+import io
 import logging
 import os
 import secrets
@@ -13,7 +15,7 @@ from app.utils import get_stats, ssm_key
 from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
@@ -159,6 +161,36 @@ async def proxy_server_users(request: Request):
 
 
 # --- ssm-api and User records -------------------------------------------------
+
+
+# --- User export ------------------------------------------------------------
+
+# The CSV shape User import accepts too (ADR 0006); Last fetch is runtime data, not exported.
+CSV_FIELDS = ["name", "password", "admin", "expires_at", "disabled", "ts_auth_key", "warp_key", "warp_ipv6"]
+
+
+def _csv_cell(v: Any) -> str:
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    return "" if v is None else str(v)
+
+
+@router.get(
+    "/export",
+    summary="User export",
+    description="Every User record as CSV (Last fetch excluded). Holds every PSK, Mesh key and WARP key in plain text.",
+)
+async def export_users():
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(CSV_FIELDS)
+    for u in store.records():
+        w.writerow([_csv_cell(u[f]) for f in CSV_FIELDS])
+    return Response(
+        buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="users.csv"', "Cache-Control": "no-store"},
+    )
 
 
 def create_upsk() -> str:
