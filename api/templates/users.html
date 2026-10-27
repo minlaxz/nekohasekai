@@ -38,6 +38,10 @@
   <body>
     <h2>User Usage</h2>
     <p><a href="/ssm/export">Export users (CSV)</a></p>
+    <form method="post" action="/ssm/import" enctype="multipart/form-data">
+      <label>Import users (CSV, add-only) <input type="file" name="file" accept=".csv,text/csv" required /></label>
+      <button type="submit">Import</button>
+    </form>
 
     <button type="button" id="toggle-more">Show details</button>
 

@@ -1,6 +1,7 @@
 """SS-2022 key derivation (#24): users keep their `k`; ssm-api and the client get the derived key."""
 
 import base64
+import csv
 import json
 import os
 import sys
@@ -28,7 +29,7 @@ def test_client_key_is_sha256_of_ssm_key_cut_to_16_bytes():
 @pytest.mark.parametrize(
     "bad",
     [
-        "insecure-user123==",  # old example-users.json shape: `-` is not base64, too short
+        "insecure-user123==",  # an old example-users.json shape: `-` is not base64, too short
         "a" * 24,  # native 16-byte key: not the `k` format
         "a" * 20,  # no `==`
         "a" * 19 + "!==",  # outside the base64 alphabet
@@ -148,7 +149,7 @@ def test_verify_rejects_other_keys(monkeypatch, reported):
 
 
 def test_example_users_have_valid_k():
-    path = os.path.join(os.path.dirname(__file__), "..", "..", "example-users.json")
+    path = os.path.join(os.path.dirname(__file__), "..", "..", "example-users.csv")
     with open(path) as f:
-        for u in json.load(f)["users"]:
+        for u in csv.DictReader(f):
             ssm_key(u["password"])
