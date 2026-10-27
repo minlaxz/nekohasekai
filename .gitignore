@@ -184,7 +184,7 @@ git-ignored
 .DS_Store
 
 **/test_data/*
-# Runtime users file, retired by ADR 0006 (see example-users.json)
+# Runtime users file, retired by ADR 0006 (scripts/users_json_to_csv.py converts one)
 *.users.json
 scales
 /data/

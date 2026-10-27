@@ -1,0 +1,4 @@
+name,password,admin,expires_at,disabled,ts_auth_key,warp_key,warp_ipv6
+user1,exampleuser1key00000==,false,2026-10-08T12:00:00+00:00,false,,wireguard-private-key-for-user1=,2606:4700:110:8000::1/128
+user2,exampleadminkey00000==,true,,false,,,
+user3,exampleuser3key00000==,false,,false,ts-auth-key-for-user3,,

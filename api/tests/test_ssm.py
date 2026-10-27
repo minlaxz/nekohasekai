@@ -1,5 +1,7 @@
 import base64
+import json
 import os
+import subprocess
 import sys
 
 import pytest
@@ -556,3 +558,130 @@ def test_dashboard_links_export(client, monkeypatch):
 
     monkeypatch.setattr(ssm, "get_stats", stats)
     assert 'href="/ssm/export"' in client.get("/ssm/server/v1/users", headers=HTML).text
+
+
+# --- User import ------------------------------------------------------------
+
+HEADER = ",".join(ssm.CSV_FIELDS)
+BOB = f"bob,{'b' * 20}==,false,,false,,,"
+
+
+def _import(client, *lines, headers=JSON):
+    body = "\n".join(lines) + "\n"
+    return client.post(
+        "/ssm/import", files={"file": ("users.csv", body, "text/csv")}, headers=headers, follow_redirects=False
+    )
+
+
+def test_import_adds_users_and_live_ones_reach_ssm_api(client, frozen):
+    r = _import(
+        client,
+        HEADER,
+        BOB,
+        f"carol,{'c' * 20}==,false,2026-01-01T00:00:00+00:00,false,,,",  # Expired
+        f"dave,{'d' * 20}==,false,,true,,,",  # Disabled
+        f"erin,{'e' * 20}==,true,2027-01-01T00:00:00+00:00,false,ts-key,wk=,2606::1/128",
+    )
+    assert r.status_code == 200
+    assert r.json() == {"added": ["bob", "carol", "dave", "erin"]}
+    assert _store_names(client) == ["alice", "bob", "carol", "dave", "erin"]
+    assert client.posted == {"bob": ssm_key("b" * 20 + "=="), "erin": ssm_key("e" * 20 + "==")}
+    erin = store.get("erin")
+    assert erin["admin"] is True and erin["ts_auth_key"] == "ts-key" and erin["warp_ipv6"] == "2606::1/128"
+    assert store.get("dave")["disabled"] is True and store.get("bob")["warp_key"] is None
+
+
+@pytest.mark.parametrize(
+    "lines,error",
+    [
+        ([HEADER + ",extra", BOB + ","], "row 1: unknown column 'extra'"),
+        ([HEADER.replace(",warp_ipv6", ""), BOB[:-1]], "row 1: missing column 'warp_ipv6'"),
+        ([HEADER + ",name", BOB + ",x"], "row 1: repeated column 'name'"),
+        ([HEADER, BOB.replace("bob", "-bob")], "row 2: bad username '-bob'"),
+        ([HEADER, BOB.replace("b" * 20, "b" * 19)], "row 2: bad PSK"),
+        ([HEADER, BOB.replace(",,false", ",tomorrow,false")], "row 2: bad Expiry 'tomorrow'"),
+        ([HEADER, BOB.replace("false", "yes", 1)], "row 2: bad admin 'yes', use true or false"),
+        ([HEADER, BOB, BOB.replace("bob,", "bobby,")], "row 3: PSK repeats row 2"),
+        ([HEADER, BOB, BOB.replace("b" * 20, "c" * 20)], "row 3: name 'bob' repeats row 2"),
+        ([HEADER, BOB.replace("bob", "alice")], "row 2: name 'alice' already exists"),
+        ([HEADER, BOB.replace("bob,", "bobby,").replace("b" * 20, "a" * 20)], "row 2: PSK already exists"),
+        ([HEADER, BOB + ","], "row 2: wrong number of cells, expected 8"),
+    ],
+)
+def test_import_rejects_whole_file(client, lines, error):
+    r = _import(client, *lines, f"zed,{'z' * 20}==,false,,false,,,")
+    assert r.status_code == 400
+    assert error in r.json()["detail"]
+    assert _store_names(client) == ["alice"] and client.posted == {}
+
+
+def test_import_reports_every_bad_row(client):
+    r = _import(client, HEADER, BOB.replace("bob", "-x"), BOB, BOB.replace("bob", "alice").replace("b" * 20, "c" * 20))
+    assert r.json()["detail"] == ["row 2: bad username '-x'", "row 3: PSK repeats row 2", "row 4: name 'alice' already exists"]
+
+
+def test_import_needs_admin(client):
+    assert _import(client, HEADER, BOB, headers={}).status_code == 401
+
+
+def test_import_keeps_zone_and_defaults_utc(client, frozen):
+    _import(client, HEADER, BOB.replace(",,false", ",2027-01-01T00:00,false"))
+    assert store.get("bob")["expires_at"] == "2027-01-01T00:00:00+00:00"
+
+
+def test_import_html_redirects_to_stats(client):
+    r = _import(client, HEADER, BOB, headers=HTML)
+    assert r.status_code == 303 and r.headers["location"] == "/ssm/server/v1/users"
+
+
+def test_dashboard_has_import_form(client, monkeypatch):
+    async def stats():
+        return []
+
+    monkeypatch.setattr(ssm, "get_stats", stats)
+    text = client.get("/ssm/server/v1/users", headers=HTML).text
+    assert 'action="/ssm/import"' in text and 'enctype="multipart/form-data"' in text
+
+
+# --- users.json conversion (ADR 0006) ---------------------------------------
+
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "users_json_to_csv.py")
+# The retired example-users.json: optional keys left out, as hand-written files have them.
+OLD_USERS = {
+    "users": [
+        {
+            "name": "user1",
+            "password": "exampleuser1key00000==",
+            "admin": False,
+            "expires_at": "2026-10-08T12:00:00+00:00",
+            "warp_key": "wireguard-private-key-for-user1=",
+            "warp_ipv6": "2606:4700:110:8000::1/128",
+        },
+        {"name": "user2", "password": "exampleadminkey00000==", "admin": True},
+        {"name": "user3", "password": "exampleuser3key00000==", "admin": False, "ts_auth_key": "ts-auth-key-for-user3"},
+        {"name": "user4", "password": "exampleuser4key00000==", "disabled": True},
+    ]
+}
+
+
+def test_users_json_round_trips_through_import_and_export(client, tmp_path):
+    path = tmp_path / "users.json"
+    path.write_text(json.dumps(OLD_USERS))
+    converted = subprocess.run([sys.executable, "-I", SCRIPT, str(path)], capture_output=True, text=True, check=True).stdout
+    store.delete("alice")
+    r = client.post("/ssm/import", files={"file": ("users.csv", converted, "text/csv")}, headers=JSON)
+    assert r.json() == {"added": ["user1", "user2", "user3", "user4"]}
+    assert client.get("/ssm/export", headers=ADMIN).text == converted
+    assert converted.splitlines()[1:] == [
+        "user1,exampleuser1key00000==,false,2026-10-08T12:00:00+00:00,false,,wireguard-private-key-for-user1=,2606:4700:110:8000::1/128",
+        "user2,exampleadminkey00000==,true,,false,,,",
+        "user3,exampleuser3key00000==,false,,false,ts-auth-key-for-user3,,",
+        "user4,exampleuser4key00000==,false,,true,,,",
+    ]
+
+
+def test_example_users_csv_imports(client):
+    path = os.path.join(os.path.dirname(__file__), "..", "..", "example-users.csv")
+    with open(path) as f:
+        r = client.post("/ssm/import", files={"file": ("users.csv", f.read(), "text/csv")}, headers=JSON)
+    assert r.status_code == 200, r.text

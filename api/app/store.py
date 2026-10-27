@@ -50,6 +50,13 @@ def add(**fields: Any) -> None:
         s.commit()
 
 
+def add_many(rows: List[Dict[str, Any]]) -> None:
+    """All rows or none: one transaction."""
+    with _session() as s:
+        s.add_all(User(**r) for r in rows)
+        s.commit()
+
+
 def update(name: str, **fields: Any) -> Optional[Dict[str, Any]]:
     """Set `fields` on the User record; None when there is no such record."""
     with _session() as s:
