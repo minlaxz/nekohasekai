@@ -128,8 +128,6 @@ A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username,
 
 WARP key (`warp_key` and `warp_ipv6`): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `shadowsocks-uot`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in the rule set at `r6` (same format and hosts as `r`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `dv=6` or without a key, no endpoint and none of these rules.
 
-Mesh keys and WARP keys have no dashboard form yet. To set them, export, add them to the CSV row, delete the user, and import that row.
-
 - Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
 - Create: form at `/ssm/form`, or `POST /ssm/create` with form fields `username` and optional `months` 0 to 6 (409 if it exists)
@@ -159,7 +157,7 @@ alice,k3j9x0q2m8n1p5r7t4w6==,false,2026-10-08T12:00:00+00:00,false,,,
 
 "Import users" on the stats page, or `POST /ssm/import` with the file as multipart field `file`, adds the users in a CSV of the export shape (`example-users.csv` is one). Import only adds; it never changes or deletes a user. It is all-or-nothing: every row is checked first. If any row is bad, nothing is added and every problem is reported as `row N: reason` (the header is row 1). A row is bad when:
 
-- a column is unknown or missing, or the row has the wrong number of cells
+- a column is unknown, missing or repeated, or the row has the wrong number of cells
 - the name is not a valid username, or the PSK is not 20 base64 characters plus `==`
 - `expires_at` is not ISO 8601, or `admin` / `disabled` is not `true`, `false` or empty
 - the name or PSK repeats an earlier row, or already exists in the store

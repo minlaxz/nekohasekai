@@ -136,7 +136,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
   -F 'file=@users.csv' https://$APP_HOST/ssm/import
 ```
 
-`200 {"added": ["alice", "bob"]}`. Add-only and all-or-nothing. Every row is checked first: unknown or missing column, wrong number of cells, bad username, bad PSK, bad `expires_at`, `admin` / `disabled` not `true`, `false` or empty, a name or PSK that repeats an earlier row or already exists in the store. Any failure adds nothing and returns `400 {"detail": ["row 2: bad username '-x'", "row 4: name 'alice' already exists"]}` with every bad row (the header is row 1). On success all rows are added in one transaction, and live users are in ssm-api before the response returns; Expired and Disabled users stay out. A browser form submit (the stats page has one) is answered with `303` to `/ssm/server/v1/users`.
+`200 {"added": ["alice", "bob"]}`. Add-only and all-or-nothing. Every row is checked first: unknown, missing or repeated column, wrong number of cells, bad username, bad PSK, bad `expires_at`, `admin` / `disabled` not `true`, `false` or empty, a name or PSK that repeats an earlier row or already exists in the store. Any failure adds nothing and returns `400 {"detail": ["row 2: bad username '-x'", "row 4: name 'alice' already exists"]}` with every bad row (the header is row 1). On success all rows are added in one transaction, and live users are in ssm-api before the response returns; Expired and Disabled users stay out. A browser form submit (the stats page has one) is answered with `303` to `/ssm/server/v1/users`.
 
 ### Traffic stats
 

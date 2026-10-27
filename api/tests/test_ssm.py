@@ -1,5 +1,7 @@
 import base64
+import json
 import os
+import subprocess
 import sys
 
 import pytest
@@ -560,7 +562,7 @@ def test_dashboard_links_export(client, monkeypatch):
 
 # --- User import ------------------------------------------------------------
 
-HEADER = "name,password,admin,expires_at,disabled,ts_auth_key,warp_key,warp_ipv6"
+HEADER = ",".join(ssm.CSV_FIELDS)
 BOB = f"bob,{'b' * 20}==,false,,false,,,"
 
 
@@ -594,6 +596,7 @@ def test_import_adds_users_and_live_ones_reach_ssm_api(client, frozen):
     [
         ([HEADER + ",extra", BOB + ","], "row 1: unknown column 'extra'"),
         ([HEADER.replace(",warp_ipv6", ""), BOB[:-1]], "row 1: missing column 'warp_ipv6'"),
+        ([HEADER + ",name", BOB + ",x"], "row 1: repeated column 'name'"),
         ([HEADER, BOB.replace("bob", "-bob")], "row 2: bad username '-bob'"),
         ([HEADER, BOB.replace("b" * 20, "b" * 19)], "row 2: bad PSK"),
         ([HEADER, BOB.replace(",,false", ",tomorrow,false")], "row 2: bad Expiry 'tomorrow'"),
@@ -641,9 +644,6 @@ def test_dashboard_has_import_form(client, monkeypatch):
 
 
 # --- users.json conversion (ADR 0006) ---------------------------------------
-
-import json  # noqa: E402
-import subprocess  # noqa: E402
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "users_json_to_csv.py")
 # The retired example-users.json: optional keys left out, as hand-written files have them.

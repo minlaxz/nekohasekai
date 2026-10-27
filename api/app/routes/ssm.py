@@ -110,6 +110,12 @@ def _expiry_of(entry: Dict[str, Any]) -> Optional[datetime]:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)  # hand-edited value without zone
 
 
+def _parse_expiry(value: str) -> str:
+    """ISO 8601 instant, zone kept, no zone = UTC; ValueError when unparsable."""
+    dt = datetime.fromisoformat(value)
+    return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
+
+
 def is_expired(entry: Dict[str, Any], now: datetime) -> bool:
     at = _expiry_of(entry)
     return at is not None and at <= now
@@ -211,7 +217,7 @@ def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
     """One CSV row as a User record; ValueError says what is wrong."""
     if None in row or None in row.values():
         raise ValueError(f"wrong number of cells, expected {len(CSV_FIELDS)}")
-    if not re.match(USERNAME_PATTERN, row["name"]):
+    if not re.fullmatch(USERNAME_PATTERN, row["name"]):
         raise ValueError(f"bad username '{row['name']}'")
     try:
         ssm_key(row["password"])
@@ -220,10 +226,9 @@ def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
     expires_at = row["expires_at"].strip() or None
     if expires_at:
         try:
-            dt = datetime.fromisoformat(expires_at)
+            expires_at = _parse_expiry(expires_at)
         except ValueError:
             raise ValueError(f"bad Expiry '{expires_at}'") from None
-        expires_at = (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
     return {
         "name": row["name"],
         "password": row["password"],
@@ -242,24 +247,26 @@ def _parse_csv(text: str) -> tuple[List[Dict[str, Any]], List[str]]:
     header = reader.fieldnames or []
     errors = [f"row 1: unknown column '{c}'" for c in header if c not in CSV_FIELDS]
     errors += [f"row 1: missing column '{c}'" for c in CSV_FIELDS if c not in header]
+    errors += [f"row 1: repeated column '{c}'" for c in CSV_FIELDS if header.count(c) > 1]
     if errors:
         return [], errors
+    # Store only, not ssm-api: on upgrade ssm-api already holds every user being imported (ADR 0006).
     existing = store.records()
-    names = {u["name"]: "already exists" for u in existing}
-    psks = {u["password"]: "already exists" for u in existing}
+    name_taken = {u["name"]: "already exists" for u in existing}
+    psk_taken = {u["password"]: "already exists" for u in existing}
     rows = []
     for n, raw in enumerate(reader, start=2):
         name, psk = raw["name"], raw["password"]
         try:
-            if name in names:
-                raise ValueError(f"name '{name}' {names[name]}")
-            if psk in psks:
-                raise ValueError(f"PSK {psks[psk]}")
+            if name in name_taken:
+                raise ValueError(f"name '{name}' {name_taken[name]}")
+            if psk in psk_taken:
+                raise ValueError(f"PSK {psk_taken[psk]}")
             rows.append(_parse_row(raw))
         except ValueError as exc:
             errors.append(f"row {n}: {exc}")
-        names.setdefault(name, f"repeats row {n}")
-        psks.setdefault(psk, f"repeats row {n}")
+        name_taken.setdefault(name, f"repeats row {n}")
+        psk_taken.setdefault(psk, f"repeats row {n}")
     return rows, errors
 
 
@@ -443,7 +450,7 @@ async def set_expiry(request: Request, username: Username, expires_at: Annotated
     value = expires_at.strip()
     if value:
         try:
-            dt = datetime.fromisoformat(value)
+            value = _parse_expiry(value)
         except ValueError:
             raise RequestValidationError([
                 {
@@ -452,7 +459,6 @@ async def set_expiry(request: Request, username: Username, expires_at: Annotated
                     "type": "value_error.invalid",
                 }
             ])
-        value = (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
     entry = store.update(username, expires_at=value or None)
     if entry is None:
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
