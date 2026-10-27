@@ -524,3 +524,35 @@ def test_stats_lists_disabled_users_with_buttons(client, monkeypatch, frozen):
     assert html.count('action="/ssm/enable"') == 1  # bob
     assert html.count('action="/ssm/delete"') == 3  # alice, stranger, bob; not root
     assert "confirm(" in html
+
+
+# --- User export ------------------------------------------------------------
+
+
+def test_export_needs_admin(client):
+    assert client.get("/ssm/export").status_code == 401
+
+
+def test_export_csv(client, monkeypatch):
+    _add_entry(client, "bob", expires_at="2026-10-08T12:00:00+00:00", disabled=True, warp_key="wk=", warp_ipv6="2606::1/128")
+    _add_entry(client, "root", admin=True, ts_auth_key="ts-key")
+    store.update("alice", last_fetch="2026-10-01T00:00:00+00:00")  # not exported
+    r = client.get("/ssm/export", headers=ADMIN)
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")
+    assert r.headers["content-disposition"].startswith("attachment")
+    assert r.headers["cache-control"] == "no-store"
+    assert r.text.splitlines() == [
+        "name,password,admin,expires_at,disabled,ts_auth_key,warp_key,warp_ipv6",
+        f"alice,{'a' * 20}==,false,,false,,,",
+        f"bob,{store.get('bob')['password']},false,2026-10-08T12:00:00+00:00,true,,wk=,2606::1/128",
+        f"root,{store.get('root')['password']},true,,false,ts-key,,",
+    ]
+
+
+def test_dashboard_links_export(client, monkeypatch):
+    async def stats():
+        return []
+
+    monkeypatch.setattr(ssm, "get_stats", stats)
+    assert 'href="/ssm/export"' in client.get("/ssm/server/v1/users", headers=HTML).text
