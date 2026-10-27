@@ -146,7 +146,7 @@ def test_stats_json(client, monkeypatch):
     assert r.headers["content-type"].startswith("text/html")
 
 
-def test_last_fetch_set_on_success_cleared_on_delete(client, monkeypatch, frozen):
+def test_last_fetch_kept_in_user_record(client, monkeypatch, frozen):
     import app.main as main
     from fastapi import HTTPException
 
@@ -158,17 +158,30 @@ def test_last_fetch_set_on_success_cleared_on_delete(client, monkeypatch, frozen
         def unwarp(self):
             return {}
 
+    async def stats():
+        return [{"username": "alice", "downlinkBytes": 0}]
+
     monkeypatch.setattr(main, "Reader", FakeReader)
-    monkeypatch.setattr(ssm, "LAST_FETCH", {})
+    monkeypatch.setattr(ssm, "get_stats", stats)
+    assert not hasattr(ssm, "LAST_FETCH")
+
+    def last_fetch():
+        return store.get("alice")["last_fetch"]
 
     assert client.get("/c?j=alice&k=bad&dp=/q").status_code == 403
-    assert ssm.LAST_FETCH == {}
+    assert client.get("/i?j=alice&k=good").status_code == 200
+    assert last_fetch() is None
     assert client.get("/c?j=alice&k=good&dp=/q").status_code == 200
-    assert ssm.LAST_FETCH == {"alice": NOW.isoformat()}
+    assert last_fetch() == NOW.isoformat()
     assert ssm._ago(NOW.isoformat()) == "just now" and ssm._ago(None) == "never"
 
+    # Restart: the stats page reads it back from the database, not process memory.
+    rows = TestClient(app).get("/ssm/server/v1/users", headers=JSON).json()["users"]
+    assert rows[0]["last_fetch"] == NOW.isoformat()
+
     assert client.post("/ssm/delete", data={"username": "alice"}, headers=JSON).status_code == 200
-    assert ssm.LAST_FETCH == {}
+    assert client.post("/ssm/create", data={"username": "alice"}, headers=JSON).status_code == 200
+    assert last_fetch() is None
 
 
 # --- docs -------------------------------------------------------------------

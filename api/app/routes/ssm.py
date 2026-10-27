@@ -24,13 +24,9 @@ APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888"
 
 templates = Jinja2Templates(directory="templates")
 
-# Last fetch: username -> ISO UTC instant of the last Profile config delivered by /c.
-# In memory only; lost on restart (never written to the User record).
-LAST_FETCH: Dict[str, str] = {}
-
 
 def record_fetch(username: str) -> None:
-    LAST_FETCH[username] = _now().isoformat()
+    store.update(username, last_fetch=_now().isoformat())
 
 
 def _ago(iso: Optional[str]) -> str:
@@ -130,7 +126,7 @@ def is_out(entry: Dict[str, Any], now: datetime) -> bool:
     summary="Per-user traffic stats",
     description=(
         "HTML table for browsers; JSON with `Accept: application/json`. Every row carries "
-        "`expires_at` (null = never), `expired`, `disabled` and `last_fetch` (null = no fetch since API start); Expired and Disabled users are listed from "
+        "`expires_at` (null = never), `expired`, `disabled` and `last_fetch` (null = never fetched); Expired and Disabled users are listed from "
         "their User records with no traffic."
     ),
 )
@@ -143,7 +139,7 @@ async def proxy_server_users(request: Request):
         row["expires_at"] = entry.get("expires_at")
         row["expired"] = is_expired(entry, now)
         row["disabled"] = bool(entry.get("disabled"))
-        row["last_fetch"] = LAST_FETCH.get(row["username"])
+        row["last_fetch"] = entry.get("last_fetch")
     seen = {row["username"] for row in stats}
     stats += [
         {
@@ -152,7 +148,7 @@ async def proxy_server_users(request: Request):
             "expires_at": u.get("expires_at"),
             "expired": is_expired(u, now),
             "disabled": bool(u.get("disabled")),
-            "last_fetch": LAST_FETCH.get(u["name"]),
+            "last_fetch": u.get("last_fetch"),
         }
         for u in by_name.values()
         if u["name"] not in seen and is_out(u, now)
@@ -404,7 +400,6 @@ async def delete_user(request: Request, username: Username):
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
     await delete_user_in_memory(username)
     store.delete(username)
-    LAST_FETCH.pop(username, None)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return {"deleted": username}
