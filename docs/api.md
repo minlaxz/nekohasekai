@@ -66,7 +66,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
   -d 'username=alice' -d 'months=1' https://$APP_HOST/ssm/renew
 ```
 
-`200 {"username": "alice", "expires_at": "..."}`. Expiry moves forward by `months` calendar months from the current Expiry, or from now if the user is already expired or has none. No Trial period. An Expired user is back in ssm-api before the response returns, with the same PSK, so devices reconnect without re-importing. `400` bad `months`, `404` if the name is not in `users.json`.
+`200 {"username": "alice", "expires_at": "..."}`. Expiry moves forward by `months` calendar months from the current Expiry, or from now if the user is already expired or has none. No Trial period. An Expired user is back in ssm-api before the response returns, with the same PSK, so devices reconnect without re-importing. `400` bad `months`, `404` if the name has no User record.
 
 ### Set a Managed user's Expiry
 
@@ -81,7 +81,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
   -d 'username=alice' -d 'expires_at=2026-12-31T00:00' https://$APP_HOST/ssm/expiry
 ```
 
-`200 {"username": "alice", "expires_at": "2026-12-31T00:00:00+00:00"}`. Sets the exact Expiry; no zone means UTC. Empty `expires_at` removes it (`"expires_at": null`, never expires). Applied before the response returns: a past instant removes the user from ssm-api, a future one or empty puts them back with the same PSK. A browser form submit (the stats page has one per row) is answered with `303` to `/ssm/server/v1/users`. `400` unparsable value, `404` if the name is not in `users.json`.
+`200 {"username": "alice", "expires_at": "2026-12-31T00:00:00+00:00"}`. Sets the exact Expiry; no zone means UTC. Empty `expires_at` removes it (`"expires_at": null`, never expires). Applied before the response returns: a past instant removes the user from ssm-api, a future one or empty puts them back with the same PSK. A browser form submit (the stats page has one per row) is answered with `303` to `/ssm/server/v1/users`. `400` unparsable value, `404` if the name has no User record.
 
 ### Disable or enable a Managed user
 
@@ -96,7 +96,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
   -d 'username=alice' https://$APP_HOST/ssm/disable
 ```
 
-`200 {"username": "alice", "disabled": true}` (or `false` for enable). Disable removes the user from ssm-api before the response returns and keeps them out until enabled; the `users.json` entry, PSK and Expiry are kept, and Renewal does not enable. Enable puts them back with the same PSK, unless they are Expired. Repeat calls are no-ops. A browser form submit is answered with `303` to `/ssm/server/v1/users`. `404` if the name is not in `users.json`, `403` to disable an admin entry.
+`200 {"username": "alice", "disabled": true}` (or `false` for enable). Disable removes the user from ssm-api before the response returns and keeps them out until enabled; the User record, PSK and Expiry are kept, and Renewal does not enable. Enable puts them back with the same PSK, unless they are Expired. Repeat calls are no-ops. A browser form submit is answered with `303` to `/ssm/server/v1/users`. `404` if the name has no User record, `403` to disable an admin entry.
 
 ### Delete a Managed user
 
@@ -110,7 +110,33 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
   -d 'username=alice' https://$APP_HOST/ssm/delete
 ```
 
-`200 {"deleted": "alice"}`. Removes the user from ssm-api and `users.json`; the PSK is gone, so a re-create issues a new one. A browser form submit is answered with `303` to `/ssm/server/v1/users`. `404` if the name is unknown, `403` for an admin entry.
+`200 {"deleted": "alice"}`. Removes the user from ssm-api and deletes the User record; the PSK is gone, so a re-create issues a new one. A browser form submit is answered with `303` to `/ssm/server/v1/users`. `404` if the name is unknown, `403` for an admin entry.
+
+### User export
+
+```
+GET /ssm/export
+```
+
+```sh
+curl -u admin:$APP_ADMIN_PASSWORD -o users.csv https://$APP_HOST/ssm/export
+```
+
+`200` CSV download (`users.csv`, `Cache-Control: no-store`): header `name,password,admin,expires_at,disabled,ts_auth_key,warp_key,warp_ipv6`, then one row per User record, sorted by name. Booleans are `true` / `false`; an empty cell means not set. Last fetch is not exported. Holds every PSK, Mesh key and WARP key in plain text.
+
+### User import
+
+```
+POST /ssm/import
+file=<CSV in the export shape>   (multipart/form-data)
+```
+
+```sh
+curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
+  -F 'file=@users.csv' https://$APP_HOST/ssm/import
+```
+
+`200 {"added": ["alice", "bob"]}`. Add-only and all-or-nothing. Every row is checked first: unknown or missing column, wrong number of cells, bad username, bad PSK, bad `expires_at`, `admin` / `disabled` not `true`, `false` or empty, a name or PSK that repeats an earlier row or already exists in the store. Any failure adds nothing and returns `400 {"detail": ["row 2: bad username '-x'", "row 4: name 'alice' already exists"]}` with every bad row (the header is row 1). On success all rows are added in one transaction, and live users are in ssm-api before the response returns; Expired and Disabled users stay out. A browser form submit (the stats page has one) is answered with `303` to `/ssm/server/v1/users`.
 
 ### Traffic stats
 
@@ -118,7 +144,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 GET /ssm/server/v1/users
 ```
 
-`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never), `expired` and `disabled`. The HTML table has a per-row form that posts to `/ssm/expiry`, plus Disable/Enable and Delete buttons on every non-admin row (users not in `users.json` get Delete only). Expired and Disabled users are no longer in ssm-api, so they are appended from `users.json` with no traffic fields.
+`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never), `expired` and `disabled`. The HTML table has a per-row form that posts to `/ssm/expiry`, plus Disable/Enable and Delete buttons on every non-admin row (users with no User record get Delete only). Expired and Disabled users are no longer in ssm-api, so they are appended from their User records with no traffic fields.
 
 ## Profile routes
 

@@ -21,7 +21,7 @@ Images are built by GitHub Actions on push to `master`.
 - **Server** runs two inbounds: Shadowsocks (loopback only; per-user PSK, managed by sing-box's ssm-api) and ShadowTLS v3 (one shared handshake password, detours into Shadowsocks). ShadowTLS is transport only. All user identity lives in Shadowsocks.
 - **Client profile** (`/c`) is built from `scaffolds/client/*.json`. The API fills in log level, DNS, and the user's PSK. Everything else is served as-is. `/i` wraps that into a `sing-box://import-remote-profile` link.
 - **First start** seeds the config volume from the image and writes ports, SNI, and the ShadowTLS password once. Every start re-detects the public IPv4 and writes it into the client template.
-- **Users** live in `users.json`. The API mirrors them into ssm-api at startup and every minute (expired and disabled users out, live users in) and keeps the file in sync through `/ssm/create`, `/ssm/renew`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete`.
+- **Users** live in the API's SQLite store (`./data/users.db` on the host). The API mirrors them into ssm-api at startup and every minute (expired and disabled users out, live users in). The admin changes them only through the dashboard and `/ssm/*`; User import and User export move them in and out as CSV.
 
 Client profiles keep the `shadowsocks-uot` outbound for Shadowsocks over ShadowTLS with UDP-over-TCP. They expose two groups: `All Outbounds`, a URL test over `direct` and `shadowsocks-uot`, and `Remote DNS Detour`, a selector over the same two options that defaults to `direct`. Proxied routes, rule-set downloads, Mesh, and WARP use `shadowsocks-uot` directly, so they cannot select the direct path through `All Outbounds`.
 
@@ -32,7 +32,6 @@ Prerequisites: Docker with the Compose plugin. Swap is strongly recommended on a
 ```sh
 git clone https://github.com/minlaxz/nekohasekai.git && cd nekohasekai
 cp .env.sample .env
-cp example-users.json users.json
 docker network create caddy-net
 ```
 
@@ -70,6 +69,8 @@ docker compose logs sing-box | grep entrypoint
 
 Expect `configured ports ...` on first start and `public ip x.x.x.x` on every start.
 
+The user store starts empty. Add users with the create form at `/ssm/form`, or import a CSV on the stats page (see [User import](#user-import)). `example-users.csv` shows the format.
+
 ### Upgrade
 
 ```sh
@@ -80,6 +81,16 @@ For deployments already using only ShadowTLS, that is the whole upgrade path. Th
 
 `git pull` on the server is only needed when `docker-compose.yaml` changes or `.env` gains a new variable.
 
+**Moving from `users.json` to the user store ([ADR 0006](docs/adr/0006-sqlite-user-store-csv-import.md)):** the API no longer reads `users.json`. Convert it once, then import it:
+
+```sh
+git pull                                   # new docker-compose.yaml: mounts ./data, drops users.json
+python3 scripts/users_json_to_csv.py users.json > users.csv
+docker compose pull && docker compose up -d
+```
+
+Open the stats page `https://<APP_HOST>/ssm/server/v1/users`, choose `users.csv` under Import users and submit. If any row is bad, nothing is added and the response lists each `row N: reason`. Fix those rows in `users.csv` and import again. Until the import, existing users keep connecting (ssm-api still holds them), but `/c` serves them no Mesh, WARP or Full mode. After a good import, delete `users.json` and `users.csv`: both hold every PSK in plain text.
+
 **Retiring Hysteria2 from an existing deployment:** use the updated Compose file and rebuild the config volume once after pulling images that include the retirement:
 
 ```sh
@@ -89,7 +100,7 @@ docker compose down -v
 docker compose up -d
 ```
 
-This resets generated configs, cached users, and traffic counters. The host's `.env` and `users.json` survive; the API restores users recorded in `users.json`, but users held only in the old cache are lost. Keep the same ShadowTLS and Shadowsocks values in `.env`. Remove the unused `HYSTERIA2_*` values and close the old UDP port in the VPS firewall. Clients pinned to Hysteria2 must switch to ShadowTLS or refresh their profile. Without the volume rebuild, persistent server and client configs retain the old transport entries.
+This resets generated configs, cached users, and traffic counters. The host's `.env` and `./data/` survive; the API restores every user in its store, but users held only in the old cache are lost. Keep the same ShadowTLS and Shadowsocks values in `.env`. Remove the unused `HYSTERIA2_*` values and close the old UDP port in the VPS firewall. Clients pinned to Hysteria2 must switch to ShadowTLS or refresh their profile. Without the volume rebuild, persistent server and client configs retain the old transport entries.
 
 Hysteria2 was retired because the operator observed delayed or failed connections when first opening the VPN and lower stability than ShadowTLS. The cause is still unknown; follow-up is tracked in [issue #65](https://github.com/minlaxz/nekohasekai/issues/65). All Hysteria2 docs and research are retained, including the [previous deployment instructions](docs/research/hysteria2-deployment-before-retirement.md), for a possible return later.
 
@@ -103,15 +114,11 @@ docker compose down && docker volume rm sing-box_sing-box-configs && docker comp
 
 ## Users
 
-`users.json`:
+Each user is a User record in the API's store: `name`, `password` (the PSK), `admin`, and optional Expiry, Disabled flag, Mesh key and WARP key. The store is `./data/users.db` on the host; back it up with `cp` or with User export.
 
-```json
-{ "users": [ { "name": "alice", "password": "20-random-chars==", "admin": false, "expires_at": "2026-10-08T12:00:00+00:00" } ] }
-```
+Passwords must be unique per user; a shared one makes sing-box treat the entries as one user. Expiry (`expires_at`, ISO 8601, no zone = UTC): past it the user is removed from ssm-api within a minute and can no longer connect or fetch a profile; the record, name and password stay. No Expiry means never. Created users get the months chosen at create plus a 3-day Trial period; `/ssm/renew` pushes it forward. Disabled: the user is kept out of ssm-api like an expired one, whatever the Expiry; `/ssm/enable` clears it.
 
-Passwords must be unique per user; a shared one makes sing-box treat the entries as one user, and the API logs `duplicate PSK shared by [...]` every minute until fixed. Optional `expires_at` (Expiry, ISO 8601 UTC): past it the user is removed from ssm-api within a minute and can no longer connect or fetch a profile; the entry, name and password stay. No `expires_at` means never. Created users get the months chosen at create plus a 3-day Trial period; `/ssm/renew` pushes it forward. Optional `disabled: true`: the user is kept out of ssm-api like an expired one, whatever the Expiry; `/ssm/enable` clears it.
-
-Optional `ts_auth_key` (Mesh key): a reusable headscale pre-auth key for that user. Mint it by hand:
+Mesh key (`ts_auth_key`): a reusable headscale pre-auth key for that user. Mint it by hand:
 
 ```sh
 headscale preauthkeys create --user alice --reusable --expiration 1y
@@ -119,31 +126,45 @@ headscale preauthkeys create --user alice --reusable --expiration 1y
 
 A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username, `control_url` from `APP_TS_CONTROL_URL`) and `100.64.0.0/10` routed into it. A user without one gets no endpoint and no such rule.
 
-Optional `warp_key` and `warp_ipv6` (WARP key): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `shadowsocks-uot`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in the rule set at `r6` (same format and hosts as `r`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `dv=6` or without a key, no endpoint and none of these rules.
+WARP key (`warp_key` and `warp_ipv6`): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with `dv=6` gets the `warp-ep` WireGuard endpoint (dialed through `shadowsocks-uot`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in the rule set at `r6` (same format and hosts as `r`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `dv=6` or without a key, no endpoint and none of these rules.
+
+Mesh keys and WARP keys have no dashboard form yet. To set them, export, add them to the CSV row, delete the user, and import that row.
 
 - Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
 - Create: form at `/ssm/form`, or `POST /ssm/create` with form fields `username` and optional `months` 0 to 6 (409 if it exists)
 - Renew: `POST /ssm/renew` with `username` and `months` 1 to 6 (404 if unknown)
-- Set or clear Expiry: per-row form on the stats page, or `POST /ssm/expiry` with `username` and `expires_at` (ISO 8601 UTC, empty = never)
-- Disable / enable: per-row button on the stats page, or `POST /ssm/disable` / `POST /ssm/enable` with `username` (404 if not in `users.json`)
+- Set or clear Expiry: per-row form on the stats page, or `POST /ssm/expiry` with `username` and `expires_at` (ISO 8601, empty = never)
+- Disable / enable: per-row button on the stats page, or `POST /ssm/disable` / `POST /ssm/enable` with `username` (404 if the user has no User record)
 - Delete: per-row button on the stats page, or `POST /ssm/delete` with form field `username` (404 if unknown). Admin entries cannot be disabled or deleted (403).
+- Export / import: see below
 - Stats: `/ssm/server/v1/users`
 
 Everything under `/ssm` needs HTTP Basic (`APP_ADMIN_USER` / `APP_ADMIN_PASSWORD`). Full reference for integrating a frontend: [docs/api.md](docs/api.md). End users: `/help?j=<name>&k=<psk>`.
 
-Changes made through `/ssm/create`, `/ssm/renew`, `/ssm/expiry`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete` take effect immediately. No restart needed.
+Every change made through the dashboard or `/ssm/*` takes effect immediately. No restart needed.
 
-Editing `users.json` by hand is picked up at API startup and by the minute sweep, but only for a file edited in place: most editors replace the file, and the container keeps the old one (see below). The sweep adds live users and removes expired ones; it never deletes ssm-api users the file does not know and never changes a password. For routine user edits, avoid `down -v`: it wipes traffic stats and the ssm cache. The one-time Hysteria2 retirement above deliberately rebuilds that volume.
+### User export
 
-| Hand edit | Apply with |
-|---|---|
-| Added user | `docker compose up -d --force-recreate sing-box-api` |
-| Changed `expires_at` | prefer the stats page form or `/ssm/expiry`; by hand, the recreate above |
-| Changed password | `docker compose exec sing-box wget -qO- --method=DELETE http://127.0.0.1:8888/server/v1/users/<name>`, then the recreate above |
-| Removed user | `docker compose exec sing-box wget -qO- --method=DELETE http://127.0.0.1:8888/server/v1/users/<name>` |
+"Export users (CSV)" on the stats page, or `GET /ssm/export`, downloads every User record as `users.csv`:
 
-`--force-recreate` (not `restart`) because editors replace the file, and a running container keeps the old single-file bind mount.
+```csv
+name,password,admin,expires_at,disabled,ts_auth_key,warp_key,warp_ipv6
+alice,k3j9x0q2m8n1p5r7t4w6==,false,2026-10-08T12:00:00+00:00,false,,,
+```
+
+`admin` and `disabled` are `true` or `false`; an empty cell means not set. Last fetch is not exported. The file holds every PSK, Mesh key and WARP key in plain text: keep it like `.env`.
+
+### User import
+
+"Import users" on the stats page, or `POST /ssm/import` with the file as multipart field `file`, adds the users in a CSV of the export shape (`example-users.csv` is one). Import only adds; it never changes or deletes a user. It is all-or-nothing: every row is checked first. If any row is bad, nothing is added and every problem is reported as `row N: reason` (the header is row 1). A row is bad when:
+
+- a column is unknown or missing, or the row has the wrong number of cells
+- the name is not a valid username, or the PSK is not 20 base64 characters plus `==`
+- `expires_at` is not ISO 8601, or `admin` / `disabled` is not `true`, `false` or empty
+- the name or PSK repeats an earlier row, or already exists in the store
+
+On success, live users are in ssm-api before the response returns; Expired and Disabled users stay out. To change an existing user through import, delete them first.
 
 `/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final, `dv` 4 or 6 (6 turns on WARP for users with a WARP key; DNS stays `ipv4_only` either way).
 
@@ -153,7 +174,8 @@ No Docker needed for the fast loop:
 
 ```sh
 # API
-cd api && uv run --with 'fastapi[standard]' --with httpx --with apscheduler fastapi dev app/main.py
+cd api && APP_INTERNAL_DB_PATH=/tmp/users.db uv run --with 'fastapi[standard]' --with httpx --with apscheduler --with sqlmodel --with alembic \
+  sh -c 'alembic upgrade head && fastapi dev app/main.py'
 
 # Entrypoint, against a scratch dir with a stubbed sing-box
 SING_BOX_ROOT=/path/to/scratch SHADOWSOCKS_PORT=1 SHADOWSOCKS_PASSWORD=$(openssl rand -base64 16) SHADOWTLS_PORT=2 \
@@ -162,7 +184,7 @@ SING_BOX_ROOT=/path/to/scratch SHADOWSOCKS_PORT=1 SHADOWSOCKS_PASSWORD=$(openssl
 
 # Tests. SING_BOX is optional; it adds `sing-box check` on the generated Server config.
 SING_BOX=/path/to/sing-box sh scaffolds/entrypoint.test.sh
-cd api && uv run --with 'fastapi[standard]' --with httpx --with apscheduler --with pytest pytest -q tests
+cd api && uv run --with 'fastapi[standard]' --with httpx --with apscheduler --with sqlmodel --with alembic --with pytest pytest -q tests
 ```
 
 Validate a config inside the image: `sing-box check -C /sing-box/server`.

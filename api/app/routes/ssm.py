@@ -3,6 +3,7 @@ import csv
 import io
 import logging
 import os
+import re
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
@@ -12,7 +13,7 @@ import httpx
 from app import store
 from app.auth import require_admin
 from app.utils import get_stats, ssm_key
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -191,6 +192,103 @@ async def export_users():
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="users.csv"', "Cache-Control": "no-store"},
     )
+
+
+# --- User import ------------------------------------------------------------
+
+
+class ImportedUsers(BaseModel):
+    added: List[str]
+
+
+def _parse_bool(value: str, column: str) -> bool:
+    if value not in ("true", "false", ""):  # empty = false, for hand-made files
+        raise ValueError(f"bad {column} '{value}', use true or false")
+    return value == "true"
+
+
+def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
+    """One CSV row as a User record; ValueError says what is wrong."""
+    if None in row or None in row.values():
+        raise ValueError(f"wrong number of cells, expected {len(CSV_FIELDS)}")
+    if not re.match(USERNAME_PATTERN, row["name"]):
+        raise ValueError(f"bad username '{row['name']}'")
+    try:
+        ssm_key(row["password"])
+    except ValueError:
+        raise ValueError("bad PSK") from None  # the value is a secret: not echoed
+    expires_at = row["expires_at"].strip() or None
+    if expires_at:
+        try:
+            dt = datetime.fromisoformat(expires_at)
+        except ValueError:
+            raise ValueError(f"bad Expiry '{expires_at}'") from None
+        expires_at = (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
+    return {
+        "name": row["name"],
+        "password": row["password"],
+        "admin": _parse_bool(row["admin"], "admin"),
+        "expires_at": expires_at,
+        "disabled": _parse_bool(row["disabled"], "disabled"),
+        "ts_auth_key": row["ts_auth_key"] or None,
+        "warp_key": row["warp_key"] or None,
+        "warp_ipv6": row["warp_ipv6"] or None,
+    }
+
+
+def _parse_csv(text: str) -> tuple[List[Dict[str, Any]], List[str]]:
+    """User records and `row N: reason` errors; the header is row 1."""
+    reader = csv.DictReader(io.StringIO(text))
+    header = reader.fieldnames or []
+    errors = [f"row 1: unknown column '{c}'" for c in header if c not in CSV_FIELDS]
+    errors += [f"row 1: missing column '{c}'" for c in CSV_FIELDS if c not in header]
+    if errors:
+        return [], errors
+    existing = store.records()
+    names = {u["name"]: "already exists" for u in existing}
+    psks = {u["password"]: "already exists" for u in existing}
+    rows = []
+    for n, raw in enumerate(reader, start=2):
+        name, psk = raw["name"], raw["password"]
+        try:
+            if name in names:
+                raise ValueError(f"name '{name}' {names[name]}")
+            if psk in psks:
+                raise ValueError(f"PSK {psks[psk]}")
+            rows.append(_parse_row(raw))
+        except ValueError as exc:
+            errors.append(f"row {n}: {exc}")
+        names.setdefault(name, f"repeats row {n}")
+        psks.setdefault(psk, f"repeats row {n}")
+    return rows, errors
+
+
+@router.post(
+    "/import",
+    response_model=ImportedUsers,
+    summary="User import",
+    description=(
+        "Multipart `file`: a CSV in the User export shape. Add-only and all-or-nothing: every row is checked "
+        "first, and any bad row, or any name or PSK already in the store, rejects the whole file with "
+        "`400 {\"detail\": [\"row N: reason\", ...]}` (the header is row 1). On success every row is added in one "
+        "transaction and live users reach ssm-api before the response returns. Browser form submits are "
+        "redirected to the stats page."
+    ),
+    responses={400: {"description": "Bad file; nothing added"}},
+)
+async def import_users(request: Request, file: UploadFile):
+    try:
+        text = (await file.read()).decode("utf-8-sig")  # -sig: spreadsheet apps prepend a BOM
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail=["row 1: file is not UTF-8 text"])
+    rows, errors = _parse_csv(text)
+    if errors:
+        raise HTTPException(status_code=400, detail=errors)
+    store.add_many(rows)
+    await reconcile_users()
+    if wants_html(request):
+        return RedirectResponse("/ssm/server/v1/users", status_code=303)
+    return ImportedUsers(added=[r["name"] for r in rows])
 
 
 def create_upsk() -> str:
