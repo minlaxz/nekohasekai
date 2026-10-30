@@ -7,7 +7,7 @@ Two surfaces:
 | Surface | Routes | Auth |
 |---|---|---|
 | Profile | `GET /c`, `GET /i` | per-user: `j` username + `k` PSK |
-| Admin | `POST /ssm/create`, `POST /ssm/renew`, `POST /ssm/expiry`, `POST /ssm/disable`, `POST /ssm/enable`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
+| Admin | `POST /ssm/create`, `POST /ssm/renew`, `POST /ssm/expiry`, `POST /ssm/warp`, `POST /ssm/disable`, `POST /ssm/enable`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
 
 Terms (`CONTEXT.md`): a **Managed user** is one Shadowsocks identity; the **PSK** is their password; the **Admin credential** gates every admin route. The PSK is what users hold and what `k` carries; ssm-api itself holds the derived **SSM key** (so the raw ssm-api proxy and stats show `uPSK` in that form, not `k`). **Expiry** is when access ends, enforced by the API within a minute (ADR 0003).
 
@@ -83,6 +83,23 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 
 `200 {"username": "alice", "expires_at": "2026-12-31T00:00:00+00:00"}`. Sets the exact Expiry; no zone means UTC. Empty `expires_at` removes it (`"expires_at": null`, never expires). Applied before the response returns: a past instant removes the user from ssm-api, a future one or empty puts them back with the same PSK. A browser form submit (the stats page has one per row) is answered with `303` to `/ssm/server/v1/users`. `400` unparsable value, `404` if the name has no User record.
 
+### Set a Managed user's WARP key
+
+```
+POST /ssm/warp
+username=<name>
+warp_key=<base64 WireGuard private key | empty>
+warp_ipv6=<IPv6 address, bare or /128 | empty>
+```
+
+```sh
+curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
+  -d 'username=alice' --data-urlencode 'warp_key=<PrivateKey>' -d 'warp_ipv6=2606:4700:110:8000::1' \
+  https://$APP_HOST/ssm/warp
+```
+
+`200 {"username": "alice", "warp_key": "<PrivateKey>", "warp_ipv6": "2606:4700:110:8000::1/128"}`. Both or neither: both empty clears the WARP key (`null`, `null`). `warp_key` must be base64 of exactly 32 bytes; `warp_ipv6` must be an IPv6 address, stored with `/128` added when bare. The user's next Profile config fetch uses it; no restart. Admin entries allowed. A browser form submit (the stats page has one per row with a User record) is answered with `303` to `/ssm/server/v1/users`. `400` only one of the two, bad key, bad address or a prefix other than `/128`; `404` if the name has no User record.
+
 ### Disable or enable a Managed user
 
 ```
@@ -144,7 +161,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 GET /ssm/server/v1/users
 ```
 
-`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never), `expired` and `disabled`. The HTML table has a per-row form that posts to `/ssm/expiry`, plus Disable/Enable and Delete buttons on every non-admin row (users with no User record get Delete only). Expired and Disabled users are no longer in ssm-api, so they are appended from their User records with no traffic fields.
+`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never), `expired` and `disabled`. The HTML table has a per-row form that posts to `/ssm/expiry`, a Keys column (behind Show details) with a per-row WARP form, pre-filled in plain text, that posts to `/ssm/warp` (`—` for users with no User record), plus Disable/Enable and Delete buttons on every non-admin row (users with no User record get Delete only). Expired and Disabled users are no longer in ssm-api, so they are appended from their User records with no traffic fields.
 
 ## Profile routes
 
