@@ -28,13 +28,12 @@
         <tr><td><code>dr</code></td><td>Resolver IP, used to look up the DoH host.</td><td>{{ defaults.dr or "(none)" }}</td></tr>
         <tr><td><code>dd</code></td><td>Outbound the resolver goes through.</td><td>{{ defaults.dd or "(none)" }}</td></tr>
         <tr><td><code>df</code></td><td>DNS server used when no DNS rule matches.</td><td>{{ defaults.df or "(none)" }}</td></tr>
-        <tr><td><code>dv</code></td><td>IP version: <code>4</code> or <code>6</code>. <code>6</code> turns on WARP (IPv6) if your account has a WARP key. Without WARP the profile is IPv4 only.</td><td>{{ defaults.dv }}</td></tr>
-        <tr><td><code>r</code></td><td>URL of your own rule set (domains to proxy). GitHub raw or gist URLs only.</td><td>(none)</td></tr>
-        <tr><td><code>r6</code></td><td>URL of a rule set listing domains to reach over WARP IPv6. Same format as <code>r</code>. Used only with <code>dv=6</code>.</td><td>(none)</td></tr>
+        <tr><td><code>r4</code></td><td>URL of your own rule set (domains to proxy). GitHub raw or gist URLs only.</td><td>(none)</td></tr>
+        <tr><td><code>r6</code></td><td>URL of a rule set listing domains to reach over WARP IPv6. Same format as <code>r4</code>. Turns on WARP (IPv6) if your account has a WARP key. Without it the profile is IPv4 only.</td><td>(none)</td></tr>
         <tr><td><code>rd</code></td><td>How remote rule sets are downloaded: <code>proxy</code> or <code>direct</code>. Try <code>direct</code> if downloads fail.</td><td>proxy</td></tr>
     </table>
 
     <h3>Example</h3>
-    <pre>{{ config_url }}&amp;dv=6&amp;r6=https://gist.githubusercontent.com/you/id/raw/rules-v6.json</pre>
+    <pre>{{ config_url }}&amp;r6=https://gist.githubusercontent.com/you/id/raw/rules-v6.json</pre>
 </body>
 </html>

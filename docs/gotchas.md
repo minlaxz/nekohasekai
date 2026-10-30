@@ -7,7 +7,7 @@
 - change TUN stack to `gvisor` see client.inbounds[0].stack
 
 ### Full mode is admin-only
-- `clash_mode: Full` rules in client route.json are stripped by the API for users without `admin: true` (see `apply_full_mode`). Mesh (`ts-ep`) rules are stripped the same way for users without `ts_auth_key`, and WARP (`warp-ep`) rules, plus the DNS rule giving WARP domains AAAA answers, for users without `warp_key` or fetching without `dv=6`. The DNS rule is matched to the route rule by its `domain_suffix` list: keep both lists identical (both are `[]` in the template; `r6` fills them, and without `r6` the API strips both, since an empty rule matches everything).
+- `clash_mode: Full` rules in client route.json are stripped by the API for users without `admin: true` (see `apply_full_mode`). Mesh (`ts-ep`) rules are stripped the same way for users without `ts_auth_key`, and WARP (`warp-ep`) rules, plus the DNS rule giving WARP domains AAAA answers, for users without `warp_key` or fetching without `r6`. The DNS rule is matched to the route rule by its `domain_suffix` list: keep both lists identical (both are `[]` in the template; `r6` fills them, and without `r6` the API strips both, since an empty rule matches everything).
 
 ### DNS: when NextDNS gets blocked
 - Today DoH to NextDNS goes direct (no `detour` on `dns-remote`): NextDNS dashboard shows each user's IP, CDNs resolve near the user.
