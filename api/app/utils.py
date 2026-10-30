@@ -291,7 +291,6 @@ class Reader(Checker):
         dns_detour: str,
         dns_final: str,
         dns_resolver: str,
-        dns_version: int,
         rules_url: str = "",
         rules_detour: str = "",
         rules_v6_url: str = "",
@@ -307,7 +306,6 @@ class Reader(Checker):
         self.dns_detour = dns_detour
         self.dns_final = dns_final
         self.dns_resolver = dns_resolver
-        self.dns_version = dns_version
 
     def _section(self, name: str) -> Any:
         return load_json(f"{APP_CLIENT_DIR}/{name}.json")[name]
@@ -376,10 +374,9 @@ class Reader(Checker):
             key,
             APP_TS_CONTROL_URL,
         )
-        # dv=6 turns WARP on: its domains get AAAA answers and IPv6 goes to warp-ep.
-        warp_key = (user.get("warp_key") or "") if self.dns_version == 6 else ""
-        # r6 lists the WARP domains; fetched only when WARP is on.
-        warp_domains = fetch_user_rules(self.rules_v6_url) if warp_key and self.rules_v6_url else {}
+        # A WARP rule set (r6) turns WARP on: its domains get AAAA answers and IPv6 goes to warp-ep.
+        warp_key = (user.get("warp_key") or "") if self.rules_v6_url else ""
+        warp_domains = fetch_user_rules(self.rules_v6_url) if warp_key else {}
         apply_warp_rules(config["route"], config["dns"], warp_domains)
         endpoints = apply_warp(endpoints, config["route"], config["dns"], warp_key, user.get("warp_ipv6") or "")
         if not warp_key:
