@@ -83,6 +83,11 @@
           </td>
           <td class="mono more">
             {% if entry %}
+            <form method="POST" action="/ssm/mesh" style="display: flex; gap: 4px">
+              <input type="hidden" name="username" value="{{ user.username }}" />
+              <input type="text" name="ts_auth_key" value="{{ entry.ts_auth_key or '' }}" placeholder="Mesh key" aria-label="Mesh key" />
+              <button type="submit">Set</button>
+            </form>
             <form method="POST" action="/ssm/warp" style="display: flex; gap: 4px">
               <input type="hidden" name="username" value="{{ user.username }}" />
               <input type="text" name="warp_key" value="{{ entry.warp_key or '' }}" placeholder="WARP key (base64)" aria-label="WARP key" />

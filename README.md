@@ -124,7 +124,7 @@ Mesh key (`ts_auth_key`): a reusable headscale pre-auth key for that user. Mint 
 headscale preauthkeys create --user alice --reusable --expiration 1y
 ```
 
-A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username, `control_url` from `APP_TS_CONTROL_URL`) and `100.64.0.0/10` routed into it. A user without one gets no endpoint and no such rule.
+A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username, `control_url` from `APP_TS_CONTROL_URL`) and `100.64.0.0/10` routed into it. A user without one gets no endpoint and no such rule. Set, change or clear it in the Keys column of the stats page (Show details), or with `POST /ssm/mesh` (`username`, `ts_auth_key`). The user's next `/c` fetch joins the Mesh, or leaves it.
 
 WARP key (`warp_key` and `warp_ipv6`): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with a WARP rule set (`r6`) gets the `warp-ep` WireGuard endpoint (dialed through `shadowsocks-uot`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in that rule set (same format and hosts as `r4`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `r6` or without a key, no endpoint and none of these rules. Set, change or clear it in the Keys column of the stats page (Show details), or with `POST /ssm/warp` (`username`, `warp_key`, `warp_ipv6`); both or neither. The user's next `/c` fetch uses it.
 
@@ -133,6 +133,7 @@ WARP key (`warp_key` and `warp_ipv6`): the `PrivateKey` and the IPv6 `Address` o
 - Create: form at `/ssm/form`, or `POST /ssm/create` with form fields `username` and optional `months` 0 to 6 (409 if it exists)
 - Renew: `POST /ssm/renew` with `username` and `months` 1 to 6 (404 if unknown)
 - Set or clear Expiry: per-row form on the stats page, or `POST /ssm/expiry` with `username` and `expires_at` (ISO 8601, empty = never)
+- Set or clear Mesh key: Keys column on the stats page, or `POST /ssm/mesh` with `username` and `ts_auth_key` (empty to clear)
 - Set or clear WARP key: Keys column on the stats page, or `POST /ssm/warp` with `username`, `warp_key` and `warp_ipv6` (both, or both empty to clear)
 - Disable / enable: per-row button on the stats page, or `POST /ssm/disable` / `POST /ssm/enable` with `username` (404 if the user has no User record)
 - Delete: per-row button on the stats page, or `POST /ssm/delete` with form field `username` (404 if unknown). Admin entries cannot be disabled or deleted (403).
