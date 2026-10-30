@@ -7,7 +7,7 @@ Two surfaces:
 | Surface | Routes | Auth |
 |---|---|---|
 | Profile | `GET /c`, `GET /i` | per-user: `j` username + `k` PSK |
-| Admin | `POST /ssm/create`, `POST /ssm/renew`, `POST /ssm/expiry`, `POST /ssm/warp`, `POST /ssm/disable`, `POST /ssm/enable`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
+| Admin | `POST /ssm/create`, `POST /ssm/renew`, `POST /ssm/expiry`, `POST /ssm/mesh`, `POST /ssm/warp`, `POST /ssm/disable`, `POST /ssm/enable`, `POST /ssm/delete`, `GET /ssm/server/v1/users` | HTTP Basic: `APP_ADMIN_USER` (default `admin`) / `APP_ADMIN_PASSWORD` |
 
 Terms (`CONTEXT.md`): a **Managed user** is one Shadowsocks identity; the **PSK** is their password; the **Admin credential** gates every admin route. The PSK is what users hold and what `k` carries; ssm-api itself holds the derived **SSM key** (so the raw ssm-api proxy and stats show `uPSK` in that form, not `k`). **Expiry** is when access ends, enforced by the API within a minute (ADR 0003).
 
@@ -82,6 +82,22 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 ```
 
 `200 {"username": "alice", "expires_at": "2026-12-31T00:00:00+00:00"}`. Sets the exact Expiry; no zone means UTC. Empty `expires_at` removes it (`"expires_at": null`, never expires). Applied before the response returns: a past instant removes the user from ssm-api, a future one or empty puts them back with the same PSK. A browser form submit (the stats page has one per row) is answered with `303` to `/ssm/server/v1/users`. `400` unparsable value, `404` if the name has no User record.
+
+### Set a Managed user's Mesh key
+
+```
+POST /ssm/mesh
+username=<name>
+ts_auth_key=<headscale pre-auth key | empty>
+```
+
+```sh
+curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
+  -d 'username=alice' --data-urlencode 'ts_auth_key=<key>' \
+  https://$APP_HOST/ssm/mesh
+```
+
+`200 {"username": "alice", "ts_auth_key": "<key>"}`. Spaces at the ends are trimmed; empty clears the Mesh key (`null`). The check is loose because headscale's key format changes between versions: only whitespace inside the key is refused. The user's next Profile config fetch joins the Mesh, or has no Mesh sections once cleared; no restart. Admin entries allowed. A browser form submit (the stats page has one per row with a User record) is answered with `303` to `/ssm/server/v1/users`. `400` whitespace inside the key, `404` if the name has no User record.
 
 ### Set a Managed user's WARP key
 
@@ -161,7 +177,7 @@ curl -u admin:$APP_ADMIN_PASSWORD -H 'Accept: application/json' \
 GET /ssm/server/v1/users
 ```
 
-`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never), `expired` and `disabled`. The HTML table has a per-row form that posts to `/ssm/expiry`, a Keys column (behind Show details) with a per-row WARP form, pre-filled in plain text, that posts to `/ssm/warp` (`—` for users with no User record), plus Disable/Enable and Delete buttons on every non-admin row (users with no User record get Delete only). Expired and Disabled users are no longer in ssm-api, so they are appended from their User records with no traffic fields.
+`{"users": [...]}` sorted by download bytes, descending. Each entry is the ssm-api stats object for one user plus their `uPSK`, `expires_at` (`null` = never), `expired` and `disabled`. The HTML table has a per-row form that posts to `/ssm/expiry`, a Keys column (behind Show details) with per-row Mesh and WARP forms, pre-filled in plain text, that post to `/ssm/mesh` and `/ssm/warp` (`—` for users with no User record), plus Disable/Enable and Delete buttons on every non-admin row (users with no User record get Delete only). Expired and Disabled users are no longer in ssm-api, so they are appended from their User records with no traffic fields.
 
 ## Profile routes
 

@@ -526,6 +526,35 @@ async def set_warp(
     return WarpSet(username=username, warp_key=entry["warp_key"], warp_ipv6=entry["warp_ipv6"])
 
 
+class MeshSet(BaseModel):
+    username: str
+    ts_auth_key: Optional[str]  # null = no Mesh key
+
+
+@router.post(
+    "/mesh",
+    response_model=MeshSet,
+    summary="Set a Managed user's Mesh key",
+    description=(
+        "Form-encoded `username` and `ts_auth_key` (a headscale pre-auth key). Spaces at the ends are trimmed; "
+        "empty clears the Mesh key. The user's next Profile config joins the Mesh, or leaves it. Admin entries "
+        "allowed. Browser form submits are redirected to the stats page. 404 if the user has no User record."
+    ),
+    responses={400: {"description": "Invalid username or key"}, 404: {"description": "Unknown username"}},
+)
+async def set_mesh(request: Request, username: Username, ts_auth_key: Annotated[str, Form()] = ""):
+    key = ts_auth_key.strip()
+    if any(c.isspace() for c in key):  # loose on purpose: headscale's key format changes between versions
+        raise _bad_field("ts_auth_key", "must not contain whitespace")
+    entry = store.update(username, ts_auth_key=key or None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+
+    if wants_html(request):
+        return RedirectResponse("/ssm/server/v1/users", status_code=303)
+    return MeshSet(username=username, ts_auth_key=entry["ts_auth_key"])
+
+
 def _refuse_admin(entry: Optional[Dict[str, Any]], username: str) -> None:
     if entry is not None and entry.get("admin"):
         raise HTTPException(status_code=403, detail=f"User '{username}' is an admin entry")

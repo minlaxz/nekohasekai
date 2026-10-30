@@ -777,3 +777,79 @@ def test_stats_page_shows_prefilled_warp_form(client, monkeypatch):
     assert html.count('action="/ssm/warp"') == 2  # alice, bob; not stranger (no User record)
     assert f'value="{WG_KEY}"' in html and 'value="2606:4700::1/128"' in html
     assert "—" in html
+
+
+# --- Mesh key ---------------------------------------------------------------
+
+
+def _set_mesh(client, key, username="alice", headers=JSON, **kw):
+    return client.post("/ssm/mesh", data={"username": username, "ts_auth_key": key}, headers=headers, **kw)
+
+
+def _profile_has_mesh(monkeypatch):
+    """Whether alice's next Profile config joins the Mesh (ts-ep, its route rule and DNS server)."""
+    from app import utils
+
+    monkeypatch.setattr(utils, "APP_CLIENT_DIR", os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client"))
+    monkeypatch.setattr(utils, "APP_TS_CONTROL_URL", "https://hs.example")
+    monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
+    config = utils.Reader(
+        username="alice", psk="a" * 20 + "==", log_level="warn",
+        dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
+        dns_final="dns-remote", dns_resolver="1.1.1.1",
+    ).unwarp()
+    return "ts-ep" in json.dumps(config)
+
+
+def test_set_mesh_reaches_next_profile_config(client, monkeypatch):
+    r = _set_mesh(client, "  test-mesh-key  ")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"username": "alice", "ts_auth_key": "test-mesh-key"}
+    assert _profile_has_mesh(monkeypatch)
+
+
+def test_clear_mesh_drops_it_from_next_profile_config(client, monkeypatch):
+    store.update("alice", ts_auth_key="test-mesh-key")
+    r = _set_mesh(client, "  ")
+    assert r.json() == {"username": "alice", "ts_auth_key": None}
+    assert not _profile_has_mesh(monkeypatch)
+
+
+@pytest.mark.parametrize("key", ["hskey auth", "hskey\tauth", "a\nb"])
+def test_set_mesh_inner_whitespace_is_400_and_keeps_old_key(client, key):
+    store.update("alice", ts_auth_key="test-mesh-key")
+    r = _set_mesh(client, key)
+    assert r.status_code == 400 and "ts_auth_key" in r.text
+    assert _entry(client, "alice")["ts_auth_key"] == "test-mesh-key"
+
+
+def test_set_mesh_unknown_is_404(client):
+    assert _set_mesh(client, "test-mesh-key", username="ghost").status_code == 404
+
+
+def test_set_mesh_needs_admin_and_allows_admin_entries(client):
+    _add_entry(client, "root", admin=True)
+    assert client.post("/ssm/mesh", data={"username": "root", "ts_auth_key": "k"}).status_code == 401
+    assert _set_mesh(client, "k", username="root").status_code == 200
+
+
+def test_set_mesh_html_redirects_to_stats(client):
+    r = _set_mesh(client, "k", headers=HTML, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/ssm/server/v1/users"
+
+
+def test_stats_page_shows_mesh_form_above_warp_form(client, monkeypatch):
+    store.update("alice", ts_auth_key="test-mesh-key")
+    _add_entry(client, "bob")
+
+    async def stats():
+        return [{"username": "alice"}, {"username": "bob"}, {"username": "stranger"}]
+
+    monkeypatch.setattr(ssm, "get_stats", stats)
+    json_rows = client.get("/ssm/server/v1/users", headers=JSON).json()["users"]
+    assert all("ts_auth_key" not in r for r in json_rows)  # stats JSON unchanged
+    html = client.get("/ssm/server/v1/users", headers=HTML).text
+    assert html.count('action="/ssm/mesh"') == 2  # alice, bob; not stranger (no User record)
+    assert 'value="test-mesh-key"' in html
+    assert html.index('action="/ssm/mesh"') < html.index('action="/ssm/warp"')
+    assert "—" in html
