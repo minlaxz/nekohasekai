@@ -802,14 +802,14 @@ def _profile_has_mesh(monkeypatch):
 
 
 def test_set_mesh_reaches_next_profile_config(client, monkeypatch):
-    r = _set_mesh(client, "  hskey-auth-abc123  ")
+    r = _set_mesh(client, "  test-mesh-key  ")
     assert r.status_code == 200, r.text
-    assert r.json() == {"username": "alice", "ts_auth_key": "hskey-auth-abc123"}
+    assert r.json() == {"username": "alice", "ts_auth_key": "test-mesh-key"}
     assert _profile_has_mesh(monkeypatch)
 
 
 def test_clear_mesh_drops_it_from_next_profile_config(client, monkeypatch):
-    store.update("alice", ts_auth_key="hskey-auth-abc123")
+    store.update("alice", ts_auth_key="test-mesh-key")
     r = _set_mesh(client, "  ")
     assert r.json() == {"username": "alice", "ts_auth_key": None}
     assert not _profile_has_mesh(monkeypatch)
@@ -817,14 +817,14 @@ def test_clear_mesh_drops_it_from_next_profile_config(client, monkeypatch):
 
 @pytest.mark.parametrize("key", ["hskey auth", "hskey\tauth", "a\nb"])
 def test_set_mesh_inner_whitespace_is_400_and_keeps_old_key(client, key):
-    store.update("alice", ts_auth_key="hskey-auth-abc123")
+    store.update("alice", ts_auth_key="test-mesh-key")
     r = _set_mesh(client, key)
     assert r.status_code == 400 and "ts_auth_key" in r.text
-    assert _entry(client, "alice")["ts_auth_key"] == "hskey-auth-abc123"
+    assert _entry(client, "alice")["ts_auth_key"] == "test-mesh-key"
 
 
 def test_set_mesh_unknown_is_404(client):
-    assert _set_mesh(client, "hskey-auth-abc123", username="ghost").status_code == 404
+    assert _set_mesh(client, "test-mesh-key", username="ghost").status_code == 404
 
 
 def test_set_mesh_needs_admin_and_allows_admin_entries(client):
@@ -839,7 +839,7 @@ def test_set_mesh_html_redirects_to_stats(client):
 
 
 def test_stats_page_shows_mesh_form_above_warp_form(client, monkeypatch):
-    store.update("alice", ts_auth_key="hskey-auth-abc123")
+    store.update("alice", ts_auth_key="test-mesh-key")
     _add_entry(client, "bob")
 
     async def stats():
@@ -850,6 +850,6 @@ def test_stats_page_shows_mesh_form_above_warp_form(client, monkeypatch):
     assert all("ts_auth_key" not in r for r in json_rows)  # stats JSON unchanged
     html = client.get("/ssm/server/v1/users", headers=HTML).text
     assert html.count('action="/ssm/mesh"') == 2  # alice, bob; not stranger (no User record)
-    assert 'value="hskey-auth-abc123"' in html
+    assert 'value="test-mesh-key"' in html
     assert html.index('action="/ssm/mesh"') < html.index('action="/ssm/warp"')
     assert "—" in html
