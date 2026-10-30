@@ -685,3 +685,95 @@ def test_example_users_csv_imports(client):
     with open(path) as f:
         r = client.post("/ssm/import", files={"file": ("users.csv", f.read(), "text/csv")}, headers=JSON)
     assert r.status_code == 200, r.text
+
+
+# --- WARP key ---------------------------------------------------------------
+
+WG_KEY = base64.b64encode(bytes(range(32))).decode()
+
+
+def _set_warp(client, key, ipv6, username="alice", headers=JSON, **kw):
+    return client.post("/ssm/warp", data={"username": username, "warp_key": key, "warp_ipv6": ipv6}, headers=headers, **kw)
+
+
+def _profile_has_warp(monkeypatch, name="alice"):
+    """The user's next Profile config, with a WARP rule set (r6) asked for."""
+    from app import utils
+
+    monkeypatch.setattr(utils, "APP_CLIENT_DIR", os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client"))
+    monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
+    monkeypatch.setattr(utils, "fetch_user_rules", lambda url: {"domain_suffix": ["ip6only.me"]})
+    config = utils.Reader(
+        username=name, psk=store.get(name)["password"], log_level="warn",
+        dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
+        dns_final="dns-remote", dns_resolver="1.1.1.1", rules_v6_url="https://x/r6.json",
+    ).unwarp()
+    return "warp-ep" in json.dumps(config)
+
+
+def test_set_warp_reaches_next_profile_config(client, monkeypatch):
+    r = _set_warp(client, WG_KEY, "2606:4700:110:8000::1")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"username": "alice", "warp_key": WG_KEY, "warp_ipv6": "2606:4700:110:8000::1/128"}
+    assert _profile_has_warp(monkeypatch)
+
+
+def test_clear_warp_drops_it_from_next_profile_config(client, monkeypatch):
+    store.update("alice", warp_key=WG_KEY, warp_ipv6="2606:4700::1/128")
+    r = _set_warp(client, "", "")
+    assert r.json() == {"username": "alice", "warp_key": None, "warp_ipv6": None}
+    assert not _profile_has_warp(monkeypatch)
+
+
+@pytest.mark.parametrize(
+    "key,ipv6,field",
+    [
+        (WG_KEY, "", "warp_ipv6"),  # both or neither
+        ("", "2606:4700::1", "warp_key"),
+        ("not base64!", "2606:4700::1", "warp_key"),
+        (base64.b64encode(bytes(31)).decode(), "2606:4700::1", "warp_key"),
+        (base64.b64encode(bytes(33)).decode(), "2606:4700::1", "warp_key"),
+        (WG_KEY, "172.16.0.2", "warp_ipv6"),
+        (WG_KEY, "not-an-address", "warp_ipv6"),
+        (WG_KEY, "2606:4700::1/64", "warp_ipv6"),
+        (WG_KEY, "fe80::1%eth0", "warp_ipv6"),
+    ],
+)
+def test_set_warp_bad_value_is_400_and_keeps_old_key(client, key, ipv6, field):
+    store.update("alice", warp_key=WG_KEY, warp_ipv6="2606:4700::1/128")
+    r = _set_warp(client, key, ipv6)
+    assert r.status_code == 400 and field in r.text
+    entry = _entry(client, "alice")
+    assert (entry["warp_key"], entry["warp_ipv6"]) == (WG_KEY, "2606:4700::1/128")
+
+
+def test_set_warp_unknown_is_404(client):
+    assert _set_warp(client, WG_KEY, "2606:4700::1", username="ghost").status_code == 404
+
+
+def test_set_warp_needs_admin_and_allows_admin_entries(client):
+    _add_entry(client, "root", admin=True)
+    assert client.post("/ssm/warp", data={"username": "root", "warp_key": WG_KEY, "warp_ipv6": "2606:4700::1"}).status_code == 401
+    assert _set_warp(client, WG_KEY, "2606:4700::1", username="root").status_code == 200
+
+
+def test_set_warp_html_redirects_to_stats(client):
+    r = _set_warp(client, WG_KEY, "2606:4700::1", headers=HTML, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/ssm/server/v1/users"
+
+
+def test_stats_page_shows_prefilled_warp_form(client, monkeypatch):
+    store.update("alice", warp_key=WG_KEY, warp_ipv6="2606:4700::1/128")
+    _add_entry(client, "bob")
+
+    async def stats():
+        return [{"username": "alice"}, {"username": "bob"}, {"username": "stranger"}]
+
+    monkeypatch.setattr(ssm, "get_stats", stats)
+    json_rows = client.get("/ssm/server/v1/users", headers=JSON).json()["users"]
+    assert all("warp_key" not in r for r in json_rows)  # stats JSON unchanged
+    html = client.get("/ssm/server/v1/users", headers=HTML).text
+    assert '<th class="more">Keys</th>' in html
+    assert html.count('action="/ssm/warp"') == 2  # alice, bob; not stranger (no User record)
+    assert f'value="{WG_KEY}"' in html and 'value="2606:4700::1/128"' in html
+    assert "—" in html

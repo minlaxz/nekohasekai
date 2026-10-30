@@ -1,6 +1,8 @@
+import base64
 import calendar
 import csv
 import io
+import ipaddress
 import logging
 import os
 import re
@@ -86,6 +88,11 @@ class Stats(BaseModel):
 
 def wants_html(request: Request) -> bool:
     return "text/html" in request.headers.get("accept", "")
+
+
+def _bad_field(field: str, msg: str) -> RequestValidationError:
+    """A 400 naming the bad form field, through main.py's handler."""
+    return RequestValidationError([{"loc": ["body", field], "msg": msg, "type": "value_error.invalid"}])
 
 
 # --- Expiry -------------------------------------------------------------------
@@ -452,13 +459,7 @@ async def set_expiry(request: Request, username: Username, expires_at: Annotated
         try:
             value = _parse_expiry(value)
         except ValueError:
-            raise RequestValidationError([
-                {
-                    "loc": ["body", "expires_at"],
-                    "msg": "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)",
-                    "type": "value_error.invalid",
-                }
-            ])
+            raise _bad_field("expires_at", "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)")
     entry = store.update(username, expires_at=value or None)
     if entry is None:
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
@@ -467,6 +468,62 @@ async def set_expiry(request: Request, username: Username, expires_at: Annotated
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return ExpirySet(username=username, expires_at=entry["expires_at"])
+
+
+class WarpSet(BaseModel):
+    username: str
+    warp_key: Optional[str]  # null = no WARP key
+    warp_ipv6: Optional[str]
+
+
+def _parse_warp(key: str, ipv6: str) -> tuple[Optional[str], Optional[str]]:
+    """The WARP key as stored: both set, or both None to clear."""
+    if not key and not ipv6:
+        return None, None
+    if not key or not ipv6:
+        raise _bad_field("warp_key" if not key else "warp_ipv6", "set both warp_key and warp_ipv6, or neither")
+    bad_key = _bad_field("warp_key", "must be a WireGuard private key: base64 of 32 bytes")
+    try:
+        if len(base64.b64decode(key, validate=True)) != 32:
+            raise bad_key
+    except ValueError:
+        raise bad_key from None
+    bad_ipv6 = _bad_field("warp_ipv6", "must be an IPv6 address, bare or /128")
+    try:
+        iface = ipaddress.IPv6Interface(ipv6)  # a bare address is /128
+    except ValueError:
+        raise bad_ipv6 from None
+    if iface.network.prefixlen != 128 or iface.scope_id:  # a %zone would reach the sing-box endpoint
+        raise bad_ipv6
+    return key, str(iface)
+
+
+@router.post(
+    "/warp",
+    response_model=WarpSet,
+    summary="Set a Managed user's WARP key",
+    description=(
+        "Form-encoded `username`, `warp_key` (WireGuard private key, base64 of 32 bytes) and `warp_ipv6` "
+        "(the WARP account's IPv6 address, bare or `/128`; stored with `/128`). Both or neither: both empty "
+        "clears the WARP key. The user's next Profile config uses it. Admin entries allowed. "
+        "Browser form submits are redirected to the stats page. 404 if the user has no User record."
+    ),
+    responses={400: {"description": "Invalid username, key or address"}, 404: {"description": "Unknown username"}},
+)
+async def set_warp(
+    request: Request,
+    username: Username,
+    warp_key: Annotated[str, Form()] = "",
+    warp_ipv6: Annotated[str, Form()] = "",
+):
+    key, ipv6 = _parse_warp(warp_key.strip(), warp_ipv6.strip())
+    entry = store.update(username, warp_key=key, warp_ipv6=ipv6)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+
+    if wants_html(request):
+        return RedirectResponse("/ssm/server/v1/users", status_code=303)
+    return WarpSet(username=username, warp_key=entry["warp_key"], warp_ipv6=entry["warp_ipv6"])
 
 
 def _refuse_admin(entry: Optional[Dict[str, Any]], username: str) -> None:

@@ -55,12 +55,14 @@
           <th class="more">TCP Sessions</th>
           <th class="more">UDP Sessions</th>
           <th class="more">Expires (UTC, empty = never)</th>
+          <th class="more">Keys</th>
           <th>Last fetch</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for user in users %}
+        {% set entry = entries.get(user.username) %}
         <tr>
           <td class="mono username">
             {{ user.username }}
@@ -79,8 +81,17 @@
               <button type="submit">Set</button>
             </form>
           </td>
+          <td class="mono more">
+            {% if entry %}
+            <form method="POST" action="/ssm/warp" style="display: flex; gap: 4px">
+              <input type="hidden" name="username" value="{{ user.username }}" />
+              <input type="text" name="warp_key" value="{{ entry.warp_key or '' }}" placeholder="WARP key (base64)" aria-label="WARP key" />
+              <input type="text" name="warp_ipv6" value="{{ entry.warp_ipv6 or '' }}" placeholder="WARP IPv6/128" aria-label="WARP IPv6 address" />
+              <button type="submit">Set</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
           <td class="mono" title="{{ user.last_fetch or '' }}">{{ user.last_fetch | ago }}</td>
-          {% set entry = entries.get(user.username) %}
           <td style="display: flex; gap: 4px">
             {% if not (entry and entry.admin) %}
             {% if entry %}
