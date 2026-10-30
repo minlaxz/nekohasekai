@@ -696,15 +696,15 @@ def _set_warp(client, key, ipv6, username="alice", headers=JSON, **kw):
     return client.post("/ssm/warp", data={"username": username, "warp_key": key, "warp_ipv6": ipv6}, headers=headers, **kw)
 
 
-def _profile_has_warp(monkeypatch, name="alice"):
-    """The user's next Profile config, with a WARP rule set (r6) asked for."""
+def _profile_has_warp(monkeypatch):
+    """alice's next Profile config, with a WARP rule set (r6) asked for."""
     from app import utils
 
     monkeypatch.setattr(utils, "APP_CLIENT_DIR", os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client"))
     monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
     monkeypatch.setattr(utils, "fetch_user_rules", lambda url: {"domain_suffix": ["ip6only.me"]})
     config = utils.Reader(
-        username=name, psk=store.get(name)["password"], log_level="warn",
+        username="alice", psk="a" * 20 + "==", log_level="warn",
         dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
         dns_final="dns-remote", dns_resolver="1.1.1.1", rules_v6_url="https://x/r6.json",
     ).unwarp()
