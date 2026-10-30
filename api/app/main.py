@@ -143,7 +143,7 @@ def read_root(request: Request):
     description=(
         "Full sing-box client config for one user. `j` username, `k` PSK (both required, "
         "checked against ssm-api). Other params override the `APP_DEFAULT_*` values; "
-        "`r` is an optional User rule set URL; `r6` the same for WARP domains (needs `dv=6`)."
+        "`r4` is an optional User rule set URL; `r6` the WARP rule set URL (turns WARP on for a user with a WARP key)."
     ),
 )
 def read_config(
@@ -160,10 +160,9 @@ def read_config(
     dd: str = os.getenv("APP_DEFAULT_DNS_DETOUR", ""),
     df: str = os.getenv("APP_DEFAULT_DNS_FINAL", ""),
     dr: str = os.getenv("APP_DEFAULT_DNS_RESOLVER", ""),
-    dv: int = int(os.getenv("APP_DEFAULT_DNS_VERSION", 0)),
     # User rule set URL (optional)
-    r: str = "",
-    # WARP domain rule set URL (optional, used with dv=6)
+    r4: str = "",
+    # WARP rule set URL (optional, turns WARP on for a user with a WARP key)
     r6: str = "",
     # Rule set download HTTP client tag: `proxy` (default) or `direct` (optional)
     rd: str = "",
@@ -176,6 +175,16 @@ def read_config(
                 "loc": ["query", "j" if not j else "k"],
                 "msg": "field required",
                 "type": "value_error.missing",
+            }
+        ])
+
+    # `r` was renamed; dropping it silently would lose the user's proxied domains.
+    if "r" in request.query_params:
+        raise RequestValidationError([
+            {
+                "loc": ["query", "r"],
+                "msg": "renamed to 'r4'",
+                "type": "value_error.invalid",
             }
         ])
 
@@ -205,8 +214,7 @@ def read_config(
         dns_detour=dd,
         dns_final=df,
         dns_resolver=dr,
-        dns_version=dv,
-        rules_url=r,
+        rules_url=r4,
         rules_detour=rd,
         rules_v6_url=r6,
     ).unwarp()

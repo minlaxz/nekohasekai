@@ -2,10 +2,10 @@
 
 Index: [network-diag.md](network-diag.md).
 
-Profile under test: `dv=6` with a WARP key and an `r6` rule set. DNS strategy
+Profile under test: a WARP key and an `r6` rule set. DNS strategy
 `ipv4_only`, except `r6` domains (`prefer_ipv4`, AAAA included). Route rule
 `ip_version: 6 → warp-ep` sits before `mm-ip-rules`, `clash_mode` and the
-`r` rules. Tun inbound has a ULA IPv6 address (`fdfe:dcba:9876::1/126`).
+`r4` rules. Tun inbound has a ULA IPv6 address (`fdfe:dcba:9876::1/126`).
 
 Key point: routing keys on the IP version of the connection, not on the DNS
 query type. An app that gets an IPv6 address by any means and connects over
@@ -104,5 +104,5 @@ Caveats:
   dual-stack sites.
 - IPv4-first holds only while the tun's IPv6 address is ULA. A global-scope
   address would make the browser prefer IPv6, and most browser traffic
-  would move to WARP, skipping `mm-ip-rules → direct` and the `r` rules.
+  would move to WARP, skipping `mm-ip-rules → direct` and the `r4` rules.
 - To make the browser follow the profile, turn off its encrypted DNS.

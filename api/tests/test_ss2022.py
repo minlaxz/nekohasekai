@@ -98,8 +98,10 @@ def test_profile_references_existing_outbounds_and_keeps_proxy_detours(monkeypat
     reader = utils.Reader(
         username="alice", psk="a" * 20 + "==", log_level="warn",
         dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
-        dns_final="dns-remote", dns_resolver="1.1.1.1", dns_version=6,
+        dns_final="dns-remote", dns_resolver="1.1.1.1",
+        rules_v6_url="https://x/r6.json",
     )
+    monkeypatch.setattr(utils, "fetch_user_rules", lambda url: {"domain_suffix": ["ip6only.me"]})
     config = reader.unwarp()
     tags = {ob["tag"] for ob in config["outbounds"] + config.get("endpoints", [])}
 
@@ -123,6 +125,22 @@ def test_profile_references_existing_outbounds_and_keeps_proxy_detours(monkeypat
     assert all(ep["detour"] == "shadowsocks-uot" for ep in config.get("endpoints", []))
     # Mesh and WARP keys come from the User record
     assert {ep["tag"] for ep in config.get("endpoints", [])} == ({"ts-ep", "warp-ep"} if with_endpoints else set())
+
+
+@pytest.mark.parametrize("warp_key,r6,warp_on", [("wg-key", "https://x/r6.json", True), ("wg-key", "", False), ("", "https://x/r6.json", False)])
+def test_warp_needs_key_and_warp_rule_set(monkeypatch, user_store, warp_key, r6, warp_on):
+    monkeypatch.setattr(utils, "APP_CLIENT_DIR", CLIENT)
+    monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
+    user_store.add(name="alice", password="a" * 20 + "==", warp_key=warp_key, warp_ipv6="2606:4700::1/128")
+    fetched = []
+    monkeypatch.setattr(utils, "fetch_user_rules", lambda url: fetched.append(url) or {"domain_suffix": ["ip6only.me"]})
+    config = utils.Reader(
+        username="alice", psk="a" * 20 + "==", log_level="warn",
+        dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
+        dns_final="dns-remote", dns_resolver="1.1.1.1", rules_v6_url=r6,
+    ).unwarp()
+    assert ("warp-ep" in json.dumps(config)) is warp_on
+    assert fetched == ([r6] if warp_on else [])
 
 
 class _Resp:
