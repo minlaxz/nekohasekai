@@ -210,6 +210,19 @@
         "method": "drop"
       },
       {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "process_name": ["tor", "tor.exe"]
+          },
+          {
+            "package_name": ["org.torproject.torbrowser"]
+          }
+        ],
+        "outbound": "shadowsocks-uot"
+      },
+      {
         "ip_version": 6,
         "outbound": "warp-ep"
       },
