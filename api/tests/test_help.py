@@ -14,7 +14,9 @@ HELP = os.path.join(os.path.dirname(__file__), "..", "templates", "help.html")
 def test_help_lists_every_config_param():
     with open(HELP) as f:
         html = f.read()
-    params = [n for n in inspect.signature(main.read_config).parameters if n != "request"]
+    sig = inspect.signature(main.read_config).parameters
+    params = [getattr(p.default, "alias", None) or n for n, p in sig.items() if n != "request"]
+    assert "rr.ip_cidr" in params  # the alias, which is what users type
     missing = [n for n in params if f"<code>{n}</code>" not in html]
     assert not missing, f"add to api/templates/help.html: {missing}"
 

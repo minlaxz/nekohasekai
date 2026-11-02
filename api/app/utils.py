@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import ipaddress
 import json
 import re
 import logging
@@ -217,10 +218,18 @@ def fetch_user_rules(url: str) -> Dict[str, List[str]]:
     return parse_user_rules(body)
 
 
+def parse_user_ips(raw: str) -> List[str]:
+    """A User IP list (`rr.ip_cidr`) as sing-box `ip_cidr` values: bare IPv4 only, one host each."""
+    try:
+        return [f"{ipaddress.IPv4Address(ip)}/32" for ip in raw.split(",")]
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"rr.ip_cidr: {exc}")
+
+
 def apply_user_rules(route: Dict[str, Any], matchers: Dict[str, List[str]]) -> None:
-    """Add a User rule set's matchers to every rule holding a domain_suffix list under
-    the proxied (`shadowsocks-uot` outbound) rules. sing-box ORs the domain_* fields within one
-    rule, so keywords and regexes sit beside the suffixes. Mutates `route`."""
+    """Add a User rule set's or User IP list's matchers to every rule holding a domain_suffix
+    list under the proxied (`shadowsocks-uot` outbound) rules. sing-box ORs the domain_* and
+    ip_cidr fields within one rule, so they all sit beside the suffixes. Mutates `route`."""
     targets: List[Dict[str, Any]] = []
 
     def walk(rule: Dict[str, Any]) -> None:
@@ -294,8 +303,10 @@ class Reader(Checker):
         rules_url: str = "",
         rules_detour: str = "",
         rules_v6_url: str = "",
+        user_ips: str = "",
     ) -> None:
         super().__init__(username, psk)
+        self.user_ips = user_ips
         self.rules_url = rules_url
         self.rules_detour = rules_detour
         self.rules_v6_url = rules_v6_url
@@ -358,6 +369,8 @@ class Reader(Checker):
         apply_full_mode(config["route"], bool(user.get("admin")))
         if self.rules_url:
             apply_user_rules(config["route"], fetch_user_rules(self.rules_url))
+        if self.user_ips:
+            apply_user_rules(config["route"], {"ip_cidr": parse_user_ips(self.user_ips)})
         if self.rules_detour:
             if self.rules_detour not in {hc["tag"] for hc in config["http_clients"]}:
                 raise HTTPException(status_code=400, detail=f"rd: no HTTP client tagged {self.rules_detour!r}")
