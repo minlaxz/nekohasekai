@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Callable, Dict, Type, Union
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
@@ -143,7 +143,8 @@ def read_root(request: Request):
     description=(
         "Full sing-box client config for one user. `j` username, `k` PSK (both required, "
         "checked against ssm-api). Other params override the `APP_DEFAULT_*` values; "
-        "`r4` is an optional User rule set URL; `r6` the WARP rule set URL (turns WARP on for a user with a WARP key)."
+        "`r4` is an optional User rule set URL; `r6` the WARP rule set URL (turns WARP on for a user with a WARP key); "
+        "`rr.ip_cidr` an optional User IP list (comma-separated bare IPv4 addresses)."
     ),
 )
 def read_config(
@@ -166,6 +167,8 @@ def read_config(
     r6: str = "",
     # Rule set download HTTP client tag: `proxy` (default) or `direct` (optional)
     rd: str = "",
+    # User IP list: comma-separated bare IPv4 addresses (optional)
+    rr_ip_cidr: list[str] = Query(default=[], alias="rr.ip_cidr"),
 ) -> dict[str, Any]:
 
     # Nothing to check if `j` and `k` aren't provided.
@@ -187,6 +190,17 @@ def read_config(
                 "type": "value_error.invalid",
             }
         ])
+
+    # A dropped route rule field would look like a working profile with the rule missing.
+    for param in request.query_params:
+        if param.startswith("rr.") and param != "rr.ip_cidr":
+            raise RequestValidationError([
+                {
+                    "loc": ["query", param],
+                    "msg": "unknown route rule field",
+                    "type": "value_error.invalid",
+                }
+            ])
 
     if not dp.startswith("/"):
         raise RequestValidationError([
@@ -217,6 +231,7 @@ def read_config(
         rules_url=r4,
         rules_detour=rd,
         rules_v6_url=r6,
+        user_ips=",".join(rr_ip_cidr),
     ).unwarp()
     record_fetch(j)
     return config

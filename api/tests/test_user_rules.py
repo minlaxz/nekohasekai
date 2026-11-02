@@ -6,7 +6,13 @@ import pytest
 from fastapi import HTTPException
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from app.utils import apply_rules_detour, apply_user_rules, fetch_user_rules, parse_user_rules  # noqa: E402
+from app.utils import (  # noqa: E402
+    apply_rules_detour,
+    apply_user_rules,
+    fetch_user_rules,
+    parse_user_ips,
+    parse_user_rules,
+)
 
 CLIENT = os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client")
 
@@ -86,6 +92,29 @@ def test_apply_extends_exactly_the_proxy_rule():
             walk(rule)
     want = {"domain_suffix": ["gstatic.com", "x.com"], "domain_keyword": ["google"]}
     assert hits == [want]
+
+
+def test_user_ips_become_single_host_prefixes():
+    assert parse_user_ips("1.2.3.4,1.2.3.5") == ["1.2.3.4/32", "1.2.3.5/32"]
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["nope", "1.2.3.4/32", "1.2.3.0/24", "2001:db8::1", "1.2.3.4,,1.2.3.5", "1.2.3.4,", " 1.2.3.4", "1.2.3"],
+)
+def test_user_ips_reject_anything_but_a_bare_ipv4(raw):
+    with pytest.raises(HTTPException) as exc:
+        parse_user_ips(raw)
+    assert exc.value.status_code == 400
+    assert "rr.ip_cidr" in exc.value.detail
+
+
+def test_user_ips_join_only_the_proxied_list():
+    route = _route()
+    apply_user_rules(route, {"ip_cidr": parse_user_ips("1.2.3.4,1.2.3.4")})
+    proxied = route["rules"][-1]["rules"][0]["rules"][1]
+    assert proxied == {"domain_suffix": ["gstatic.com"], "ip_cidr": ["1.2.3.4/32"]}
+    assert route["rules"][0]["ip_cidr"] == ["100.64.0.0/10"]  # Mesh rule untouched
 
 
 def test_apply_without_target_list_is_500():
