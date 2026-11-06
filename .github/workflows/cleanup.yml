@@ -21,7 +21,7 @@ jobs:
           keep_minimum_runs: 3
       - uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          keep-n-tagged: 3
+          keep-n-tagged: 4
           delete-untagged: true
       - uses: geekyeggo/delete-artifact@v5
         with:
