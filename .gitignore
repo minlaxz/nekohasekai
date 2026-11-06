@@ -188,3 +188,6 @@ git-ignored
 *.users.json
 scales
 /data/
+
+# understand-anything knowledge graph
+.ua/
