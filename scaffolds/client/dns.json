@@ -32,18 +32,21 @@
     ],
     "rules": [
       {
+        "domain_suffix": [],
+        "action": "route",
+        "server": "dns-remote"
+      },
+      {
+        "query_type": ["AAAA"],
+        "action": "predefined",
+        "rcode": "NOERROR"
+      },
+      {
         "preferred_by": "dns-mesh",
         "action": "route",
         "server": "dns-mesh"
-      },
-      {
-        "domain_suffix": [],
-        "action": "route",
-        "server": "dns-remote",
-        "strategy": "prefer_ipv4"
       }
     ],
-    "strategy": "ipv4_only",
     "disable_cache": false,
     "disable_expire": false,
     "cache_capacity": 10240,

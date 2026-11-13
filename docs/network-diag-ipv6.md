@@ -2,8 +2,9 @@
 
 Index: [network-diag.md](network-diag.md).
 
-Profile under test: a WARP key and an `r6` rule set. DNS strategy
-`ipv4_only`, except `r6` domains (`prefer_ipv4`, AAAA included). Route rule
+Profile under test: a WARP key and an `r6` rule set. DNS answers AAAA
+empty (`query_type: AAAA` rule), except `r6` domains (rule placed before it,
+AAAA included). Route rule
 `ip_version: 6 → warp-ep` sits before `mm-ip-rules`, `clash_mode` and the
 `r4` rules. Tun inbound has a ULA IPv6 address (`fdfe:dcba:9876::1/126`).
 

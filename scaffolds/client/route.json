@@ -292,6 +292,9 @@
     ],
     "final": "direct",
     "auto_detect_interface": true,
-    "default_domain_resolver": "dns-resolver"
+    "default_domain_resolver": {
+      "server": "dns-resolver",
+      "strategy": "ipv4_only"
+    }
   }
 }
