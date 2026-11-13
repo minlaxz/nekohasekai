@@ -126,7 +126,7 @@ headscale preauthkeys create --user alice --reusable --expiration 1y
 
 A user with a Mesh key gets the `ts-ep` tailscale endpoint (hostname = username, `control_url` from `APP_TS_CONTROL_URL`) and `100.64.0.0/10` routed into it. A user without one gets no endpoint and no such rule. Set, change or clear it in the Keys column of the stats page (Show details), or with `POST /ssm/mesh` (`username`, `ts_auth_key`). The user's next `/c` fetch joins the Mesh, or leaves it.
 
-WARP key (`warp_key` and `warp_ipv6`): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with a WARP rule set (`r6`) gets the `warp-ep` WireGuard endpoint (dialed through `shadowsocks-uot`, since WireGuard and Cloudflare are blocked locally). DNS stays `ipv4_only` except for the WARP domains listed in that rule set (same format and hosts as `r4`, e.g. `ip6only.me`, `test-ipv6.com`), which a DNS rule answers with `prefer_ipv4` (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `r6` or without a key, no endpoint and none of these rules. Set, change or clear it in the Keys column of the stats page (Show details), or with `POST /ssm/warp` (`username`, `warp_key`, `warp_ipv6`); both or neither. The user's next `/c` fetch uses it.
+WARP key (`warp_key` and `warp_ipv6`): the `PrivateKey` and the IPv6 `Address` of a Cloudflare WARP account, e.g. from `wgcf register && wgcf generate`. A user with a WARP key who fetches with a WARP rule set (`r6`) gets the `warp-ep` WireGuard endpoint (dialed through `shadowsocks-uot`, since WireGuard and Cloudflare are blocked locally). DNS answers AAAA queries empty except for the WARP domains listed in that rule set (same format and hosts as `r4`, e.g. `ip6only.me`, `test-ipv6.com`), whose DNS rule sits before the AAAA block (AAAA included); every IPv6 connection (`ip_version: 6`) and all traffic to those domains go to `warp-ep`. Without `r6` or without a key, no endpoint and none of these rules. Set, change or clear it in the Keys column of the stats page (Show details), or with `POST /ssm/warp` (`username`, `warp_key`, `warp_ipv6`); both or neither. The user's next `/c` fetch uses it.
 
 - Import link: `https://<APP_HOST>/i?j=<name>&k=<password>`
 - Raw profile: `https://<APP_HOST>/c?j=<name>&k=<password>`
@@ -166,7 +166,7 @@ alice,k3j9x0q2m8n1p5r7t4w6==,false,2026-10-08T12:00:00+00:00,false,,,
 
 On success, live users are in ssm-api before the response returns; Expired and Disabled users stay out. To change an existing user through import, delete them first.
 
-`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final. DNS is always `ipv4_only`, except WARP domains (see WARP key).
+`/c` query parameters (each falls back to its `APP_DEFAULT_*`): `ll` log level, `dh` DoH host or IP, `dn` DoH TLS server name (when `dh` is an IP), `dp` DoH path prefix (username is appended), `dr` resolver IP, `dd` resolver detour, `df` DNS final. DNS answers no AAAA (a `query_type: AAAA` rule returns empty `NOERROR`; sing-box 1.14 deprecates the DNS rule `strategy`), except WARP domains (see WARP key). Proxy server names resolve `ipv4_only` through `route.default_domain_resolver`.
 
 ## Develop
 
