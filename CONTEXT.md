@@ -1,47 +1,54 @@
 # Context: nekohasekai
 
-Single bounded context. Glossary of domain terms as used in this repo.
+Single bounded context. Glossary of domain terms as used in this repo. Mechanics live in `docs/` and `docs/adr/`.
 
-## Terms
+## Deployment
 
 - **Server config** — the sing-box config directory the VPS runs (`server/`). Seeded from the image on first start, then persistent.
-- **Client template** — the sing-box outbounds config handed to end users (`client/`). Has server address, ports, and SNI filled in; per-user passwords are filled by the API, not by init.
-- **Init** — the container entrypoint. It seeds Server config and Client template into the persistent volume and fills in Deploy values. Each step has its own gate: seeding runs once (`.initialized`); the Shadowsocks port, ShadowTLS port, SNI, and ShadowTLS password are written once (`.configured`); SS-2022 is set up once (`.ss2022`): method, server PSK on both sides, ssm-api cache reset, likewise upgrading older volumes; Public IP is refreshed on every start.
-- **Template refresh** — the every-start step that copies every Client template file except `outbounds.json` from the image (`/defaults`) into the volume. Routine upgrades use `pull` + `up -d`; `outbounds.json` is skipped because it holds Deploy values. Retiring Hysteria2 requires a one-time volume rebuild (ADR 0005).
-- **Deploy values** — values that differ per VPS: Shadowsocks port, Server PSK, ShadowTLS port, SNI, ShadowTLS password, Public IP. All but Public IP come from `.env`; Public IP is auto-detected, `PUBLIC_IP` overrides.
-- **Public IP** — the VPS's internet-facing IPv4 address. Auto-detected on every start (`PUBLIC_IP` overrides), written into the Client template.
+- **Client template** — the sing-box client config directory (`client/`) that every Profile config is built from. Init fills in Deploy values; per-user values are filled by the API.
+- **Init** — the container entrypoint. Seeds Server config and Client template into the volume and writes Deploy values once; Public IP is refreshed on every start.
+- **Template refresh** — the every-start step of Init that copies every Client template file except `outbounds.json` from the image into the volume, so routine upgrades need only `pull` + `up -d` (`docs/upgrade.md`).
+- **Deploy values** — values that differ per VPS: Shadowsocks port, Server PSK, ShadowTLS port, SNI, ShadowTLS password, Public IP. All but Public IP come from `.env`.
+- **Public IP** — the VPS's internet-facing IPv4 address. Auto-detected on every start; `PUBLIC_IP` overrides.
+
+## Transport
+
+- **Transport** — the way a client reaches the VPS: ShadowTLS over TCP, carrying Shadowsocks for both TCP and UDP. Holds only shared secrets, never a per-user identity. Shadowsocks is never exposed on the internet by itself.
 - **SNI** — the TLS server name the ShadowTLS handshake imitates. Same value on server (`handshake.server`) and client (`tls.server_name`).
-- **User record** — one Managed user's stored entry: name, PSK, admin flag, plus an optional Mesh key, WARP key, Expiry, Disabled flag, and Last fetch. Held by the API in its own store and changed only through the admin surface. Mirrored into ssm-api at API startup and every minute (Expired and Disabled users out, live users in; users with no User record are left alone); kept in sync by `/ssm/create`, `/ssm/renew`, `/ssm/disable`, `/ssm/enable` and `/ssm/delete`.
-- **User import** — the admin adding User records from a CSV file on the dashboard. Add-only and all-or-nothing: if any row is invalid, or any name or PSK already exists, nothing is added and every bad row is reported. Imported users reach ssm-api at once. The way to seed a new VPS and to bring over a retired Users file (ADR 0006).
-- **User export** — the admin downloading every User record as CSV, in the same shape User import accepts, Last fetch excluded. Holds every PSK, Mesh key, and WARP key in plain text; treat it like `.env`.
-- **Users file** — retired. `users.json` on the host, mounted into the API, was the store of User records until ADR 0006; a script turns one into a CSV for User import.
-- **Managed users** — Shadowsocks users held by the ssm-api service. The only per-user identity; adding or removing one needs no sing-box restart. Also called SSM users in the admin UI. A username is 1–32 characters: letters, digits, `-`, `_`; it must start with a letter or digit. Creating an existing username is a conflict, not a password rotation; rotate by deleting and creating.
-- **Admin credential** — the single username/password pair that gates every Managed user operation (create, delete, stats, raw ssm-api proxy). Set per VPS. Without it the admin surface is closed, not open.
-- **Transport** — the way a client reaches the VPS: ShadowTLS (over TCP). The Transport carries Shadowsocks inside it, for both TCP and UDP traffic, and holds one shared secret with no per-user identity. Shadowsocks is never exposed on the internet by itself.
-- **Shadowsocks UOT** — the `shadowsocks-uot` connection: Shadowsocks over ShadowTLS with UDP-over-TCP, carrying both TCP and UDP traffic through the active Transport.
-- **All Outbounds** — the client group that tests `direct` and `shadowsocks-uot` and selects a path by their measured response times. Either path may be selected, so this group is not a guarantee that traffic goes through the proxy.
-- **Remote DNS Detour** — the client selector for reaching the remote DNS service, with `direct` and `shadowsocks-uot` as options. It defaults to `direct`.
-- **ShadowTLS password** — one shared handshake secret for all clients. ShadowTLS is transport only; it carries no per-user identity.
-- **Hysteria2 transport** — the retired UDP (QUIC) path to the VPS, obfuscated with Salamander. Transport only, like ShadowTLS: it carries Shadowsocks inside and can reach nothing on the server except the Shadowsocks inbound. The PSK stays the gate, and Managed users stay the only per-user identity. Retired from API-served profiles and the deployment after reported startup instability; retained here for future investigation (issue #65, ADR 0005).
-- **Hysteria2 password** and **Salamander password** — two shared secrets for clients of the retired Hysteria2 transport, formerly set in `.env` like the ShadowTLS password and written once by Init. Transport only; they carry no per-user identity.
-- **Hysteria2 certificate** — the self-signed certificate for the retired Hysteria2 transport. It was generated once by Init and kept in the volume; the Client template carried it inline as the trust anchor.
-- **Profile config** — the full sing-box client config returned by `/c` for one user. Built from the Client template: log, dns, and outbounds are injected per request (query params override `APP_DEFAULT_*`); inbounds, experimental, endpoints, services, http_clients, and route are served verbatim, except for the User rule set and User IP list merge into route and the `rd` rule-set download client.
-- **User rule set** — a sing-box rule-set source file the user hosts and passes by URL (`r4`) when fetching their Profile config. Only `domain_suffix`, `domain_keyword`, and `domain_regex` are accepted. Fetched and checked on every request; its matchers join the Profile config's proxied-in-Partial-mode list, alongside the admin-curated rule sets (`my-rules`, geosite). Optional, one per request. A bad or unreachable file fails the request rather than being dropped silently.
-- **User IP list** — single IPv4 addresses the user passes directly (`rr.ip_cidr`, comma-separated, no prefix length) when fetching their Profile config. Each address means exactly that one host. They join the same proxied-in-Partial-mode list as the User rule set, so earlier route rules still win: an address in Myanmar stays direct. Optional. Any entry that is not a single IPv4 address fails the request.
-- **Help page** — the `/help` page listing every Profile config query param, its meaning, and its current default. Only a user with a valid `j`/`k` sees it; anyone else gets the same not-found answer as an unknown path.
+- **ShadowTLS password** — the one handshake secret shared by all clients.
+- **Server PSK** — the SS-2022 identity PSK of the Shadowsocks inbound (`SHADOWSOCKS_PASSWORD`, 16 bytes). Shared by all clients; not the user's PSK.
+- **Shadowsocks UOT** — the `shadowsocks-uot` outbound: Shadowsocks over ShadowTLS with UDP-over-TCP.
+- **All Outbounds** — the client URL-test group over `direct` and `shadowsocks-uot`. Either may win, so it does not guarantee traffic goes through the proxy.
+- **Remote DNS Detour** — the client selector for reaching the remote DNS service, over `direct` and `shadowsocks-uot`. Defaults to `direct`.
+- **Hysteria2 transport** — retired UDP (QUIC) Transport, with its own shared passwords and a self-signed certificate. Kept in docs for a possible return (ADR 0001, ADR 0005, issue #65).
+
+## Users
+
+- **Managed user** — one Shadowsocks identity held by ssm-api; the only per-user identity. Called SSM user in the admin UI. Added or removed with no sing-box restart.
+- **User record** — one Managed user's entry in the API's store: name, PSK, admin flag, and optional Mesh key, WARP key, Expiry, Disabled flag, Last fetch. The store is the source of truth; the API mirrors it into ssm-api (ADR 0003, ADR 0006).
+- **Users file** — retired. `users.json`, the store of User records before ADR 0006.
+- **User import** — the admin adding User records from CSV. Add-only and all-or-nothing (`docs/api.md`).
+- **User export** — the admin downloading every User record as CSV in the User import shape. Holds every secret in plain text; treat it like `.env`.
+- **Admin credential** — the single username/password pair that gates every admin route. Unset means the admin surface is closed, not open.
+- **PSK** — the user's Shadowsocks password (`k`): 20 base64 characters plus `==`. Must be unique: SS-2022 identifies a user by key, so two Managed users with one PSK are one user to sing-box (last name wins, stats merge, Expiry on one does nothing).
+- **SSM key** — the SS-2022 user key ssm-api holds, derived from the PSK by the API, never stored (ADR 0002).
+- **Client key** — the 16-byte key a Profile config carries, derived from the SSM key; written as `<Server PSK>:<Client key>` (ADR 0002).
+- **Expiry** — the UTC instant after which a Managed user may no longer connect. None means never.
+- **Trial period** — the 3 days added on top of the months chosen at create. 0 months means Trial period only.
+- **Renewal** — pushing Expiry forward by whole months, with no Trial period. Does not enable a Disabled user.
+- **Expired user** — a Managed user past Expiry: out of ssm-api, cannot connect, `/c` refuses them. User record and PSK are kept, so Renewal brings them back with no re-import. Expiry gates Shadowsocks only: a Mesh key stays valid.
+- **Disabled user** — a Managed user switched off by the admin. Same effect as Expired, independent of Expiry: back only when neither holds.
+- **Deleted user** — a Managed user removed from ssm-api and from the store. Permanent: a re-create issues a new PSK that devices must re-import.
+- **Last fetch** — the last time `/c` delivered a user's Profile config. Not a measure of activity: clients re-fetch only on their own update interval.
+
+## Profile
+
+- **Profile config** — the full sing-box client config `/c` returns for one user, built from the Client template plus per-user values.
 - **Profile import** — the `/i` page that wraps a Profile config URL in a `sing-box://import-remote-profile` link.
-- **PSK** — the user's Shadowsocks password (`k`): 20 base64 characters plus `==`. What the user holds, what the User record holds, what the import and config URLs carry. Verified against ssm-api before a Profile config is issued. Per-user; the ShadowTLS password is separate and shared. Must be unique: SS-2022 identifies a user by key, so two Managed users with one PSK are one user to sing-box (last name wins, stats merge, Expiry on one of them does nothing). Not a valid SS-2022 key by itself: the API derives one from it (see SSM key, Client key; ADR 0002).
-- **SSM key** — the SS-2022 user key ssm-api holds for a PSK: the PSK without `==` plus its first 4 characters (`nj75pm4nlaslo8xm8xtK==` → `nj75pm4nlaslo8xm8xtKnj75`, 18 bytes). sing-box's server side reduces it to 16 bytes with SHA-256. Derived by the API on seed, create, and verify; never stored.
-- **Client key** — the 16-byte key the Profile config's Shadowsocks outbounds carry for a PSK: SHA-256 of the decoded SSM key, cut to 16 bytes. Equal to what the server keeps internally; sing-box's client side accepts nothing but exactly 16 bytes. Written as `<Server PSK>:<Client key>` (SIP022).
-- **Server PSK** — the SS-2022 identity PSK of the Shadowsocks inbound (`SHADOWSOCKS_PASSWORD`, exactly 16 bytes). A Deploy value, written once by Init into the inbound and into the Client template Shadowsocks outbound. Shared by all clients; it carries no per-user identity.
-- **Mesh** — the headscale tailnet that users' devices join. Separate deployment from the VPS; the VPS is not in the mesh path. Mesh addresses are the whole `100.64.0.0/10` range; a device reaches a peer only if that peer is registered.
-- **Mesh key** — a per-user, reusable headscale pre-auth key (`ts_auth_key` in the User record), minted by the admin by hand in headscale, then viewed, set, changed, or cleared on the stats page. Optional: a user with a Mesh key gets a Profile config that joins the Mesh under their username and resolves MagicDNS names (`*.minlaxz.internal`); a user without one gets no Mesh sections at all.
-- **WARP key** — a per-user Cloudflare WARP WireGuard private key plus that account's IPv6 address (`warp_key`, `warp_ipv6` in the User record), registered by the admin by hand with Cloudflare, then viewed, set, changed, or cleared on the stats page. The key and the IPv6 address go together: both or neither. Optional: a user with a WARP key whose Profile config is fetched with a WARP rule set gets a WireGuard endpoint to WARP, dialed through `shadowsocks-uot`. Only WARP domains get AAAA answers; all IPv6 traffic and those domains go to WARP. Otherwise no WARP sections at all, and DNS is IPv4 only.
-- **WARP rule set** — a rule-set source file, same format and checks as the User rule set, that the user passes by URL (`r6`) to list the WARP domains. Passing it is what turns WARP on, and only for a user with a WARP key; without a WARP key it is ignored and not fetched.
-- **Expiry** — the UTC instant after which a Managed user may no longer connect. Set once at create: the Trial period plus the whole months the admin chose (0 to 6, calendar months). The admin can also set it to an exact instant or clear it from the stats page. A User record without an Expiry never expires; existing users and admins have none.
-- **Trial period** — the 3 days every new Managed user gets on top of the chosen months. 0 months means Trial period only.
-- **Expired user** — a Managed user whose Expiry has passed. Removed from ssm-api, so no transport lets them connect and `/c` refuses them, but their User record, username, and PSK are untouched. Expiry gates Shadowsocks only: a Mesh key stays valid. Not the same as a deleted user: `/ssm/delete` removes the User record outright.
-- **Disabled user** — a Managed user the admin switched off by hand. Same effect as an Expired user: out of ssm-api, cannot connect, `/c` refuses them, User record, username, PSK, and Expiry untouched, Mesh key still valid. Enable puts them back exactly as before. Independent of Expiry: a user can be both Disabled and Expired, and comes back only when neither holds. Admin entries cannot be disabled from the dashboard.
-- **Deleted user** — a Managed user removed from both ssm-api and its User record. Permanent: the PSK is gone, and a re-create issues a new one that devices must re-import. Admin entries cannot be deleted from the dashboard.
-- **Last fetch** — the last time a Managed user's Profile config was delivered by `/c`. Refused requests do not count, and `/i` visits do not count. Tells the admin who holds the latest config. It is not a measure of activity: clients re-fetch only on their own update interval. Kept in the User record, so it survives API restarts; not part of User export.
-- **Renewal** — the admin pushing a Managed user's Expiry forward by whole months (1 to 6). Counts from now if the user is already expired or has no Expiry, otherwise from the current Expiry. No Trial period is added. An Expired user comes back with the same PSK; no re-import on devices. Renewal does not enable a Disabled user.
+- **Help page** — the `/help` page listing every Profile config query param and its default. Visible only with a valid `j`/`k`.
+- **User rule set** — a rule-set file the user hosts and passes by URL (`r4`); its domains are proxied in Partial mode.
+- **User IP list** — single IPv4 addresses the user passes (`rr.ip_cidr`), proxied in Partial mode. Earlier route rules still win: an address in Myanmar stays direct.
+- **Mesh** — the headscale tailnet users' devices join. A separate deployment; the VPS is not in the Mesh path.
+- **Mesh key** — a per-user headscale pre-auth key. Optional: with one, the Profile config joins the Mesh; without one, no Mesh sections (`docs/users.md`).
+- **WARP key** — a per-user Cloudflare WARP private key plus its IPv6 address, both or neither. Optional (`docs/users.md`).
+- **WARP rule set** — a rule-set file passed by URL (`r6`) listing WARP domains. Turns WARP on only for a user with a WARP key; otherwise ignored.
