@@ -194,7 +194,3 @@ No admin credential. Identity is the `j`/`k` pair from the create response.
 3. The user's sing-box fetches `/c` through that link; nothing else to do.
 4. Access ends at `expires_at` on its own; the user keeps the same link. To extend by months: `POST /ssm/renew`; to set an exact date or clear it: `POST /ssm/expiry`.
 5. To revoke for good: `POST /ssm/delete`.
-
-## Not public
-
-`/ssm-transparent/*` raw-proxies the internal ssm-api. It is behind the same Admin credential, undocumented, and may change without notice.
