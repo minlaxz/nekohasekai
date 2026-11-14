@@ -178,3 +178,136 @@ def test_delete_with_ssm_api_down_keeps_the_record(ssm):
     with pytest.raises(ssm_api.SsmUnavailable):
         asyncio.run(lifecycle.delete("alice"))
     assert store.get("alice") is not None
+
+
+# --- Renewal --------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "expires_at,months,renewed",
+    [
+        ("2026-10-20T00:00:00+00:00", 2, "2026-12-20T00:00:00+00:00"),  # live: from the current Expiry
+        ("2026-09-01T00:00:00+00:00", 1, "2026-11-05T12:00:00+00:00"),  # Expired: from now
+        (None, 1, "2026-11-05T12:00:00+00:00"),  # no Expiry: from now, no Trial period
+        ("2027-01-31T00:00:00+00:00", 1, "2027-02-28T00:00:00+00:00"),  # day clamped
+    ],
+)
+def test_renew_pushes_expiry_by_calendar_months(ssm, frozen, expires_at, months, renewed):
+    store.update("alice", expires_at=expires_at)
+    entry = asyncio.run(lifecycle.renew("alice", months))
+    assert entry["expires_at"] == renewed and store.get("alice") == entry
+
+
+def test_renew_brings_an_expired_user_back_with_the_same_psk(ssm, frozen):
+    store.update("alice", expires_at="2026-09-01T00:00:00+00:00")
+    ssm.users.pop("alice")
+    asyncio.run(lifecycle.renew("alice", 1))
+    assert ssm.users["alice"]["uPSK"] == ssm_key("a" * 20 + "==")
+
+
+def test_renew_does_not_enable(ssm, frozen):
+    store.update("alice", disabled=True)
+    entry = asyncio.run(lifecycle.renew("alice", 1))
+    assert entry["disabled"] is True and "alice" not in ssm.users
+
+
+# --- Setting Expiry -------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value,stored",
+    [
+        ("2027-01-01T09:00:00+09:00", "2027-01-01T09:00:00+09:00"),  # zone kept
+        (" 2027-01-01T00:00 ", "2027-01-01T00:00:00+00:00"),  # no zone = UTC
+        ("", None),  # never
+    ],
+)
+def test_set_expiry_stores_the_instant(ssm, value, stored):
+    entry = asyncio.run(lifecycle.set_expiry("alice", value))
+    assert entry["expires_at"] == stored and store.get("alice") == entry
+
+
+def test_set_expiry_unparsable_raises_invalid_field(ssm):
+    with pytest.raises(lifecycle.InvalidField) as exc:
+        asyncio.run(lifecycle.set_expiry("alice", "tomorrow"))
+    assert exc.value.field == "expires_at"
+    assert exc.value.msg == "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)"
+    assert store.get("alice")["expires_at"] is None
+
+
+def test_set_expiry_past_removes_the_user_and_future_or_empty_puts_them_back(ssm, frozen):
+    asyncio.run(lifecycle.set_expiry("alice", "2026-01-01T00:00"))
+    assert "alice" not in ssm.users
+    asyncio.run(lifecycle.set_expiry("alice", "2027-01-01T00:00"))
+    assert "alice" in ssm.users
+    asyncio.run(lifecycle.set_expiry("alice", "2026-01-01T00:00"))
+    asyncio.run(lifecycle.set_expiry("alice", ""))
+    assert "alice" in ssm.users
+
+
+def test_set_expiry_does_not_enable(ssm, frozen):
+    store.update("alice", disabled=True)
+    asyncio.run(lifecycle.set_expiry("alice", ""))
+    assert "alice" not in ssm.users
+
+
+# --- Disable and enable ---------------------------------------------------------
+
+
+def test_disable_takes_the_user_out_and_keeps_the_record(ssm, frozen):
+    store.update("alice", expires_at="2026-12-01T00:00:00+00:00")
+    entry = asyncio.run(lifecycle.disable("alice"))
+    assert entry["disabled"] is True and store.get("alice") == entry
+    assert (entry["password"], entry["expires_at"]) == ("a" * 20 + "==", "2026-12-01T00:00:00+00:00")
+    assert "alice" not in ssm.users
+    assert asyncio.run(lifecycle.disable("alice")) == entry  # repeat: no-op
+
+
+def test_disable_admin_entry_raises_admin_entry(ssm):
+    _add("root", admin=True)
+    ssm.users["root"] = {"username": "root"}
+    with pytest.raises(lifecycle.AdminEntry):
+        asyncio.run(lifecycle.disable("root"))
+    assert store.get("root")["disabled"] is False and "root" in ssm.users
+
+
+def test_enable_puts_the_user_back_with_the_same_psk(ssm, frozen):
+    asyncio.run(lifecycle.disable("alice"))
+    entry = asyncio.run(lifecycle.enable("alice"))
+    assert entry["disabled"] is False and store.get("alice") == entry
+    assert ssm.users["alice"]["uPSK"] == ssm_key("a" * 20 + "==")
+    assert asyncio.run(lifecycle.enable("alice")) == entry  # repeat: no-op
+
+
+def test_enable_an_expired_user_keeps_them_out(ssm, frozen):
+    store.update("alice", disabled=True, expires_at="2026-01-01T00:00:00+00:00")
+    asyncio.run(lifecycle.enable("alice"))
+    assert "alice" not in ssm.users
+
+
+# --- User not found -------------------------------------------------------------
+
+
+CHANGES = [
+    lambda name: lifecycle.renew(name, 1),
+    lambda name: lifecycle.set_expiry(name, ""),
+    lifecycle.disable,
+    lifecycle.enable,
+]
+
+
+@pytest.mark.parametrize("change", CHANGES)
+def test_change_to_a_missing_user_raises_user_not_found(ssm, change):
+    ssm.users["stranger"] = {"username": "stranger"}  # in ssm-api only: still not found
+    for name in ("ghost", "stranger"):
+        with pytest.raises(lifecycle.UserNotFound):
+            asyncio.run(change(name))
+
+
+@pytest.mark.parametrize("change", CHANGES)
+def test_change_to_a_user_deleted_meanwhile_raises_user_not_found(ssm, monkeypatch, change):
+    stale = store.get("alice")
+    store.delete("alice")
+    monkeypatch.setattr(store, "get", lambda name: stale)  # read before the delete
+    with pytest.raises(lifecycle.UserNotFound):
+        asyncio.run(change("alice"))
