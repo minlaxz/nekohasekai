@@ -1,10 +1,20 @@
 import os
 import sys
+from datetime import datetime, timezone
 
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from app import ssm_api, store  # noqa: E402
+from app import lifecycle, ssm_api, store  # noqa: E402
+
+NOW = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def frozen(monkeypatch):
+    """Lifecycle time stands still at NOW."""
+    monkeypatch.setattr(lifecycle, "now", lambda: NOW)
+    return NOW
 
 
 class InMemorySsm:
