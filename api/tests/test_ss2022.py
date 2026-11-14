@@ -140,27 +140,32 @@ def test_warp_needs_key_and_warp_rule_set(warp_key, r6, warp_on):
     assert fetched == ([r6] if warp_on else [])
 
 
-class _Resp:
-    def __init__(self, data):
-        self._data = data
+def _help_status(fake_ssm, held=None):
+    """`/help` for alice with `K`: 200 only if verify_user passes. `held` is the key ssm-api holds, None for no user."""
+    from fastapi.testclient import TestClient
+    from app import main
 
-    def raise_for_status(self):
-        pass
-
-    def json(self):
-        return self._data
-
-
-def test_verify_compares_derived_key(monkeypatch):
-    monkeypatch.setattr(utils.httpx, "get", lambda url, timeout: _Resp({"uPSK": ssm_key(K)}))
-    utils.verify_user("alice", K)  # no raise
+    if held is not None:
+        fake_ssm.users["alice"] = {"username": "alice", "uPSK": held}
+    return TestClient(main.app).get("/help", params={"j": "alice", "k": K}).status_code
 
 
-@pytest.mark.parametrize("reported", [K, "nj75pm4nlaslo8xm8xtKnj76", ""])
-def test_verify_rejects_other_keys(monkeypatch, reported):
-    monkeypatch.setattr(utils.httpx, "get", lambda url, timeout: _Resp({"uPSK": reported}))
-    with pytest.raises(utils.HTTPException):
-        utils.verify_user("alice", K)
+def test_verify_compares_derived_key(fake_ssm):
+    assert _help_status(fake_ssm, ssm_key(K)) == 200
+
+
+@pytest.mark.parametrize("held", [K, "nj75pm4nlaslo8xm8xtKnj76", ""])
+def test_verify_rejects_other_keys(fake_ssm, held):
+    assert _help_status(fake_ssm, held) == 404
+
+
+def test_verify_rejects_a_user_ssm_api_does_not_hold(fake_ssm):
+    assert _help_status(fake_ssm) == 404
+
+
+def test_verify_rejects_while_ssm_api_is_down(fake_ssm):
+    fake_ssm.down = True
+    assert _help_status(fake_ssm, ssm_key(K)) == 404
 
 
 def test_example_users_have_valid_k():

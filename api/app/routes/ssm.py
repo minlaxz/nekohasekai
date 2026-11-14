@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import calendar
 import csv
@@ -11,10 +12,9 @@ import string
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Dict, List, Optional
 
-import httpx
-from app import store
+from app import ssm_api, store
 from app.auth import require_admin
-from app.utils import get_stats, ssm_key
+from app.utils import ssm_key
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.requests import Request
@@ -25,7 +25,6 @@ from pydantic import BaseModel
 router = APIRouter(dependencies=[Depends(require_admin)], tags=["admin"])
 
 APP_HOST: str = os.getenv("APP_HOST", "")  # main.py logs when it is unset
-APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
 
 templates = Jinja2Templates(directory="templates")
 
@@ -134,6 +133,45 @@ def is_out(entry: Dict[str, Any], now: datetime) -> bool:
 
 
 # --- Stats ------------------------------------------------------------------
+
+
+def format_bytes(v: int) -> str:
+    if v >= 1 << 30:
+        return f"{v / (1 << 30):.2f} GB"
+    elif v >= 1 << 20:
+        return f"{v / (1 << 20):.2f} MB"
+    elif v >= 1 << 10:
+        return f"{v / (1 << 10):.2f} KB"
+    return f"{v} B"
+
+
+def format_packets(v: int) -> str:
+    if v >= 1_000_000:
+        return f"{v / 1_000_000:.2f} M"
+    elif v >= 1_000:
+        return f"{v / 1_000:.2f} K"
+    return str(v)
+
+
+async def get_stats() -> List[Dict[str, Any]]:
+    """ssm-api's per-user traffic, busiest first, with each user's SSM key and human-readable counters."""
+    stats_data, users_data = await asyncio.gather(ssm_api.client.stats(), ssm_api.client.list_users())
+    keys = {u["username"]: u.get("uPSK") for u in users_data}
+    for stat in stats_data:
+        if stat["username"] in keys:
+            stat["uPSK"] = keys[stat["username"]]
+
+    stats_data.sort(key=lambda x: x.get("downlinkBytes", 0), reverse=True)  # by raw bytes
+
+    for row in stats_data:
+        extra = {}
+        for k, v in row.items():
+            if k.endswith("Bytes"):
+                extra[k + "Human"] = format_bytes(v)
+            elif k.endswith("Packets"):
+                extra[k + "Human"] = format_packets(v)
+        row.update(extra)
+    return stats_data
 
 
 @router.get(
@@ -315,39 +353,12 @@ def create_upsk() -> str:
     return "".join(secrets.choice(alphabet) for _ in range(20)) + "=="
 
 
-async def _upstream_usernames() -> set[str]:
-    async with httpx.AsyncClient(timeout=5) as client:
-        try:
-            r = await client.get(f"{APP_SSM_UPSTREAM}/server/v1/users")
-            r.raise_for_status()
-        except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
-    return {u["username"] for u in r.json().get("users", [])}
+async def _ssm_usernames() -> set[str]:
+    return {u["username"] for u in await ssm_api.client.list_users()}
 
 
 async def _user_exists(username: str) -> bool:
-    return store.get(username) is not None or username in await _upstream_usernames()
-
-
-async def create_user_in_memory(username: str, uPSK: str):
-    async with httpx.AsyncClient(timeout=5) as client:
-        create_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
-        payload = {"username": username, "uPSK": uPSK}
-        try:
-            r = await client.post(create_upstream, json=payload)
-            r.raise_for_status()
-        except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
-
-
-async def delete_user_in_memory(username: str):
-    async with httpx.AsyncClient(timeout=5) as client:
-        try:
-            r = await client.delete(f"{APP_SSM_UPSTREAM}/server/v1/users/{username}")
-            if r.status_code != 404:
-                r.raise_for_status()
-        except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
+    return store.get(username) is not None or username in await _ssm_usernames()
 
 
 async def reconcile_users() -> None:
@@ -355,12 +366,12 @@ async def reconcile_users() -> None:
     ssm-api users with no User record are left alone."""
     now = _now()
     users = store.records()
-    existing = await _upstream_usernames()
+    existing = await _ssm_usernames()
     added, removed = [], []
     for u in users:
         if is_out(u, now):
             if u["name"] in existing:
-                await delete_user_in_memory(u["name"])
+                await ssm_api.client.remove_user(u["name"])
                 removed.append(u["name"])
         elif u["name"] not in existing:
             try:
@@ -368,7 +379,7 @@ async def reconcile_users() -> None:
             except ValueError as exc:  # ssm-api keeps a user whose key fails to apply: never post it
                 logging.error(f"reconcile: skipping {u['name']}: {exc}")
                 continue
-            await create_user_in_memory(u["name"], key)
+            await ssm_api.client.add_user(u["name"], key)
             added.append(u["name"])
     if added or removed:
         logging.info(f"reconcile: added {added}, removed {removed}")
@@ -403,8 +414,8 @@ async def create_user(request: Request, username: Username, months: Months = 0):
     # Record first: a failure in between must not leave an ssm-api user with no Expiry.
     store.add(name=username, password=uPSK, expires_at=expires_at)
     try:
-        await create_user_in_memory(username, ssm_key(uPSK))
-    except HTTPException:
+        await ssm_api.client.add_user(username, ssm_key(uPSK))
+    except ssm_api.SsmUnavailable:
         store.delete(username)  # the admin never saw this PSK
         raise
 
@@ -630,7 +641,7 @@ async def delete_user(request: Request, username: Username):
     _refuse_admin(store.get(username), username)
     if not await _user_exists(username):
         raise HTTPException(status_code=404, detail=f"User '{username}' not found")
-    await delete_user_in_memory(username)
+    await ssm_api.client.remove_user(username)
     store.delete(username)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)

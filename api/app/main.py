@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, Response, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from .routes.ssm import router as ssm_router, reconcile_users, record_fetch
-from .routes.ssm_transparent import router as ssm_transparent_router
+from .ssm_api import SsmUnavailable
 from .utils import build_profile, load_template, user_entry, verify_user
 
 scheduler: AsyncIOScheduler = AsyncIOScheduler()
@@ -52,10 +52,16 @@ async def validation_error(request: Request, exc: RequestValidationError) -> Res
     )
 
 
+async def ssm_unavailable(request: Request, exc: SsmUnavailable) -> Response:
+    logging.error(f"502 Error: ssm-api: {exc}")
+    return JSONResponse(status_code=502, content={"detail": f"ssm-api error: {exc}"})
+
+
 exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
     404: not_found,
     Exception: internal_error,
     RequestValidationError: validation_error,
+    SsmUnavailable: ssm_unavailable,
 }
 
 
@@ -93,7 +99,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(ssm_router, prefix="/ssm")
-app.include_router(ssm_transparent_router, prefix="/ssm-transparent")
 
 
 origins = [

@@ -24,6 +24,7 @@ Single bounded context. Glossary of domain terms as used in this repo. Mechanics
 
 ## Users
 
+- **ssm-api** — the sing-box service that holds the Managed users the Shadowsocks inbound accepts, and counts their traffic. Keeps both across restarts. A mirror of the User records, not their source: the API adds and removes users to match the store. Not "upstream", not "in memory".
 - **Managed user** — one Shadowsocks identity held by ssm-api; the only per-user identity. Called SSM user in the admin UI. Added or removed with no sing-box restart.
 - **User record** — one Managed user's entry in the API's store: name, PSK, admin flag, and optional Mesh key, WARP key, Expiry, Disabled flag, Last fetch. The store is the source of truth; the API mirrors it into ssm-api (ADR 0003, ADR 0006).
 - **Users file** — retired. `users.json`, the store of User records before ADR 0006.
