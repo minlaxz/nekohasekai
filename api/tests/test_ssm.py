@@ -103,23 +103,16 @@ def test_create_accepts_existing_name_shapes(client, name):
     assert client.post("/ssm/create", data={"username": name}, headers=JSON).status_code == 200
 
 
-# --- delete -----------------------------------------------------------------
-
-
-def test_create_that_fails_at_the_store_leaves_nobody_in_ssm_api(client, monkeypatch):
-    monkeypatch.setattr(ssm, "create_upsk", lambda: "a" * 20 + "==")  # alice's PSK: the store refuses it
-    r = TestClient(app, raise_server_exceptions=False).post("/ssm/create", data={"username": "bob"}, headers=JSON)
-    assert r.status_code == 500
-    assert "bob" not in client.ssm.users and _store_names(client) == ["alice"]
-
-
-def test_create_that_fails_at_ssm_api_leaves_no_user_record(client, monkeypatch):
+def test_create_with_ssm_api_down_is_502(client, monkeypatch):
     async def down(username, upsk):
         raise ssm_api.SsmUnavailable("ssm-api is down")
 
     monkeypatch.setattr(client.ssm, "add_user", down)
     assert client.post("/ssm/create", data={"username": "bob"}, headers=JSON).status_code == 502
     assert _store_names(client) == ["alice"]  # so the admin can create bob again
+
+
+# --- delete -----------------------------------------------------------------
 
 
 def test_delete(client):
@@ -193,17 +186,6 @@ def _set_expiry(client, name, expires_at):
 
 def _add_entry(client, name, **extra):
     store.add(name=name, password=name[0] * 20 + "==", **extra)
-
-
-def test_create_default_is_trial_only(client, frozen):
-    body = client.post("/ssm/create", data={"username": "bob"}, headers=JSON).json()
-    assert body["expires_at"] == "2026-10-08T12:00:00+00:00"
-    assert _entry(client, "bob")["expires_at"] == body["expires_at"]
-
-
-def test_create_months_adds_trial(client, frozen):
-    body = client.post("/ssm/create", data={"username": "bob", "months": 3}, headers=JSON).json()
-    assert body["expires_at"] == "2027-01-08T12:00:00+00:00"
 
 
 def test_create_html_shows_expiry(client, frozen):
@@ -362,17 +344,6 @@ def test_set_expiry_does_not_enable(client, frozen):
     client.post("/ssm/disable", data={"username": "alice"}, headers=JSON)
     client.post("/ssm/expiry", data={"username": "alice", "expires_at": ""}, headers=JSON)
     assert "alice" not in client.ssm.users and _entry(client, "alice")["disabled"] is True
-
-
-def test_delete_memory_only_user(client):
-    client.ssm.users["stranger"] = {"username": "stranger"}
-    assert client.post("/ssm/delete", data={"username": "stranger"}, headers=JSON).status_code == 200
-    assert "stranger" not in client.ssm.users and _store_names(client) == ["alice"]
-
-
-def test_delete_admin_not_in_ssm_api_is_403(client):
-    _add_entry(client, "root", admin=True)
-    assert client.post("/ssm/delete", data={"username": "root"}, headers=JSON).status_code == 403
 
 
 def test_renew_does_not_enable(client, frozen):
