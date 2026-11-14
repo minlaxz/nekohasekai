@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import base64
 import copy
 import hashlib
@@ -13,16 +12,16 @@ import time
 import urllib.parse
 from typing import Any, Callable, Dict, List
 
+import anyio
 import httpx
 from fastapi import HTTPException
 
-from app import store
+from app import ssm_api, store
 
 # -------------------------------------------------------------------
 # Environment & Constants
 # -------------------------------------------------------------------
 
-APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
 APP_CLIENT_DIR = os.getenv("APP_INTERNAL_CLIENT_DIR", "/sing-box/client")
 APP_DEFAULT_QUOTA_IN_BYTES = int(os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "30000000000"))
 APP_TS_CONTROL_URL = os.getenv("APP_TS_CONTROL_URL", "")
@@ -260,11 +259,11 @@ def apply_user_rules(route: Dict[str, Any], matchers: Dict[str, List[str]]) -> N
 
 def verify_user(username: str, psk: str) -> None:
     """Raise 400 unless ssm-api holds `username` under the key derived from `psk` and quota is left."""
-    url = f"{APP_SSM_UPSTREAM}/server/v1/users/{username}"
     try:
-        response = httpx.get(url, timeout=HTTP_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
+        # Sync routes run in an anyio worker thread; ssm-api is reached from the event loop.
+        data = anyio.from_thread.run(ssm_api.client.get_user, username)
+        if data is None:
+            raise ValueError("No such user in ssm-api")
 
         if data.get("uPSK") != ssm_key(psk):
             raise ValueError("User or PSK mismatch")
@@ -367,68 +366,3 @@ def build_profile(
     if endpoints:
         config["endpoints"] = endpoints
     return config
-
-
-# -------------------------------------------------------------------
-# Stats
-# -------------------------------------------------------------------
-
-
-def format_bytes(v: int) -> str:
-    if v >= 1 << 30:
-        return f"{v / (1 << 30):.2f} GB"
-    elif v >= 1 << 20:
-        return f"{v / (1 << 20):.2f} MB"
-    elif v >= 1 << 10:
-        return f"{v / (1 << 10):.2f} KB"
-    return f"{v} B"
-
-
-def format_packets(v: int) -> str:
-    if v >= 1_000_000:
-        return f"{v / 1_000_000:.2f} M"
-    elif v >= 1_000:
-        return f"{v / 1_000:.2f} K"
-    return str(v)
-
-
-async def get_stats() -> List[Dict[str, Any]]:
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-        stats_upstream = f"{APP_SSM_UPSTREAM}/server/v1/stats"
-        users_upstream = f"{APP_SSM_UPSTREAM}/server/v1/users"
-
-        try:
-            stats_r, users_r = await asyncio.gather(
-                client.get(stats_upstream),
-                client.get(users_upstream),
-            )
-            stats_r.raise_for_status()
-            users_r.raise_for_status()
-
-            stats_data = stats_r.json()["users"]
-            users_data = users_r.json()["users"]
-
-            users_dict = {user["username"]: user for user in users_data}
-
-            for stat in stats_data:
-                username = stat["username"]
-                if username in users_dict:
-                    stat["uPSK"] = users_dict[username].get("uPSK")
-
-            # sort by raw bytes
-            stats_data.sort(key=lambda x: x.get("downlinkBytes", 0), reverse=True)  # type: ignore
-
-            for row in stats_data:
-                extra = {}
-                for k, v in row.items():
-                    if k.endswith("Bytes"):
-                        extra[k + "Human"] = format_bytes(v)
-                    elif k.endswith("Packets"):
-                        extra[k + "Human"] = format_packets(v)
-
-                row.update(extra)
-
-            return stats_data
-
-        except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"Upstream error: {str(e)}")
