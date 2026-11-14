@@ -41,31 +41,44 @@ def test_rejects_non_k(bad):
         ssm_key(bad)
 
 
-def _outbounds(tmp_path, monkeypatch):
+def _profile(user, psk="a" * 20 + "==", template=None, **kwargs):
+    """A Profile config for alice from the real Client template."""
+    kwargs.setdefault("fetch_rules", lambda url: {"domain_suffix": ["ip6only.me"]})
+    return utils.build_profile(
+        template or utils.load_template(CLIENT), user,
+        username="alice", psk=psk, log_level="warn",
+        dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
+        dns_final="dns-remote", dns_resolver="1.1.1.1", **kwargs,
+    )
+
+
+def _outbounds():
     """Profile config outbounds from a Client template that Init has filled with the server PSK."""
-    with open(os.path.join(CLIENT, "outbounds.json")) as f:
-        template = json.load(f)
+    template = utils.load_template(CLIENT)
     for ob in template["outbounds"]:
         if ob["type"] == "shadowsocks":
             ob["password"] = "server-psk"
         elif ob["tag"] == "shadowtls":
             ob["password"] = "shared-pw"
-    (tmp_path / "outbounds.json").write_text(json.dumps(template))
-    monkeypatch.setattr(utils, "APP_CLIENT_DIR", str(tmp_path))
-    reader = utils.Reader.__new__(utils.Reader)  # skip the ssm-api PSK check
-    reader.psk = K
-    return {o["tag"]: o for o in reader._outbounds()}
+    return {o["tag"]: o for o in _profile({}, psk=K, template=template)["outbounds"]}
 
 
-def test_profile_outbounds_carry_server_and_derived_key(tmp_path, monkeypatch):
-    obs = _outbounds(tmp_path, monkeypatch)
+def test_profile_outbounds_carry_server_and_derived_key():
+    obs = _outbounds()
     ss = obs["shadowsocks-uot"]
     assert ss["method"] == "2022-blake3-aes-128-gcm"
     assert ss["password"] == "server-psk:+sA1Rl+PHSeeDd8nD0MlIg=="
 
 
-def test_profile_uses_shadowtls_only(tmp_path, monkeypatch):
-    obs = _outbounds(tmp_path, monkeypatch)
+def test_build_profile_leaves_the_template_unchanged():
+    template = utils.load_template(CLIENT)
+    before = json.dumps(template)
+    _profile({"admin": True}, template=template)
+    assert json.dumps(template) == before
+
+
+def test_profile_uses_shadowtls_only():
+    obs = _outbounds()
     assert "hysteria2" not in obs and "shadowsocks-hy2" not in obs
     assert "Proxy" not in obs and "All" not in obs
     assert {t for t, ob in obs.items() if ob["type"] in ("urltest", "selector")} == {
@@ -87,22 +100,11 @@ def test_profile_uses_shadowtls_only(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("with_endpoints", [False, True])
-def test_profile_references_existing_outbounds_and_keeps_proxy_detours(monkeypatch, user_store, with_endpoints):
-    monkeypatch.setattr(utils, "APP_CLIENT_DIR", CLIENT)
-    monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
+def test_profile_references_existing_outbounds_and_keeps_proxy_detours(with_endpoints):
     user = {"admin": True}
     if with_endpoints:
         user.update(ts_auth_key="ts-key", warp_key="wg-key", warp_ipv6="2606:4700::1/128")
-    user_store.add(name="alice", password="a" * 20 + "==", **user)
-    monkeypatch.setattr(utils, "APP_TS_CONTROL_URL", "https://hs.example")
-    reader = utils.Reader(
-        username="alice", psk="a" * 20 + "==", log_level="warn",
-        dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
-        dns_final="dns-remote", dns_resolver="1.1.1.1",
-        rules_v6_url="https://x/r6.json",
-    )
-    monkeypatch.setattr(utils, "fetch_user_rules", lambda url: {"domain_suffix": ["ip6only.me"]})
-    config = reader.unwarp()
+    config = _profile(user, rules_v6_url="https://x/r6.json", control_url="https://hs.example")
     tags = {ob["tag"] for ob in config["outbounds"] + config.get("endpoints", [])}
 
     def check_references(value):
@@ -128,17 +130,12 @@ def test_profile_references_existing_outbounds_and_keeps_proxy_detours(monkeypat
 
 
 @pytest.mark.parametrize("warp_key,r6,warp_on", [("wg-key", "https://x/r6.json", True), ("wg-key", "", False), ("", "https://x/r6.json", False)])
-def test_warp_needs_key_and_warp_rule_set(monkeypatch, user_store, warp_key, r6, warp_on):
-    monkeypatch.setattr(utils, "APP_CLIENT_DIR", CLIENT)
-    monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
-    user_store.add(name="alice", password="a" * 20 + "==", warp_key=warp_key, warp_ipv6="2606:4700::1/128")
+def test_warp_needs_key_and_warp_rule_set(warp_key, r6, warp_on):
     fetched = []
-    monkeypatch.setattr(utils, "fetch_user_rules", lambda url: fetched.append(url) or {"domain_suffix": ["ip6only.me"]})
-    config = utils.Reader(
-        username="alice", psk="a" * 20 + "==", log_level="warn",
-        dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
-        dns_final="dns-remote", dns_resolver="1.1.1.1", rules_v6_url=r6,
-    ).unwarp()
+    config = _profile(
+        {"warp_key": warp_key, "warp_ipv6": "2606:4700::1/128"}, rules_v6_url=r6,
+        fetch_rules=lambda url: fetched.append(url) or {"domain_suffix": ["ip6only.me"]},
+    )
     assert ("warp-ep" in json.dumps(config)) is warp_on
     assert fetched == ([r6] if warp_on else [])
 
@@ -156,14 +153,14 @@ class _Resp:
 
 def test_verify_compares_derived_key(monkeypatch):
     monkeypatch.setattr(utils.httpx, "get", lambda url, timeout: _Resp({"uPSK": ssm_key(K)}))
-    utils.Checker("alice", K)  # no raise
+    utils.verify_user("alice", K)  # no raise
 
 
 @pytest.mark.parametrize("reported", [K, "nj75pm4nlaslo8xm8xtKnj76", ""])
 def test_verify_rejects_other_keys(monkeypatch, reported):
     monkeypatch.setattr(utils.httpx, "get", lambda url, timeout: _Resp({"uPSK": reported}))
     with pytest.raises(utils.HTTPException):
-        utils.Checker("alice", K)
+        utils.verify_user("alice", K)
 
 
 def test_example_users_have_valid_k():

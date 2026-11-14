@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import copy
 import hashlib
 import ipaddress
 import json
@@ -10,7 +11,7 @@ import logging
 import os
 import time
 import urllib.parse
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import httpx
 from fastapi import HTTPException
@@ -27,8 +28,10 @@ APP_DEFAULT_QUOTA_IN_BYTES = int(os.getenv("APP_DEFAULT_QUOTA_IN_BYTES", "300000
 APP_TS_CONTROL_URL = os.getenv("APP_TS_CONTROL_URL", "")
 HTTP_TIMEOUT = 5  # seconds
 
-# Sections copied verbatim from APP_CLIENT_DIR; log/dns/outbounds/endpoints get injected.
-STATIC_SECTIONS = ("inbounds", "experimental", "services", "route", "http_clients")
+# Client template sections, one `<name>.json` each, in Profile config order.
+TEMPLATE_SECTIONS = (
+    "log", "dns", "outbounds", "inbounds", "experimental", "services", "route", "http_clients", "endpoints",
+)
 MESH_ENDPOINT_TAG = "ts-ep"
 MESH_DNS_TAG = "dns-mesh"  # tailscale DNS server: resolves MagicDNS names via ts-ep
 WARP_ENDPOINT_TAG = "warp-ep"
@@ -251,152 +254,119 @@ def apply_user_rules(route: Dict[str, Any], matchers: Dict[str, List[str]]) -> N
 
 
 # -------------------------------------------------------------------
-# Checker
+# User check
 # -------------------------------------------------------------------
 
 
-class Checker:
-    def __init__(self, username: str, psk: str) -> None:
-        self.username = username
-        self.psk = psk
-        self._verify_user()
+def verify_user(username: str, psk: str) -> None:
+    """Raise 400 unless ssm-api holds `username` under the key derived from `psk` and quota is left."""
+    url = f"{APP_SSM_UPSTREAM}/server/v1/users/{username}"
+    try:
+        response = httpx.get(url, timeout=HTTP_TIMEOUT)
+        response.raise_for_status()
+        data = response.json()
 
-    def _verify_user(self) -> None:
-        url = f"{APP_SSM_UPSTREAM}/server/v1/users/{self.username}"
-        try:
-            response = httpx.get(url, timeout=HTTP_TIMEOUT)
-            response.raise_for_status()
-            data = response.json()
+        if data.get("uPSK") != ssm_key(psk):
+            raise ValueError("User or PSK mismatch")
 
-            if data.get("uPSK") != ssm_key(self.psk):
-                raise ValueError("User or PSK mismatch")
+        used_bytes = data.get("uplinkBytes", 0) + data.get("downlinkBytes", 0)
+        if used_bytes > APP_DEFAULT_QUOTA_IN_BYTES:
+            raise ValueError("Quota exceeded")
 
-            used_bytes = data.get("uplinkBytes", 0) + data.get("downlinkBytes", 0)
-            if used_bytes > APP_DEFAULT_QUOTA_IN_BYTES:
-                raise ValueError("Quota exceeded")
-
-            logger.info("User %s verified", self.username)
-        except Exception as exc:
-            logger.error("User verification failed: %s", exc)
-            raise HTTPException(
-                status_code=400, detail="User verification failed or quota exceeded."
-            )
-
-
-# -------------------------------------------------------------------
-# Reader
-# -------------------------------------------------------------------
-
-
-class Reader(Checker):
-    def __init__(
-        self,
-        username: str,
-        psk: str,
-        log_level: str,
-        dns_host: str,
-        dns_sni: str,
-        dns_path: str,
-        dns_detour: str,
-        dns_final: str,
-        dns_resolver: str,
-        rules_url: str = "",
-        rules_detour: str = "",
-        rules_v6_url: str = "",
-        user_ips: str = "",
-    ) -> None:
-        super().__init__(username, psk)
-        self.user_ips = user_ips
-        self.rules_url = rules_url
-        self.rules_detour = rules_detour
-        self.rules_v6_url = rules_v6_url
-        self.log_level = log_level
-        self.dns_host = dns_host
-        self.dns_sni = dns_sni
-        self.dns_path = dns_path
-        self.dns_detour = dns_detour
-        self.dns_final = dns_final
-        self.dns_resolver = dns_resolver
-
-    def _section(self, name: str) -> Any:
-        return load_json(f"{APP_CLIENT_DIR}/{name}.json")[name]
-
-    def _log(self) -> Dict[str, Any]:
-        log = self._section("log")
-        if self.log_level:
-            log["level"] = self.log_level
-        return log
-
-    def _dns(self) -> Dict[str, Any]:
-        dns = self._section("dns")
-        if self.dns_final:
-            dns["final"] = self.dns_final
-
-        for server in dns.get("servers", []):
-            match server.get("tag"):
-                case "dns-remote":
-                    server["server"] = self.dns_host
-                    server["path"] = f"{self.dns_path}{self.username}"
-                    if self.dns_sni:  # host is a pinned IP; SNI + cert check need the name
-                        server["tls"] = {"enabled": True, "server_name": self.dns_sni}
-                case "dns-resolver":
-                    server["server"] = self.dns_resolver
-                    server["detour"] = self.dns_detour
-                case "dns-resolver-bypass":
-                    server["server"] = self.dns_resolver
-        return dns
-
-    def _outbounds(self) -> List[Dict[str, Any]]:
-        outbounds = self._section("outbounds")
-        for ob in outbounds:
-            if ob.get("type") != "shadowsocks":
-                continue  # ShadowTLS password is shared, set by Init
-            # SIP022 `iPSK:uPSK`; Init wrote the server PSK into the template's `password`
-            ob["password"] = f"{ob['password']}:{client_key(self.psk)}"
-        return outbounds
-
-    def unwarp(self) -> Dict[str, Any]:
-        logger.info("Injecting config for user %s", self.username)
-        config: Dict[str, Any] = {
-            "log": self._log(),
-            "dns": self._dns(),
-            "outbounds": self._outbounds(),
-        }
-        for name in STATIC_SECTIONS:
-            config[name] = self._section(name)
-
-        user = user_entry(self.username)
-        apply_full_mode(config["route"], bool(user.get("admin")))
-        if self.rules_url:
-            apply_user_rules(config["route"], fetch_user_rules(self.rules_url))
-        if self.user_ips:
-            apply_user_rules(config["route"], {"ip_cidr": parse_user_ips(self.user_ips)})
-        if self.rules_detour:
-            if self.rules_detour not in {hc["tag"] for hc in config["http_clients"]}:
-                raise HTTPException(status_code=400, detail=f"rd: no HTTP client tagged {self.rules_detour!r}")
-            apply_rules_detour(config["route"], self.rules_detour)
-        key = user.get("ts_auth_key") or ""
-        if key and not APP_TS_CONTROL_URL:
-            logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", self.username)
-            raise HTTPException(status_code=500, detail="APP_TS_CONTROL_URL is not set.")
-        endpoints = apply_mesh(
-            self._section("endpoints"),
-            config["route"],
-            config["dns"],
-            self.username,
-            key,
-            APP_TS_CONTROL_URL,
+        logger.info("User %s verified", username)
+    except Exception as exc:
+        logger.error("User verification failed: %s", exc)
+        raise HTTPException(
+            status_code=400, detail="User verification failed or quota exceeded."
         )
-        # A WARP rule set (r6) turns WARP on: its domains get AAAA answers and IPv6 goes to warp-ep.
-        warp_key = (user.get("warp_key") or "") if self.rules_v6_url else ""
-        warp_domains = fetch_user_rules(self.rules_v6_url) if warp_key else {}
-        apply_warp_rules(config["route"], config["dns"], warp_domains)
-        endpoints = apply_warp(endpoints, config["route"], config["dns"], warp_key, user.get("warp_ipv6") or "")
-        if not warp_key:
-            strip_tun_ipv6(config["inbounds"])
-        if endpoints:
-            config["endpoints"] = endpoints
-        return config
+
+
+# -------------------------------------------------------------------
+# Profile config
+# -------------------------------------------------------------------
+
+
+def load_template(client_dir: str = APP_CLIENT_DIR) -> Dict[str, Any]:
+    """The Client template: every section by name."""
+    return {name: load_json(f"{client_dir}/{name}.json")[name] for name in TEMPLATE_SECTIONS}
+
+
+def build_profile(
+    template: Dict[str, Any],
+    user: Dict[str, Any],
+    *,
+    username: str,
+    psk: str,
+    log_level: str,
+    dns_host: str,
+    dns_sni: str,
+    dns_path: str,
+    dns_detour: str,
+    dns_final: str,
+    dns_resolver: str,
+    rules_url: str = "",
+    rules_detour: str = "",
+    rules_v6_url: str = "",
+    user_ips: str = "",
+    control_url: str = APP_TS_CONTROL_URL,
+    fetch_rules: Callable[[str], Dict[str, List[str]]] = fetch_user_rules,
+) -> Dict[str, Any]:
+    """The Profile config for one user: the Client template plus per-user values.
+    `user` is the User record, {} when there is none. `template` is left unchanged.
+    The user is not checked here: call verify_user first."""
+    logger.info("Injecting config for user %s", username)
+    config = copy.deepcopy(template)
+    endpoints = config.pop("endpoints")
+
+    if log_level:
+        config["log"]["level"] = log_level
+
+    dns = config["dns"]
+    if dns_final:
+        dns["final"] = dns_final
+    for server in dns.get("servers", []):
+        match server.get("tag"):
+            case "dns-remote":
+                server["server"] = dns_host
+                server["path"] = f"{dns_path}{username}"
+                if dns_sni:  # host is a pinned IP; SNI + cert check need the name
+                    server["tls"] = {"enabled": True, "server_name": dns_sni}
+            case "dns-resolver":
+                server["server"] = dns_resolver
+                server["detour"] = dns_detour
+            case "dns-resolver-bypass":
+                server["server"] = dns_resolver
+
+    for ob in config["outbounds"]:
+        if ob.get("type") != "shadowsocks":
+            continue  # ShadowTLS password is shared, set by Init
+        # SIP022 `iPSK:uPSK`; Init wrote the server PSK into the template's `password`
+        ob["password"] = f"{ob['password']}:{client_key(psk)}"
+
+    apply_full_mode(config["route"], bool(user.get("admin")))
+    if rules_url:
+        apply_user_rules(config["route"], fetch_rules(rules_url))
+    if user_ips:
+        apply_user_rules(config["route"], {"ip_cidr": parse_user_ips(user_ips)})
+    if rules_detour:
+        if rules_detour not in {hc["tag"] for hc in config["http_clients"]}:
+            raise HTTPException(status_code=400, detail=f"rd: no HTTP client tagged {rules_detour!r}")
+        apply_rules_detour(config["route"], rules_detour)
+    key = user.get("ts_auth_key") or ""
+    if key and not control_url:
+        logger.error("User %s has a Mesh key but APP_TS_CONTROL_URL is empty", username)
+        raise HTTPException(status_code=500, detail="APP_TS_CONTROL_URL is not set.")
+    endpoints = apply_mesh(endpoints, config["route"], dns, username, key, control_url)
+    # A WARP rule set (r6) turns WARP on: its domains get AAAA answers and IPv6 goes to warp-ep.
+    warp_key = (user.get("warp_key") or "") if rules_v6_url else ""
+    warp_domains = fetch_rules(rules_v6_url) if warp_key else {}
+    apply_warp_rules(config["route"], dns, warp_domains)
+    endpoints = apply_warp(endpoints, config["route"], dns, warp_key, user.get("warp_ipv6") or "")
+    if not warp_key:
+        strip_tun_ipv6(config["inbounds"])
+    if endpoints:
+        config["endpoints"] = endpoints
+    return config
 
 
 # -------------------------------------------------------------------

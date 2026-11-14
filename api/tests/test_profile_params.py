@@ -10,19 +10,18 @@ from app import main  # noqa: E402
 
 @pytest.fixture
 def seen(monkeypatch, user_store):
-    """Reader kwargs of the last `/c` request."""
+    """build_profile kwargs of the last `/c` request."""
     user_store.add(name="alice", password="a" * 20 + "==")
     seen = {}
 
-    class FakeReader:
-        def __init__(self, **kwargs):
-            seen.clear()
-            seen.update(kwargs)
+    def build_profile(template, user, **kwargs):
+        seen.clear()
+        seen.update(kwargs)
+        return {}
 
-        def unwarp(self):
-            return {}
-
-    monkeypatch.setattr(main, "Reader", FakeReader)
+    monkeypatch.setattr(main, "verify_user", lambda j, k: None)
+    monkeypatch.setattr(main, "load_template", dict)
+    monkeypatch.setattr(main, "build_profile", build_profile)
     return seen
 
 

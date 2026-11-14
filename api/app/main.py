@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 
 from .routes.ssm import router as ssm_router, reconcile_users, record_fetch
 from .routes.ssm_transparent import router as ssm_transparent_router
-from .utils import Checker, Reader
+from .utils import build_profile, load_template, user_entry, verify_user
 
 scheduler: AsyncIOScheduler = AsyncIOScheduler()
 
@@ -218,7 +218,10 @@ def read_config(
     )
     logging.info(f"Received request: {j}-{real_ip}")
 
-    config = Reader(
+    verify_user(j, k)
+    config = build_profile(
+        load_template(),
+        user_entry(j),
         username=j,  # Required
         psk=k,  # Required
         log_level=ll,
@@ -232,7 +235,7 @@ def read_config(
         rules_detour=rd,
         rules_v6_url=r6,
         user_ips=",".join(rr_ip_cidr),
-    ).unwarp()
+    )
     record_fetch(j)
     return config
 
@@ -257,7 +260,7 @@ def read_help(request: Request, j: str = "", k: str = ""):
     """Help page: every `/c` param with its meaning and default. Valid `j`/`k`
     only; anyone else gets the same 404 as an unknown path."""
     try:
-        Checker(j, k)
+        verify_user(j, k)
     except HTTPException:
         raise HTTPException(status_code=404)
     defaults = {
