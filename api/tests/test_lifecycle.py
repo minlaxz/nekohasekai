@@ -1,9 +1,11 @@
 import asyncio
+import re
 from datetime import datetime, timezone
 
 import pytest
 
-from app import lifecycle, store
+from app import lifecycle, ssm_api, store
+from app.utils import ssm_key
 
 
 @pytest.fixture
@@ -95,3 +97,84 @@ def test_record_fetch_stores_now(ssm, frozen):
 def test_record_fetch_for_a_user_with_no_record_is_a_no_op(ssm, frozen):
     lifecycle.record_fetch("stranger")
     assert store.get("stranger") is None
+
+
+# --- Create ---------------------------------------------------------------------
+
+
+def test_create_returns_the_record_and_adds_the_ssm_key(ssm, frozen):
+    entry = asyncio.run(lifecycle.create("bob", 0))
+    psk = entry["password"]
+    assert re.fullmatch(r"[a-z0-9]{20}==", psk)
+    assert entry["name"] == "bob" and store.get("bob") == entry
+    # ssm-api gets the SS-2022 key; the user keeps the PSK (#24)
+    assert ssm.users["bob"]["uPSK"] == ssm_key(psk)
+
+
+@pytest.mark.parametrize(
+    "months,expires_at",
+    [(0, "2026-10-08T12:00:00+00:00"), (3, "2027-01-08T12:00:00+00:00")],  # months plus the 3-day Trial period
+)
+def test_create_sets_expiry(ssm, frozen, months, expires_at):
+    assert asyncio.run(lifecycle.create("bob", months))["expires_at"] == expires_at
+
+
+def test_create_existing_user_raises_user_exists(ssm):
+    ssm.users["stranger"] = {"username": "stranger"}  # in ssm-api only
+    for name in ("alice", "stranger"):
+        with pytest.raises(lifecycle.UserExists):
+            asyncio.run(lifecycle.create(name, 0))
+    assert [u["name"] for u in store.records()] == ["alice"]
+
+
+def test_create_with_ssm_api_down_leaves_no_user_record(ssm, monkeypatch):
+    async def down(username, upsk):
+        raise ssm_api.SsmUnavailable("ssm-api is down")
+
+    monkeypatch.setattr(ssm, "add_user", down)
+    with pytest.raises(ssm_api.SsmUnavailable):
+        asyncio.run(lifecycle.create("bob", 0))
+    assert store.get("bob") is None  # so the admin can create bob again
+
+
+def test_create_that_fails_at_the_store_leaves_nobody_in_ssm_api(ssm, monkeypatch):
+    monkeypatch.setattr(lifecycle, "new_psk", lambda: "a" * 20 + "==")  # alice's PSK: the store refuses it
+    with pytest.raises(Exception):
+        asyncio.run(lifecycle.create("bob", 0))
+    assert "bob" not in ssm.users and store.get("bob") is None
+
+
+# --- Delete ---------------------------------------------------------------------
+
+
+def test_delete_removes_the_user_from_ssm_api_and_the_store(ssm):
+    asyncio.run(lifecycle.delete("alice"))
+    assert "alice" not in ssm.users and store.get("alice") is None
+
+
+def test_delete_user_only_in_ssm_api(ssm):
+    ssm.users["stranger"] = {"username": "stranger"}
+    asyncio.run(lifecycle.delete("stranger"))
+    assert "stranger" not in ssm.users and store.get("alice") is not None
+
+
+def test_delete_unknown_raises_user_not_found(ssm):
+    with pytest.raises(lifecycle.UserNotFound):
+        asyncio.run(lifecycle.delete("ghost"))
+
+
+@pytest.mark.parametrize("in_ssm_api", [True, False])
+def test_delete_admin_entry_raises_admin_entry(ssm, in_ssm_api):
+    _add("root", admin=True)
+    if in_ssm_api:
+        ssm.users["root"] = {"username": "root"}
+    with pytest.raises(lifecycle.AdminEntry):
+        asyncio.run(lifecycle.delete("root"))
+    assert store.get("root") is not None and ("root" in ssm.users) == in_ssm_api
+
+
+def test_delete_with_ssm_api_down_keeps_the_record(ssm):
+    ssm.down = True
+    with pytest.raises(ssm_api.SsmUnavailable):
+        asyncio.run(lifecycle.delete("alice"))
+    assert store.get("alice") is not None

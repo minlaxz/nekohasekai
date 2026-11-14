@@ -5,9 +5,7 @@ import io
 import ipaddress
 import os
 import re
-import secrets
-import string
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Annotated, Any, Dict, List, Optional
 
 from app import lifecycle, ssm_api, store
@@ -303,16 +301,6 @@ async def import_users(request: Request, file: UploadFile):
     return ImportedUsers(added=[r["name"] for r in rows])
 
 
-def create_upsk() -> str:
-    alphabet = string.ascii_lowercase + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(20)) + "=="
-
-
-async def _user_exists(username: str) -> bool:
-    # shortcut: private lifecycle helper, until create and delete move into the lifecycle module (#101)
-    return store.get(username) is not None or username in await lifecycle._ssm_usernames()
-
-
 # --- Admin routes -----------------------------------------------------------
 
 
@@ -334,21 +322,10 @@ async def get_form(request: Request):
     responses={400: {"description": "Invalid username or months"}, 409: {"description": "Username exists"}},
 )
 async def create_user(request: Request, username: Username, months: Months = 0):
-    if await _user_exists(username):
-        raise lifecycle.UserExists(username)
-
-    uPSK = create_upsk()  # what the user holds; ssm-api gets the derived SS-2022 key (#24)
-    expires_at = (lifecycle.add_months(lifecycle.now(), months) + timedelta(days=lifecycle.TRIAL_DAYS)).isoformat()
-    # Record first: a failure in between must not leave an ssm-api user with no Expiry.
-    store.add(name=username, password=uPSK, expires_at=expires_at)
-    try:
-        await ssm_api.client.add_user(username, ssm_key(uPSK))
-    except ssm_api.SsmUnavailable:
-        store.delete(username)  # the admin never saw this PSK
-        raise
-
-    import_url = f"https://{APP_HOST}/i?j={username}&k={uPSK}"
-    config_url = f"https://{APP_HOST}/c?j={username}&k={uPSK}"
+    entry = await lifecycle.create(username, months)
+    psk, expires_at = entry["password"], entry["expires_at"]
+    import_url = f"https://{APP_HOST}/i?j={username}&k={psk}"
+    config_url = f"https://{APP_HOST}/c?j={username}&k={psk}"
     if wants_html(request):
         return templates.TemplateResponse(
             request,
@@ -356,7 +333,7 @@ async def create_user(request: Request, username: Username, months: Months = 0):
             {"import_url": import_url, "config_url": config_url, "expires_at": expires_at},
         )
     return CreatedUser(
-        username=username, uPSK=uPSK, expires_at=expires_at, import_url=import_url, config_url=config_url
+        username=username, uPSK=psk, expires_at=expires_at, import_url=import_url, config_url=config_url
     )
 
 
@@ -566,11 +543,7 @@ async def enable_user(request: Request, username: Username):
     responses={403: {"description": "Admin entry"}, 404: {"description": "Unknown username"}},
 )
 async def delete_user(request: Request, username: Username):
-    _refuse_admin(store.get(username), username)
-    if not await _user_exists(username):
-        raise lifecycle.UserNotFound(username)
-    await ssm_api.client.remove_user(username)
-    store.delete(username)
+    await lifecycle.delete(username)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return {"deleted": username}

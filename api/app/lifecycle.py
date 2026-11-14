@@ -3,7 +3,9 @@ Knows nothing about HTTP; main.py maps the domain errors below to responses."""
 
 import calendar
 import logging
-from datetime import datetime, timezone
+import secrets
+import string
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from app import ssm_api, store
@@ -77,6 +79,49 @@ def is_expired(entry: Dict[str, Any], at: datetime) -> bool:
 def is_out(entry: Dict[str, Any], at: datetime) -> bool:
     """Kept out of ssm-api: Expired or Disabled."""
     return bool(entry.get("disabled")) or is_expired(entry, at)
+
+
+# --- Create and delete -----------------------------------------------------------
+
+
+def new_psk() -> str:
+    alphabet = string.ascii_lowercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(20)) + "=="
+
+
+async def _exists(username: str) -> bool:
+    """In the store, or only in ssm-api."""
+    return store.get(username) is not None or username in await _ssm_usernames()
+
+
+async def create(username: str, months: int) -> Dict[str, Any]:
+    """Generates the PSK; Expiry is now plus `months` plus the Trial period. Returns the User record."""
+    if await _exists(username):
+        raise UserExists(username)
+    psk = new_psk()  # what the user holds; ssm-api gets the derived SS-2022 key (#24)
+    expires_at = (add_months(now(), months) + timedelta(days=TRIAL_DAYS)).isoformat()
+    # Record first: a failure in between must not leave an ssm-api user with no Expiry.
+    store.add(name=username, password=psk, expires_at=expires_at)
+    try:
+        await ssm_api.client.add_user(username, ssm_key(psk))
+    except ssm_api.SsmUnavailable:
+        store.delete(username)  # the admin never saw this PSK
+        raise
+    entry = store.get(username)
+    if entry is None:  # deleted meanwhile
+        raise UserNotFound(username)
+    return entry
+
+
+async def delete(username: str) -> None:
+    """Also deletes a user who is in ssm-api but has no User record. ssm-api first: when it fails, the record is kept."""
+    entry = store.get(username)
+    if entry is not None and entry.get("admin"):
+        raise AdminEntry(username)
+    if not await _exists(username):
+        raise UserNotFound(username)
+    await ssm_api.client.remove_user(username)
+    store.delete(username)
 
 
 # --- Last fetch -------------------------------------------------------------------
