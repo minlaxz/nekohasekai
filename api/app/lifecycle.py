@@ -1,7 +1,9 @@
 """Managed user lifecycle: the rules for changing User records and keeping ssm-api in line with them.
 Knows nothing about HTTP; main.py maps the domain errors below to responses."""
 
+import base64
 import calendar
+import ipaddress
 import logging
 import secrets
 import string
@@ -184,6 +186,47 @@ async def enable(username: str) -> Dict[str, Any]:
     entry = _update(username, disabled=False)
     await reconcile()
     return entry
+
+
+# --- WARP key and Mesh key -------------------------------------------------------
+# Neither affects access: no Reconcile. Admin entries allowed.
+
+
+def parse_warp_key(key: str, ipv6: str) -> tuple[Optional[str], Optional[str]]:
+    """The WARP key as stored: both set, or both None to clear."""
+    key, ipv6 = key.strip(), ipv6.strip()
+    if not key and not ipv6:
+        return None, None
+    if not key or not ipv6:
+        raise InvalidField("warp_key" if not key else "warp_ipv6", "set both warp_key and warp_ipv6, or neither")
+    bad_key = InvalidField("warp_key", "must be a WireGuard private key: base64 of 32 bytes")
+    try:
+        if len(base64.b64decode(key, validate=True)) != 32:
+            raise bad_key
+    except ValueError:
+        raise bad_key from None
+    bad_ipv6 = InvalidField("warp_ipv6", "must be an IPv6 address, bare or /128")
+    try:
+        iface = ipaddress.IPv6Interface(ipv6)  # a bare address is /128
+    except ValueError:
+        raise bad_ipv6 from None
+    if iface.network.prefixlen != 128 or iface.scope_id:  # a %zone would reach the sing-box endpoint
+        raise bad_ipv6
+    return key, str(iface)
+
+
+def set_warp_key(username: str, key: str, ipv6: str) -> Dict[str, Any]:
+    """Both empty clears the WARP key."""
+    warp_key, warp_ipv6 = parse_warp_key(key, ipv6)
+    return _update(username, warp_key=warp_key, warp_ipv6=warp_ipv6)
+
+
+def set_mesh_key(username: str, key: str) -> Dict[str, Any]:
+    """Trimmed at the ends; empty clears the Mesh key."""
+    key = key.strip()
+    if any(c.isspace() for c in key):  # loose on purpose: headscale's key format changes between versions
+        raise InvalidField("ts_auth_key", "must not contain whitespace")
+    return _update(username, ts_auth_key=key or None)
 
 
 # --- Last fetch -------------------------------------------------------------------

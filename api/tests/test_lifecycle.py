@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import re
 from datetime import datetime, timezone
 
@@ -311,3 +312,87 @@ def test_change_to_a_user_deleted_meanwhile_raises_user_not_found(ssm, monkeypat
     monkeypatch.setattr(store, "get", lambda name: stale)  # read before the delete
     with pytest.raises(lifecycle.UserNotFound):
         asyncio.run(change("alice"))
+
+
+# --- WARP key and Mesh key ------------------------------------------------------
+# Neither affects access: no Reconcile.
+
+WG_KEY = base64.b64encode(bytes(range(32))).decode()
+
+
+def test_set_warp_stores_the_key_with_a_128_address(ssm):
+    entry = lifecycle.set_warp_key("alice", f" {WG_KEY} ", " 2606:4700:110:8000::1 ")
+    assert (entry["warp_key"], entry["warp_ipv6"]) == (WG_KEY, "2606:4700:110:8000::1/128")
+    assert store.get("alice")["warp_ipv6"] == "2606:4700:110:8000::1/128"
+
+
+def test_set_warp_both_empty_clears_it(ssm):
+    store.update("alice", warp_key=WG_KEY, warp_ipv6="2606:4700::1/128")
+    entry = lifecycle.set_warp_key("alice", "", " ")
+    assert (entry["warp_key"], entry["warp_ipv6"]) == (None, None)
+
+
+@pytest.mark.parametrize(
+    "key,ipv6,field,msg",
+    [
+        (WG_KEY, "", "warp_ipv6", "set both warp_key and warp_ipv6, or neither"),
+        ("", "2606:4700::1", "warp_key", "set both warp_key and warp_ipv6, or neither"),
+        ("not base64!", "2606:4700::1", "warp_key", "must be a WireGuard private key: base64 of 32 bytes"),
+        (base64.b64encode(bytes(31)).decode(), "2606:4700::1", "warp_key", "must be a WireGuard private key: base64 of 32 bytes"),
+        (base64.b64encode(bytes(33)).decode(), "2606:4700::1", "warp_key", "must be a WireGuard private key: base64 of 32 bytes"),
+        (WG_KEY, "172.16.0.2", "warp_ipv6", "must be an IPv6 address, bare or /128"),
+        (WG_KEY, "not-an-address", "warp_ipv6", "must be an IPv6 address, bare or /128"),
+        (WG_KEY, "2606:4700::1/64", "warp_ipv6", "must be an IPv6 address, bare or /128"),
+        (WG_KEY, "fe80::1%eth0", "warp_ipv6", "must be an IPv6 address, bare or /128"),
+    ],
+)
+def test_set_warp_bad_value_raises_invalid_field_and_keeps_the_old_key(ssm, key, ipv6, field, msg):
+    store.update("alice", warp_key=WG_KEY, warp_ipv6="2606:4700::1/128")
+    with pytest.raises(lifecycle.InvalidField) as exc:
+        lifecycle.set_warp_key("alice", key, ipv6)
+    assert (exc.value.field, exc.value.msg) == (field, msg)
+    assert (store.get("alice")["warp_key"], store.get("alice")["warp_ipv6"]) == (WG_KEY, "2606:4700::1/128")
+
+
+def test_parse_warp_key_returns_the_stored_form_without_a_user():  # User import reuses it
+    assert lifecycle.parse_warp_key(WG_KEY, "2606:4700::1/128") == (WG_KEY, "2606:4700::1/128")
+    assert lifecycle.parse_warp_key("", "") == (None, None)
+
+
+def test_set_mesh_trims_the_key_and_empty_clears_it(ssm):
+    assert lifecycle.set_mesh_key("alice", "  test-mesh-key  ")["ts_auth_key"] == "test-mesh-key"
+    assert store.get("alice")["ts_auth_key"] == "test-mesh-key"
+    assert lifecycle.set_mesh_key("alice", "  ")["ts_auth_key"] is None
+
+
+@pytest.mark.parametrize("key", ["hskey auth", "hskey\tauth", "a\nb"])
+def test_set_mesh_inner_whitespace_raises_invalid_field_and_keeps_the_old_key(ssm, key):
+    store.update("alice", ts_auth_key="test-mesh-key")
+    with pytest.raises(lifecycle.InvalidField) as exc:
+        lifecycle.set_mesh_key("alice", key)
+    assert (exc.value.field, exc.value.msg) == ("ts_auth_key", "must not contain whitespace")
+    assert store.get("alice")["ts_auth_key"] == "test-mesh-key"
+
+
+KEY_CHANGES = [
+    lambda name: lifecycle.set_warp_key(name, WG_KEY, "2606:4700::1"),
+    lambda name: lifecycle.set_mesh_key(name, "test-mesh-key"),
+]
+
+
+@pytest.mark.parametrize("change", KEY_CHANGES)
+def test_key_change_allowed_on_admin_entries_and_leaves_ssm_api_alone(ssm, change):
+    _add("root", admin=True)
+    _add("bob", expires_at="2026-01-01T00:00:00+00:00")  # Expired, still in ssm-api: no Reconcile
+    ssm.users["bob"] = {"username": "bob"}
+    assert change("root")["name"] == "root"
+    change("bob")
+    assert set(ssm.users) == {"alice", "bob"}
+
+
+@pytest.mark.parametrize("change", KEY_CHANGES)
+def test_key_change_to_a_missing_user_raises_user_not_found(ssm, change):
+    ssm.users["stranger"] = {"username": "stranger"}  # in ssm-api only: still not found
+    for name in ("ghost", "stranger"):
+        with pytest.raises(lifecycle.UserNotFound):
+            change(name)
