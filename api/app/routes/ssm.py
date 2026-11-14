@@ -5,7 +5,7 @@ import io
 import ipaddress
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated, Any, Dict, List, Optional
 
 from app import lifecycle, ssm_api, store
@@ -75,15 +75,6 @@ class Stats(BaseModel):
 
 def wants_html(request: Request) -> bool:
     return "text/html" in request.headers.get("accept", "")
-
-
-# --- Expiry -------------------------------------------------------------------
-
-
-def _parse_expiry(value: str) -> str:
-    """ISO 8601 instant, zone kept, no zone = UTC; ValueError when unparsable."""
-    dt = datetime.fromisoformat(value)
-    return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
 
 
 # --- Stats ------------------------------------------------------------------
@@ -222,12 +213,10 @@ def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
         ssm_key(row["password"])
     except ValueError:
         raise ValueError("bad PSK") from None  # the value is a secret: not echoed
-    expires_at = row["expires_at"].strip() or None
-    if expires_at:
-        try:
-            expires_at = _parse_expiry(expires_at)
-        except ValueError:
-            raise ValueError(f"bad Expiry '{expires_at}'") from None
+    try:
+        expires_at = lifecycle.parse_expiry(row["expires_at"])
+    except lifecycle.InvalidField:  # the same rule as /ssm/expiry
+        raise ValueError(f"bad Expiry '{row['expires_at'].strip()}'") from None
     try:
         warp_key, warp_ipv6 = _parse_warp(row["warp_key"].strip(), row["warp_ipv6"].strip())
     except lifecycle.InvalidField as exc:  # the same checks as /ssm/warp
@@ -349,18 +338,7 @@ async def create_user(request: Request, username: Username, months: Months = 0):
     responses={400: {"description": "Invalid username or months"}, 404: {"description": "Unknown username"}},
 )
 async def renew_user(request: Request, username: Username, months: RenewMonths):
-    entry = store.get(username)
-    if entry is None:
-        raise lifecycle.UserNotFound(username)
-
-    now = lifecycle.now()
-    current = lifecycle._expiry_of(entry)  # shortcut: private, until Renewal moves into the lifecycle module (#101)
-    start = current if current is not None and current > now else now
-    entry = store.update(username, expires_at=lifecycle.add_months(start, months).isoformat())
-    if entry is None:  # deleted meanwhile
-        raise lifecycle.UserNotFound(username)
-    await lifecycle.reconcile()
-
+    entry = await lifecycle.renew(username, months)
     if wants_html(request):
         return templates.TemplateResponse(
             request, "form.html", {"renewed": {"username": username, "expires_at": entry["expires_at"]}}
@@ -380,17 +358,7 @@ async def renew_user(request: Request, username: Username, months: RenewMonths):
     responses={400: {"description": "Invalid username or expires_at"}, 404: {"description": "Unknown username"}},
 )
 async def set_expiry(request: Request, username: Username, expires_at: Annotated[str, Form()] = ""):
-    value = expires_at.strip()
-    if value:
-        try:
-            value = _parse_expiry(value)
-        except ValueError:
-            raise lifecycle.InvalidField("expires_at", "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)")
-    entry = store.update(username, expires_at=value or None)
-    if entry is None:
-        raise lifecycle.UserNotFound(username)
-    await lifecycle.reconcile()
-
+    entry = await lifecycle.set_expiry(username, expires_at)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return ExpirySet(username=username, expires_at=entry["expires_at"])
@@ -481,24 +449,10 @@ async def set_mesh(request: Request, username: Username, ts_auth_key: Annotated[
     return MeshSet(username=username, ts_auth_key=entry["ts_auth_key"])
 
 
-def _refuse_admin(entry: Optional[Dict[str, Any]], username: str) -> None:
-    if entry is not None and entry.get("admin"):
-        raise lifecycle.AdminEntry(username)
-
-
-async def _set_disabled(request: Request, username: str, disabled: bool):
-    entry = store.get(username)
-    if entry is None:
-        raise lifecycle.UserNotFound(username)
-    if disabled:
-        _refuse_admin(entry, username)
-    if store.update(username, disabled=disabled) is None:  # deleted meanwhile
-        raise lifecycle.UserNotFound(username)
-    await lifecycle.reconcile()
-
+def _disabled_set(request: Request, entry: Dict[str, Any]):
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
-    return DisabledSet(username=username, disabled=disabled)
+    return DisabledSet(username=entry["name"], disabled=entry["disabled"])
 
 
 @router.post(
@@ -514,7 +468,7 @@ async def _set_disabled(request: Request, username: str, disabled: bool):
     responses={403: {"description": "Admin entry"}, 404: {"description": "Unknown username"}},
 )
 async def disable_user(request: Request, username: Username):
-    return await _set_disabled(request, username, True)
+    return _disabled_set(request, await lifecycle.disable(username))
 
 
 @router.post(
@@ -529,7 +483,7 @@ async def disable_user(request: Request, username: Username):
     responses={404: {"description": "Unknown username"}},
 )
 async def enable_user(request: Request, username: Username):
-    return await _set_disabled(request, username, False)
+    return _disabled_set(request, await lifecycle.enable(username))
 
 
 @router.post(

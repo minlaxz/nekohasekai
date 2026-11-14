@@ -63,12 +63,26 @@ def add_months(dt: datetime, months: int) -> datetime:
     return dt.replace(year=year, month=month, day=min(dt.day, calendar.monthrange(year, month)[1]))
 
 
+def _instant(value: str) -> datetime:
+    """ISO 8601, zone kept, no zone = UTC; ValueError when unparsable."""
+    dt = datetime.fromisoformat(value)
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)  # typed or hand-edited without zone
+
+
+def parse_expiry(value: str) -> Optional[str]:
+    """An Expiry as stored: an ISO 8601 instant, or None (never) for empty."""
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        return _instant(value).isoformat()
+    except ValueError:
+        raise InvalidField("expires_at", "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)") from None
+
+
 def _expiry_of(entry: Dict[str, Any]) -> Optional[datetime]:
     at = entry.get("expires_at")
-    if not at:
-        return None
-    dt = datetime.fromisoformat(at)
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)  # hand-edited value without zone
+    return _instant(at) if at else None
 
 
 def is_expired(entry: Dict[str, Any], at: datetime) -> bool:
@@ -107,10 +121,7 @@ async def create(username: str, months: int) -> Dict[str, Any]:
     except ssm_api.SsmUnavailable:
         store.delete(username)  # the admin never saw this PSK
         raise
-    entry = store.get(username)
-    if entry is None:  # deleted meanwhile
-        raise UserNotFound(username)
-    return entry
+    return _get(username)  # UserNotFound when deleted meanwhile
 
 
 async def delete(username: str) -> None:
@@ -122,6 +133,57 @@ async def delete(username: str) -> None:
         raise UserNotFound(username)
     await ssm_api.client.remove_user(username)
     store.delete(username)
+
+
+# --- Renewal, Expiry, disable and enable -----------------------------------------
+# Each writes the User record, then runs Reconcile, and returns the updated record.
+
+
+def _get(username: str) -> Dict[str, Any]:
+    entry = store.get(username)
+    if entry is None:
+        raise UserNotFound(username)
+    return entry
+
+
+def _update(username: str, **fields: Any) -> Dict[str, Any]:
+    entry = store.update(username, **fields)
+    if entry is None:  # missing, or deleted since it was read
+        raise UserNotFound(username)
+    return entry
+
+
+async def renew(username: str, months: int) -> Dict[str, Any]:
+    """Counts from the current Expiry, or from now when Expired or never expiring. No Trial period; does not enable."""
+    at = now()
+    current = _expiry_of(_get(username))
+    start = current if current is not None and current > at else at
+    entry = _update(username, expires_at=add_months(start, months).isoformat())
+    await reconcile()
+    return entry
+
+
+async def set_expiry(username: str, value: str) -> Dict[str, Any]:
+    """Takes effect at once: a past instant takes the user out of ssm-api, a future one or empty puts them back."""
+    entry = _update(username, expires_at=parse_expiry(value))
+    await reconcile()
+    return entry
+
+
+async def disable(username: str) -> Dict[str, Any]:
+    """Out of ssm-api until enabled; the User record, PSK and Expiry are kept."""
+    if _get(username).get("admin"):
+        raise AdminEntry(username)
+    entry = _update(username, disabled=True)
+    await reconcile()
+    return entry
+
+
+async def enable(username: str) -> Dict[str, Any]:
+    """Back into ssm-api, unless Expired."""
+    entry = _update(username, disabled=False)
+    await reconcile()
+    return entry
 
 
 # --- Last fetch -------------------------------------------------------------------
