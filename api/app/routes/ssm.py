@@ -1,8 +1,6 @@
 import asyncio
-import base64
 import csv
 import io
-import ipaddress
 import os
 import re
 from datetime import datetime
@@ -218,7 +216,7 @@ def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
     except lifecycle.InvalidField:  # the same rule as /ssm/expiry
         raise ValueError(f"bad Expiry '{row['expires_at'].strip()}'") from None
     try:
-        warp_key, warp_ipv6 = _parse_warp(row["warp_key"].strip(), row["warp_ipv6"].strip())
+        warp_key, warp_ipv6 = lifecycle.parse_warp_key(row["warp_key"], row["warp_ipv6"])
     except lifecycle.InvalidField as exc:  # the same checks as /ssm/warp
         raise ValueError(f"bad {exc.field}: {exc.msg}") from None
     return {
@@ -370,28 +368,6 @@ class WarpSet(BaseModel):
     warp_ipv6: Optional[str]
 
 
-def _parse_warp(key: str, ipv6: str) -> tuple[Optional[str], Optional[str]]:
-    """The WARP key as stored: both set, or both None to clear."""
-    if not key and not ipv6:
-        return None, None
-    if not key or not ipv6:
-        raise lifecycle.InvalidField("warp_key" if not key else "warp_ipv6", "set both warp_key and warp_ipv6, or neither")
-    bad_key = lifecycle.InvalidField("warp_key", "must be a WireGuard private key: base64 of 32 bytes")
-    try:
-        if len(base64.b64decode(key, validate=True)) != 32:
-            raise bad_key
-    except ValueError:
-        raise bad_key from None
-    bad_ipv6 = lifecycle.InvalidField("warp_ipv6", "must be an IPv6 address, bare or /128")
-    try:
-        iface = ipaddress.IPv6Interface(ipv6)  # a bare address is /128
-    except ValueError:
-        raise bad_ipv6 from None
-    if iface.network.prefixlen != 128 or iface.scope_id:  # a %zone would reach the sing-box endpoint
-        raise bad_ipv6
-    return key, str(iface)
-
-
 @router.post(
     "/warp",
     response_model=WarpSet,
@@ -410,11 +386,7 @@ async def set_warp(
     warp_key: Annotated[str, Form()] = "",
     warp_ipv6: Annotated[str, Form()] = "",
 ):
-    key, ipv6 = _parse_warp(warp_key.strip(), warp_ipv6.strip())
-    entry = store.update(username, warp_key=key, warp_ipv6=ipv6)
-    if entry is None:
-        raise lifecycle.UserNotFound(username)
-
+    entry = lifecycle.set_warp_key(username, warp_key, warp_ipv6)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return WarpSet(username=username, warp_key=entry["warp_key"], warp_ipv6=entry["warp_ipv6"])
@@ -437,13 +409,7 @@ class MeshSet(BaseModel):
     responses={400: {"description": "Invalid username or key"}, 404: {"description": "Unknown username"}},
 )
 async def set_mesh(request: Request, username: Username, ts_auth_key: Annotated[str, Form()] = ""):
-    key = ts_auth_key.strip()
-    if any(c.isspace() for c in key):  # loose on purpose: headscale's key format changes between versions
-        raise lifecycle.InvalidField("ts_auth_key", "must not contain whitespace")
-    entry = store.update(username, ts_auth_key=key or None)
-    if entry is None:
-        raise lifecycle.UserNotFound(username)
-
+    entry = lifecycle.set_mesh_key(username, ts_auth_key)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return MeshSet(username=username, ts_auth_key=entry["ts_auth_key"])
