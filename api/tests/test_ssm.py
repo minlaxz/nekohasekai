@@ -168,42 +168,19 @@ def test_last_fetch_kept_in_user_record(client, monkeypatch, frozen):
     assert client.get("/i?j=alice&k=good").status_code == 200
     assert last_fetch() is None
     assert client.get("/c?j=alice&k=good&dp=/q").status_code == 200
-    assert last_fetch() == NOW.isoformat()
-    assert ssm._ago(NOW.isoformat()) == "just now" and ssm._ago(None) == "never"
+    assert last_fetch() == frozen.isoformat()
+    assert ssm._ago(frozen.isoformat()) == "just now" and ssm._ago(None) == "never"
 
     # Restart: the stats page reads it back from the database, not process memory.
     rows = TestClient(app).get("/ssm/server/v1/users", headers=JSON).json()["users"]
-    assert rows[0]["last_fetch"] == NOW.isoformat()
+    assert rows[0]["last_fetch"] == frozen.isoformat()
 
     assert client.post("/ssm/delete", data={"username": "alice"}, headers=JSON).status_code == 200
     assert client.post("/ssm/create", data={"username": "alice"}, headers=JSON).status_code == 200
     assert last_fetch() is None
 
 
-# --- reconcile --------------------------------------------------------------
-
-
-def test_reconcile_posts_derived_keys_and_skips_bad_entries(client, monkeypatch):
-    k = "nj75pm4nlaslo8xm8xtK=="
-    store.add(name="bad", password="insecure-user123==")
-    store.add(name="bob", password=k)
-    import asyncio
-    asyncio.run(ssm.reconcile_users())
-    assert client.ssm.users["bob"] == {"username": "bob", "uPSK": "nj75pm4nlaslo8xm8xtKnj75"}
-    assert "bad" not in client.ssm.users
-
 # --- expiry -----------------------------------------------------------------
-
-import asyncio  # noqa: E402
-from datetime import datetime, timezone  # noqa: E402
-
-NOW = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
-
-
-@pytest.fixture
-def frozen(monkeypatch):
-    monkeypatch.setattr(ssm, "_now", lambda: NOW)
-    return NOW
 
 
 def _entry(client, name):
@@ -239,32 +216,6 @@ def test_create_months_out_of_range_is_400(client, months):
     r = client.post("/ssm/create", data={"username": "bob", "months": months}, headers=JSON)
     assert r.status_code == 400
     assert "bob" not in client.ssm.users
-
-
-@pytest.mark.parametrize(
-    "start,months,end",
-    [
-        ("2026-01-31", 1, "2026-02-28"),
-        ("2028-01-31", 1, "2028-02-29"),
-        ("2026-10-31", 4, "2027-02-28"),
-        ("2026-05-15", 6, "2026-11-15"),
-        ("2026-12-01", 1, "2027-01-01"),
-    ],
-)
-def test_add_months_is_calendar(start, months, end):
-    dt = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
-    assert ssm.add_months(dt, months).date().isoformat() == end
-
-
-def test_reconcile_removes_expired_and_adds_live(client, frozen):
-    _set_expiry(client, "alice", "2026-10-05T11:59:00+00:00")  # expired, still in ssm-api
-    _add_entry(client, "carol", expires_at="2026-12-01T00:00:00+00:00")  # live, missing from ssm-api
-    _add_entry(client, "dan")  # no Expiry: never expires
-    _add_entry(client, "eve", expires_at="2026-01-01")  # hand-edited, no zone: still expired
-    client.ssm.users["stranger"] = {"username": "stranger"}  # in ssm-api only: left alone
-    asyncio.run(ssm.reconcile_users())
-    assert set(client.ssm.users) == {"carol", "dan", "stranger"}
-    assert _store_names(client) == ["alice", "carol", "dan", "eve"]
 
 
 def test_renew_expired_counts_from_now(client, frozen):
@@ -380,15 +331,6 @@ def test_set_expiry_html_redirects_to_stats(client, frozen):
 # --- disable / enable -------------------------------------------------------
 
 
-def test_reconcile_keeps_disabled_users_out(client, frozen):
-    _add_entry(client, "bob", disabled=True)
-    client.ssm.users["bob"] = {"username": "bob"}
-    _add_entry(client, "carol", disabled=True, expires_at="2026-01-01T00:00:00+00:00")
-    _add_entry(client, "dan", disabled=False)
-    asyncio.run(ssm.reconcile_users())
-    assert set(client.ssm.users) == {"alice", "dan"}
-
-
 def test_disable_removes_user_and_keeps_expiry(client, frozen):
     _set_expiry(client, "alice", "2026-12-01T00:00:00+00:00")
     r = client.post("/ssm/disable", data={"username": "alice"}, headers=JSON)
@@ -475,6 +417,39 @@ def test_stats_lists_disabled_users_with_buttons(client, monkeypatch, frozen):
     assert html.count('action="/ssm/enable"') == 1  # bob
     assert html.count('action="/ssm/delete"') == 3  # alice, stranger, bob; not root
     assert "confirm(" in html
+
+
+# --- domain error bodies ------------------------------------------------------
+
+
+def _bad_field_body(field, msg):
+    detail = {"loc": ["body", field], "msg": msg, "type": "value_error.invalid"}
+    return {"message": f"1 validation error:\n  {detail!r}"}
+
+
+@pytest.mark.parametrize(
+    "path,data,status,body",
+    [
+        ("/ssm/renew", {"username": "ghost", "months": 1}, 404,
+         {"message": "The resource you are looking for is not found."}),
+        ("/ssm/create", {"username": "alice"}, 409, {"detail": "User 'alice' already exists"}),
+        ("/ssm/disable", {"username": "root"}, 403, {"detail": "User 'root' is an admin entry"}),
+        ("/ssm/expiry", {"username": "alice", "expires_at": "tomorrow"}, 400,
+         _bad_field_body("expires_at", "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)")),
+        ("/ssm/mesh", {"username": "alice", "ts_auth_key": "a b"}, 400,
+         _bad_field_body("ts_auth_key", "must not contain whitespace")),
+    ],
+)
+def test_lifecycle_errors_keep_their_http_bodies(client, path, data, status, body):
+    _add_entry(client, "root", admin=True)
+    r = client.post(path, data=data, headers=JSON)
+    assert (r.status_code, r.json()) == (status, body)
+
+
+def test_import_rejected_keeps_its_http_body(client):
+    r = client.post("/ssm/import", files={"file": ("u.csv", "name,password\n")}, headers=JSON)
+    assert r.status_code == 400
+    assert r.json() == {"detail": [f"row 1: missing column '{c}'" for c in ssm.CSV_FIELDS[2:]]}
 
 
 # --- User export ------------------------------------------------------------

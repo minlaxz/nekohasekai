@@ -15,7 +15,8 @@ from fastapi.responses import JSONResponse, Response, HTMLResponse
 # from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 
-from .routes.ssm import router as ssm_router, reconcile_users, record_fetch
+from . import lifecycle
+from .routes.ssm import router as ssm_router
 from .ssm_api import SsmUnavailable
 from .utils import build_profile, load_template, user_entry, verify_user
 
@@ -57,11 +58,32 @@ async def ssm_unavailable(request: Request, exc: SsmUnavailable) -> Response:
     return JSONResponse(status_code=502, content={"detail": f"ssm-api error: {exc}"})
 
 
+async def invalid_field(request: Request, exc: lifecycle.InvalidField) -> Response:
+    """A 400 naming the bad form field, the same body as request validation gives."""
+    detail = {"loc": ["body", exc.field], "msg": exc.msg, "type": "value_error.invalid"}
+    return await validation_error(request, RequestValidationError([detail]))
+
+
+def _detail_handler(status: int, detail: Callable[[Any], Any]) -> Callable[[Request, Any], Any]:
+    """A handler answering `{"detail": detail(exc)}` with `status`."""
+
+    async def handler(request: Request, exc: Exception) -> Response:
+        return JSONResponse(status_code=status, content={"detail": detail(exc)})
+
+    return handler
+
+
 exceptions: Dict[Union[int, Type[Exception]], Callable[[Request, Any], Any]] = {
     404: not_found,
     Exception: internal_error,
     RequestValidationError: validation_error,
     SsmUnavailable: ssm_unavailable,
+    # Lifecycle domain errors (app/lifecycle.py), with the bodies HTTPException gave before.
+    lifecycle.UserNotFound: not_found,
+    lifecycle.UserExists: _detail_handler(409, str),
+    lifecycle.AdminEntry: _detail_handler(403, str),
+    lifecycle.InvalidField: invalid_field,
+    lifecycle.ImportRejected: _detail_handler(400, lambda exc: exc.errors),
 }
 
 
@@ -71,11 +93,11 @@ async def lifespan(app: FastAPI):
     if not os.getenv("APP_ADMIN_PASSWORD"):
         logging.critical("APP_ADMIN_PASSWORD is not set: every /ssm request will be refused")
     try:
-        await reconcile_users()
+        await lifecycle.reconcile()
     except Exception as exc:  # ssm-api not up yet
         logging.warning(f"reconcile skipped: {exc}")
     # Expiry enforcement (ADR 0003): ssm-api mirrors the User records every minute.
-    scheduler.add_job(reconcile_users, "interval", seconds=60)  # type: ignore
+    scheduler.add_job(lifecycle.reconcile, "interval", seconds=60)  # type: ignore
     scheduler.start()  # type: ignore
 
     yield  # App runs here
@@ -241,7 +263,7 @@ def read_config(
         rules_v6_url=r6,
         user_ips=",".join(rr_ip_cidr),
     )
-    record_fetch(j)
+    lifecycle.record_fetch(j)
     return config
 
 

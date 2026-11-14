@@ -1,10 +1,8 @@
 import asyncio
 import base64
-import calendar
 import csv
 import io
 import ipaddress
-import logging
 import os
 import re
 import secrets
@@ -12,11 +10,10 @@ import string
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Dict, List, Optional
 
-from app import ssm_api, store
+from app import lifecycle, ssm_api, store
 from app.auth import require_admin
 from app.utils import ssm_key
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
-from fastapi.exceptions import RequestValidationError
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -29,14 +26,10 @@ APP_HOST: str = os.getenv("APP_HOST", "")  # main.py logs when it is unset
 templates = Jinja2Templates(directory="templates")
 
 
-def record_fetch(username: str) -> None:
-    store.update(username, last_fetch=_now().isoformat())
-
-
 def _ago(iso: Optional[str]) -> str:
     if not iso:
         return "never"
-    s = int((_now() - datetime.fromisoformat(iso)).total_seconds())
+    s = int((lifecycle.now() - datetime.fromisoformat(iso)).total_seconds())
     for unit, size in (("d", 86400), ("h", 3600), ("m", 60)):
         if s >= size:
             return f"{s // size}{unit} ago"
@@ -45,13 +38,10 @@ def _ago(iso: Optional[str]) -> str:
 
 templates.env.filters["ago"] = _ago
 
-USERNAME_PATTERN = r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,31}$"
-# Invalid names fail request validation and surface through main.py's 400 handler.
-Username = Annotated[str, Form(pattern=USERNAME_PATTERN)]
-# Whole calendar months of access. Create adds the Trial period on top; renew does not.
-Months = Annotated[int, Form(ge=0, le=6)]
-RenewMonths = Annotated[int, Form(ge=1, le=6)]
-TRIAL_DAYS = 3
+# Invalid names and months fail request validation and surface through main.py's 400 handler.
+Username = Annotated[str, Form(pattern=lifecycle.USERNAME_PATTERN)]
+Months = Annotated[int, Form(ge=lifecycle.CREATE_MONTHS[0], le=lifecycle.CREATE_MONTHS[1])]
+RenewMonths = Annotated[int, Form(ge=lifecycle.RENEW_MONTHS[0], le=lifecycle.RENEW_MONTHS[1])]
 
 
 class CreatedUser(BaseModel):
@@ -89,47 +79,13 @@ def wants_html(request: Request) -> bool:
     return "text/html" in request.headers.get("accept", "")
 
 
-def _bad_field(field: str, msg: str) -> RequestValidationError:
-    """A 400 naming the bad form field, through main.py's handler."""
-    return RequestValidationError([{"loc": ["body", field], "msg": msg, "type": "value_error.invalid"}])
-
-
 # --- Expiry -------------------------------------------------------------------
-
-
-def _now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def add_months(dt: datetime, months: int) -> datetime:
-    """Calendar months; the day clamps to the target month (Jan 31 + 1 = Feb 28)."""
-    month0 = dt.month - 1 + months
-    year, month = dt.year + month0 // 12, month0 % 12 + 1
-    return dt.replace(year=year, month=month, day=min(dt.day, calendar.monthrange(year, month)[1]))
-
-
-def _expiry_of(entry: Dict[str, Any]) -> Optional[datetime]:
-    at = entry.get("expires_at")
-    if not at:
-        return None
-    dt = datetime.fromisoformat(at)
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)  # hand-edited value without zone
 
 
 def _parse_expiry(value: str) -> str:
     """ISO 8601 instant, zone kept, no zone = UTC; ValueError when unparsable."""
     dt = datetime.fromisoformat(value)
     return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
-
-
-def is_expired(entry: Dict[str, Any], now: datetime) -> bool:
-    at = _expiry_of(entry)
-    return at is not None and at <= now
-
-
-def is_out(entry: Dict[str, Any], now: datetime) -> bool:
-    """Kept out of ssm-api: Expired or Disabled."""
-    return bool(entry.get("disabled")) or is_expired(entry, now)
 
 
 # --- Stats ------------------------------------------------------------------
@@ -186,12 +142,12 @@ async def get_stats() -> List[Dict[str, Any]]:
 )
 async def proxy_server_users(request: Request):
     stats: List[Dict[str, Any]] = await get_stats()
-    now = _now()
+    now = lifecycle.now()
     by_name = {u["name"]: u for u in store.records()}
     for row in stats:
         entry = by_name.get(row["username"], {})
         row["expires_at"] = entry.get("expires_at")
-        row["expired"] = is_expired(entry, now)
+        row["expired"] = lifecycle.is_expired(entry, now)
         row["disabled"] = bool(entry.get("disabled"))
         row["last_fetch"] = entry.get("last_fetch")
     seen = {row["username"] for row in stats}
@@ -200,12 +156,12 @@ async def proxy_server_users(request: Request):
             "username": u["name"],
             "uPSK": u["password"],
             "expires_at": u.get("expires_at"),
-            "expired": is_expired(u, now),
+            "expired": lifecycle.is_expired(u, now),
             "disabled": bool(u.get("disabled")),
             "last_fetch": u.get("last_fetch"),
         }
         for u in by_name.values()
-        if u["name"] not in seen and is_out(u, now)
+        if u["name"] not in seen and lifecycle.is_out(u, now)
     ]
     if wants_html(request):
         return templates.TemplateResponse(request, "users.html", {"users": stats, "entries": by_name})
@@ -262,7 +218,7 @@ def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
     """One CSV row as a User record; ValueError says what is wrong."""
     if None in row or None in row.values():
         raise ValueError(f"wrong number of cells, expected {len(CSV_FIELDS)}")
-    if not re.fullmatch(USERNAME_PATTERN, row["name"]):
+    if not re.fullmatch(lifecycle.USERNAME_PATTERN, row["name"]):
         raise ValueError(f"bad username '{row['name']}'")
     try:
         ssm_key(row["password"])
@@ -276,9 +232,8 @@ def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
             raise ValueError(f"bad Expiry '{expires_at}'") from None
     try:
         warp_key, warp_ipv6 = _parse_warp(row["warp_key"].strip(), row["warp_ipv6"].strip())
-    except RequestValidationError as exc:  # the same checks as /ssm/warp
-        err = exc.errors()[0]
-        raise ValueError(f"bad {err['loc'][-1]}: {err['msg']}") from None
+    except lifecycle.InvalidField as exc:  # the same checks as /ssm/warp
+        raise ValueError(f"bad {exc.field}: {exc.msg}") from None
     return {
         "name": row["name"],
         "password": row["password"],
@@ -340,9 +295,9 @@ async def import_users(request: Request, file: UploadFile):
         raise HTTPException(status_code=400, detail=["row 1: file is not UTF-8 text"])
     rows, errors = _parse_csv(text)
     if errors:
-        raise HTTPException(status_code=400, detail=errors)
+        raise lifecycle.ImportRejected(errors)
     store.add_many(rows)
-    await reconcile_users()
+    await lifecycle.reconcile()
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
     return ImportedUsers(added=[r["name"] for r in rows])
@@ -353,36 +308,9 @@ def create_upsk() -> str:
     return "".join(secrets.choice(alphabet) for _ in range(20)) + "=="
 
 
-async def _ssm_usernames() -> set[str]:
-    return {u["username"] for u in await ssm_api.client.list_users()}
-
-
 async def _user_exists(username: str) -> bool:
-    return store.get(username) is not None or username in await _ssm_usernames()
-
-
-async def reconcile_users() -> None:
-    """ssm-api mirrors the User records: Expired and Disabled users out, live users in.
-    ssm-api users with no User record are left alone."""
-    now = _now()
-    users = store.records()
-    existing = await _ssm_usernames()
-    added, removed = [], []
-    for u in users:
-        if is_out(u, now):
-            if u["name"] in existing:
-                await ssm_api.client.remove_user(u["name"])
-                removed.append(u["name"])
-        elif u["name"] not in existing:
-            try:
-                key = ssm_key(u["password"])
-            except ValueError as exc:  # ssm-api keeps a user whose key fails to apply: never post it
-                logging.error(f"reconcile: skipping {u['name']}: {exc}")
-                continue
-            await ssm_api.client.add_user(u["name"], key)
-            added.append(u["name"])
-    if added or removed:
-        logging.info(f"reconcile: added {added}, removed {removed}")
+    # shortcut: private lifecycle helper, until create and delete move into the lifecycle module (#101)
+    return store.get(username) is not None or username in await lifecycle._ssm_usernames()
 
 
 # --- Admin routes -----------------------------------------------------------
@@ -390,7 +318,7 @@ async def reconcile_users() -> None:
 
 @router.get("/form", include_in_schema=False)
 async def get_form(request: Request):
-    return templates.TemplateResponse(request, "form.html", {"pattern": USERNAME_PATTERN})
+    return templates.TemplateResponse(request, "form.html", {"pattern": lifecycle.USERNAME_PATTERN})
 
 
 @router.post(
@@ -407,10 +335,10 @@ async def get_form(request: Request):
 )
 async def create_user(request: Request, username: Username, months: Months = 0):
     if await _user_exists(username):
-        raise HTTPException(status_code=409, detail=f"User '{username}' already exists")
+        raise lifecycle.UserExists(username)
 
     uPSK = create_upsk()  # what the user holds; ssm-api gets the derived SS-2022 key (#24)
-    expires_at = (add_months(_now(), months) + timedelta(days=TRIAL_DAYS)).isoformat()
+    expires_at = (lifecycle.add_months(lifecycle.now(), months) + timedelta(days=lifecycle.TRIAL_DAYS)).isoformat()
     # Record first: a failure in between must not leave an ssm-api user with no Expiry.
     store.add(name=username, password=uPSK, expires_at=expires_at)
     try:
@@ -446,15 +374,15 @@ async def create_user(request: Request, username: Username, months: Months = 0):
 async def renew_user(request: Request, username: Username, months: RenewMonths):
     entry = store.get(username)
     if entry is None:
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+        raise lifecycle.UserNotFound(username)
 
-    now = _now()
-    current = _expiry_of(entry)
+    now = lifecycle.now()
+    current = lifecycle._expiry_of(entry)  # shortcut: private, until Renewal moves into the lifecycle module (#101)
     start = current if current is not None and current > now else now
-    entry = store.update(username, expires_at=add_months(start, months).isoformat())
+    entry = store.update(username, expires_at=lifecycle.add_months(start, months).isoformat())
     if entry is None:  # deleted meanwhile
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
-    await reconcile_users()
+        raise lifecycle.UserNotFound(username)
+    await lifecycle.reconcile()
 
     if wants_html(request):
         return templates.TemplateResponse(
@@ -480,11 +408,11 @@ async def set_expiry(request: Request, username: Username, expires_at: Annotated
         try:
             value = _parse_expiry(value)
         except ValueError:
-            raise _bad_field("expires_at", "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)")
+            raise lifecycle.InvalidField("expires_at", "must be ISO 8601, e.g. 2026-12-31T00:00 (UTC when no zone is given)")
     entry = store.update(username, expires_at=value or None)
     if entry is None:
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
-    await reconcile_users()
+        raise lifecycle.UserNotFound(username)
+    await lifecycle.reconcile()
 
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
@@ -502,14 +430,14 @@ def _parse_warp(key: str, ipv6: str) -> tuple[Optional[str], Optional[str]]:
     if not key and not ipv6:
         return None, None
     if not key or not ipv6:
-        raise _bad_field("warp_key" if not key else "warp_ipv6", "set both warp_key and warp_ipv6, or neither")
-    bad_key = _bad_field("warp_key", "must be a WireGuard private key: base64 of 32 bytes")
+        raise lifecycle.InvalidField("warp_key" if not key else "warp_ipv6", "set both warp_key and warp_ipv6, or neither")
+    bad_key = lifecycle.InvalidField("warp_key", "must be a WireGuard private key: base64 of 32 bytes")
     try:
         if len(base64.b64decode(key, validate=True)) != 32:
             raise bad_key
     except ValueError:
         raise bad_key from None
-    bad_ipv6 = _bad_field("warp_ipv6", "must be an IPv6 address, bare or /128")
+    bad_ipv6 = lifecycle.InvalidField("warp_ipv6", "must be an IPv6 address, bare or /128")
     try:
         iface = ipaddress.IPv6Interface(ipv6)  # a bare address is /128
     except ValueError:
@@ -540,7 +468,7 @@ async def set_warp(
     key, ipv6 = _parse_warp(warp_key.strip(), warp_ipv6.strip())
     entry = store.update(username, warp_key=key, warp_ipv6=ipv6)
     if entry is None:
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+        raise lifecycle.UserNotFound(username)
 
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
@@ -566,10 +494,10 @@ class MeshSet(BaseModel):
 async def set_mesh(request: Request, username: Username, ts_auth_key: Annotated[str, Form()] = ""):
     key = ts_auth_key.strip()
     if any(c.isspace() for c in key):  # loose on purpose: headscale's key format changes between versions
-        raise _bad_field("ts_auth_key", "must not contain whitespace")
+        raise lifecycle.InvalidField("ts_auth_key", "must not contain whitespace")
     entry = store.update(username, ts_auth_key=key or None)
     if entry is None:
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+        raise lifecycle.UserNotFound(username)
 
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
@@ -578,18 +506,18 @@ async def set_mesh(request: Request, username: Username, ts_auth_key: Annotated[
 
 def _refuse_admin(entry: Optional[Dict[str, Any]], username: str) -> None:
     if entry is not None and entry.get("admin"):
-        raise HTTPException(status_code=403, detail=f"User '{username}' is an admin entry")
+        raise lifecycle.AdminEntry(username)
 
 
 async def _set_disabled(request: Request, username: str, disabled: bool):
     entry = store.get(username)
     if entry is None:
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+        raise lifecycle.UserNotFound(username)
     if disabled:
         _refuse_admin(entry, username)
     if store.update(username, disabled=disabled) is None:  # deleted meanwhile
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
-    await reconcile_users()
+        raise lifecycle.UserNotFound(username)
+    await lifecycle.reconcile()
 
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
@@ -640,7 +568,7 @@ async def enable_user(request: Request, username: Username):
 async def delete_user(request: Request, username: Username):
     _refuse_admin(store.get(username), username)
     if not await _user_exists(username):
-        raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+        raise lifecycle.UserNotFound(username)
     await ssm_api.client.remove_user(username)
     store.delete(username)
     if wants_html(request):
