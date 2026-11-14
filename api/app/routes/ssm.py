@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 router = APIRouter(dependencies=[Depends(require_admin)], tags=["admin"])
 
-APP_HOST: str = os.getenv("APP_HOST", "www.gstatic.com")
+APP_HOST: str = os.getenv("APP_HOST", "")  # main.py logs when it is unset
 APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
 
 templates = Jinja2Templates(directory="templates")
@@ -236,6 +236,11 @@ def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
             expires_at = _parse_expiry(expires_at)
         except ValueError:
             raise ValueError(f"bad Expiry '{expires_at}'") from None
+    try:
+        warp_key, warp_ipv6 = _parse_warp(row["warp_key"].strip(), row["warp_ipv6"].strip())
+    except RequestValidationError as exc:  # the same checks as /ssm/warp
+        err = exc.errors()[0]
+        raise ValueError(f"bad {err['loc'][-1]}: {err['msg']}") from None
     return {
         "name": row["name"],
         "password": row["password"],
@@ -243,8 +248,8 @@ def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
         "expires_at": expires_at,
         "disabled": _parse_bool(row["disabled"], "disabled"),
         "ts_auth_key": row["ts_auth_key"] or None,
-        "warp_key": row["warp_key"] or None,
-        "warp_ipv6": row["warp_ipv6"] or None,
+        "warp_key": warp_key,
+        "warp_ipv6": warp_ipv6,
     }
 
 
@@ -395,8 +400,13 @@ async def create_user(request: Request, username: Username, months: Months = 0):
 
     uPSK = create_upsk()  # what the user holds; ssm-api gets the derived SS-2022 key (#24)
     expires_at = (add_months(_now(), months) + timedelta(days=TRIAL_DAYS)).isoformat()
-    await create_user_in_memory(username, ssm_key(uPSK))
+    # Record first: a failure in between must not leave an ssm-api user with no Expiry.
     store.add(name=username, password=uPSK, expires_at=expires_at)
+    try:
+        await create_user_in_memory(username, ssm_key(uPSK))
+    except HTTPException:
+        store.delete(username)  # the admin never saw this PSK
+        raise
 
     import_url = f"https://{APP_HOST}/i?j={username}&k={uPSK}"
     config_url = f"https://{APP_HOST}/c?j={username}&k={uPSK}"

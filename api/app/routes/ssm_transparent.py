@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request, Response
 START_PORT: int = int(os.getenv("START_PORT", "1080"))
 END_PORT: int = int(os.getenv("END_PORT", "1090"))
 
-APP_SSM_UPSTREAM = os.getenv("APP_SSM_UPSTREAM", "http://sing-box:8888")
+APP_SSM_UPSTREAM = os.getenv("APP_INTERNAL_SSM_UPSTREAM", "http://sing-box:8888")
 
 router = APIRouter(dependencies=[Depends(require_admin)], include_in_schema=False)
 

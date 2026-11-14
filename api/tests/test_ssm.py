@@ -123,6 +123,22 @@ def test_create_accepts_existing_name_shapes(client, name):
 # --- delete -----------------------------------------------------------------
 
 
+def test_create_that_fails_at_the_store_leaves_nobody_in_ssm_api(client, monkeypatch):
+    monkeypatch.setattr(ssm, "create_upsk", lambda: "a" * 20 + "==")  # alice's PSK: the store refuses it
+    r = TestClient(app, raise_server_exceptions=False).post("/ssm/create", data={"username": "bob"}, headers=JSON)
+    assert r.status_code == 500
+    assert "bob" not in client.upstream and _store_names(client) == ["alice"]
+
+
+def test_create_that_fails_at_ssm_api_leaves_no_user_record(client, monkeypatch):
+    async def down(username, upsk):
+        raise ssm.HTTPException(status_code=502, detail="Upstream error")
+
+    monkeypatch.setattr(ssm, "create_user_in_memory", down)
+    assert client.post("/ssm/create", data={"username": "bob"}, headers=JSON).status_code == 502
+    assert _store_names(client) == ["alice"]  # so the admin can create bob again
+
+
 def test_delete(client):
     r = client.post("/ssm/delete", data={"username": "alice"}, headers=JSON)
     assert r.status_code == 200
@@ -578,7 +594,7 @@ def test_import_adds_users_and_live_ones_reach_ssm_api(client, frozen):
         BOB,
         f"carol,{'c' * 20}==,false,2026-01-01T00:00:00+00:00,false,,,",  # Expired
         f"dave,{'d' * 20}==,false,,true,,,",  # Disabled
-        f"erin,{'e' * 20}==,true,2027-01-01T00:00:00+00:00,false,ts-key,wk=,2606::1/128",
+        f"erin,{'e' * 20}==,true,2027-01-01T00:00:00+00:00,false,ts-key,{WG_KEY},2606::1",  # a bare address is stored as /128
     )
     assert r.status_code == 200
     assert r.json() == {"added": ["bob", "carol", "dave", "erin"]}
@@ -652,7 +668,7 @@ OLD_USERS = {
             "password": "exampleuser1key00000==",
             "admin": False,
             "expires_at": "2026-10-08T12:00:00+00:00",
-            "warp_key": "wireguard-private-key-for-user1=",
+            "warp_key": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
             "warp_ipv6": "2606:4700:110:8000::1/128",
         },
         {"name": "user2", "password": "exampleadminkey00000==", "admin": True},
@@ -671,7 +687,7 @@ def test_users_json_round_trips_through_import_and_export(client, tmp_path):
     assert r.json() == {"added": ["user1", "user2", "user3", "user4"]}
     assert client.get("/ssm/export", headers=ADMIN).text == converted
     assert converted.splitlines()[1:] == [
-        "user1,exampleuser1key00000==,false,2026-10-08T12:00:00+00:00,false,,wireguard-private-key-for-user1=,2606:4700:110:8000::1/128",
+        "user1,exampleuser1key00000==,false,2026-10-08T12:00:00+00:00,false,,AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=,2606:4700:110:8000::1/128",
         "user2,exampleadminkey00000==,true,,false,,,",
         "user3,exampleuser3key00000==,false,,false,ts-auth-key-for-user3,,",
         "user4,exampleuser4key00000==,false,,true,,,",
@@ -747,6 +763,22 @@ def test_set_warp_bad_value_is_400_and_keeps_old_key(client, key, ipv6, field):
     assert r.status_code == 400 and field in r.text
     entry = _entry(client, "alice")
     assert (entry["warp_key"], entry["warp_ipv6"]) == (WG_KEY, "2606:4700::1/128")
+
+
+@pytest.mark.parametrize(
+    "key,ipv6,error",
+    [
+        (WG_KEY, "", "row 2: bad warp_ipv6: set both warp_key and warp_ipv6, or neither"),
+        ("", "2606:4700::1/128", "row 2: bad warp_key: set both warp_key and warp_ipv6, or neither"),
+        ("wk=", "2606:4700::1/128", "row 2: bad warp_key: must be a WireGuard private key: base64 of 32 bytes"),
+        (WG_KEY, "2606:4700::1/64", "row 2: bad warp_ipv6: must be an IPv6 address, bare or /128"),
+    ],
+)
+def test_import_rejects_a_warp_key_that_set_warp_rejects(client, key, ipv6, error):
+    r = _import(client, HEADER, BOB[:-1] + f"{key},{ipv6}")
+    assert r.status_code == 400, r.text
+    assert r.json()["detail"] == [error]
+    assert _store_names(client) == ["alice"] and client.posted == {}
 
 
 def test_set_warp_unknown_is_404(client):
