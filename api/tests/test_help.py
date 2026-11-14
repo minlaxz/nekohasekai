@@ -25,14 +25,14 @@ def test_help_is_404_without_valid_user(monkeypatch):
     def reject(j, k):
         raise HTTPException(status_code=400)
 
-    monkeypatch.setattr(main, "Checker", reject)
+    monkeypatch.setattr(main, "verify_user", reject)
     r = TestClient(main.app).get("/help?j=alice&k=wrong")
     assert r.status_code == 404
     assert r.json() == TestClient(main.app).get("/no-such-path").json()
 
 
 def test_help_renders_for_valid_user(monkeypatch):
-    monkeypatch.setattr(main, "Checker", lambda j, k: None)
+    monkeypatch.setattr(main, "verify_user", lambda j, k: None)
     r = TestClient(main.app).get("/help?j=alice&k=a%2Bb==")
     assert r.status_code == 200
     assert "j=alice&amp;k=a%2Bb%3D%3D" in r.text

@@ -38,7 +38,7 @@ Scope: this note covers WARP specifically. It builds on `docs/research/sing-box-
   - **Better outer leg for Flow B:** Hysteria2 (UDP).
 - **The repo today does not use WARP.**
   - The server runs ShadowTLS + SS with `final: direct-out` and `endpoints: []` (`scaffolds/server/route.json`, `scaffolds/server/endpoints.json`).
-  - `unwarp()` in `api/app/utils.py` is unrelated. It is the method that builds a user's client config.
+  - `build_profile()` in `api/app/utils.py` (once named `unwarp()`) is unrelated. It is the function that builds a user's client config.
 
 ---
 

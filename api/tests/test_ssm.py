@@ -152,18 +152,16 @@ def test_last_fetch_kept_in_user_record(client, monkeypatch, frozen):
     import app.main as main
     from fastapi import HTTPException
 
-    class FakeReader:
-        def __init__(self, username, psk, **_):
-            if psk != "good":
-                raise HTTPException(status_code=403, detail="bad PSK")
-
-        def unwarp(self):
-            return {}
+    def verify_user(username, psk):
+        if psk != "good":
+            raise HTTPException(status_code=403, detail="bad PSK")
 
     async def stats():
         return [{"username": "alice", "downlinkBytes": 0}]
 
-    monkeypatch.setattr(main, "Reader", FakeReader)
+    monkeypatch.setattr(main, "verify_user", verify_user)
+    monkeypatch.setattr(main, "load_template", dict)
+    monkeypatch.setattr(main, "build_profile", lambda template, user, **_: {})
     monkeypatch.setattr(ssm, "get_stats", stats)
     assert not hasattr(ssm, "LAST_FETCH")
 
@@ -696,33 +694,37 @@ def _set_warp(client, key, ipv6, username="alice", headers=JSON, **kw):
     return client.post("/ssm/warp", data={"username": username, "warp_key": key, "warp_ipv6": ipv6}, headers=headers, **kw)
 
 
-def _profile_has_warp(monkeypatch):
-    """alice's next Profile config, with a WARP rule set (r6) asked for."""
+def _profile(**kwargs):
+    """alice's next Profile config, built from her User record and the real Client template."""
     from app import utils
 
-    monkeypatch.setattr(utils, "APP_CLIENT_DIR", os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client"))
-    monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
-    monkeypatch.setattr(utils, "fetch_user_rules", lambda url: {"domain_suffix": ["ip6only.me"]})
-    config = utils.Reader(
+    return utils.build_profile(
+        utils.load_template(os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client")),
+        store.get("alice"),
         username="alice", psk="a" * 20 + "==", log_level="warn",
         dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
-        dns_final="dns-remote", dns_resolver="1.1.1.1", rules_v6_url="https://x/r6.json",
-    ).unwarp()
+        dns_final="dns-remote", dns_resolver="1.1.1.1", **kwargs,
+    )
+
+
+def _profile_has_warp():
+    """Whether alice's next Profile config, with a WARP rule set (r6) asked for, has WARP on."""
+    config = _profile(rules_v6_url="https://x/r6.json", fetch_rules=lambda url: {"domain_suffix": ["ip6only.me"]})
     return "warp-ep" in json.dumps(config)
 
 
-def test_set_warp_reaches_next_profile_config(client, monkeypatch):
+def test_set_warp_reaches_next_profile_config(client):
     r = _set_warp(client, WG_KEY, "2606:4700:110:8000::1")
     assert r.status_code == 200, r.text
     assert r.json() == {"username": "alice", "warp_key": WG_KEY, "warp_ipv6": "2606:4700:110:8000::1/128"}
-    assert _profile_has_warp(monkeypatch)
+    assert _profile_has_warp()
 
 
-def test_clear_warp_drops_it_from_next_profile_config(client, monkeypatch):
+def test_clear_warp_drops_it_from_next_profile_config(client):
     store.update("alice", warp_key=WG_KEY, warp_ipv6="2606:4700::1/128")
     r = _set_warp(client, "", "")
     assert r.json() == {"username": "alice", "warp_key": None, "warp_ipv6": None}
-    assert not _profile_has_warp(monkeypatch)
+    assert not _profile_has_warp()
 
 
 @pytest.mark.parametrize(
@@ -786,33 +788,23 @@ def _set_mesh(client, key, username="alice", headers=JSON, **kw):
     return client.post("/ssm/mesh", data={"username": username, "ts_auth_key": key}, headers=headers, **kw)
 
 
-def _profile_has_mesh(monkeypatch):
+def _profile_has_mesh():
     """Whether alice's next Profile config joins the Mesh (ts-ep, its route rule and DNS server)."""
-    from app import utils
-
-    monkeypatch.setattr(utils, "APP_CLIENT_DIR", os.path.join(os.path.dirname(__file__), "..", "..", "scaffolds", "client"))
-    monkeypatch.setattr(utils, "APP_TS_CONTROL_URL", "https://hs.example")
-    monkeypatch.setattr(utils.Checker, "_verify_user", lambda self: None)
-    config = utils.Reader(
-        username="alice", psk="a" * 20 + "==", log_level="warn",
-        dns_host="1.1.1.1", dns_sni="", dns_path="/", dns_detour="shadowsocks-uot",
-        dns_final="dns-remote", dns_resolver="1.1.1.1",
-    ).unwarp()
-    return "ts-ep" in json.dumps(config)
+    return "ts-ep" in json.dumps(_profile(control_url="https://hs.example"))
 
 
-def test_set_mesh_reaches_next_profile_config(client, monkeypatch):
+def test_set_mesh_reaches_next_profile_config(client):
     r = _set_mesh(client, "  test-mesh-key  ")
     assert r.status_code == 200, r.text
     assert r.json() == {"username": "alice", "ts_auth_key": "test-mesh-key"}
-    assert _profile_has_mesh(monkeypatch)
+    assert _profile_has_mesh()
 
 
-def test_clear_mesh_drops_it_from_next_profile_config(client, monkeypatch):
+def test_clear_mesh_drops_it_from_next_profile_config(client):
     store.update("alice", ts_auth_key="test-mesh-key")
     r = _set_mesh(client, "  ")
     assert r.json() == {"username": "alice", "ts_auth_key": None}
-    assert not _profile_has_mesh(monkeypatch)
+    assert not _profile_has_mesh()
 
 
 @pytest.mark.parametrize("key", ["hskey auth", "hskey\tauth", "a\nb"])
