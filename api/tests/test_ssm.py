@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app.main import app  # noqa: E402
-from app import store  # noqa: E402
+from app import lifecycle, store  # noqa: E402
 from app import ssm_api  # noqa: E402
 from app.routes import ssm  # noqa: E402
 from app.utils import ssm_key  # noqa: E402
@@ -335,7 +335,7 @@ def test_lifecycle_errors_keep_their_http_bodies(client, path, data, status, bod
 def test_import_rejected_keeps_its_http_body(client):
     r = client.post("/ssm/import", files={"file": ("u.csv", "name,password\n")}, headers=JSON)
     assert r.status_code == 400
-    assert r.json() == {"detail": [f"row 1: missing column '{c}'" for c in ssm.CSV_FIELDS[2:]]}
+    assert r.json() == {"detail": [f"row 1: missing column '{c}'" for c in lifecycle.CSV_FIELDS[2:]]}
 
 
 # --- User export ------------------------------------------------------------
@@ -345,21 +345,13 @@ def test_export_needs_admin(client):
     assert client.get("/ssm/export").status_code == 401
 
 
-def test_export_csv(client, monkeypatch):
-    _add_entry(client, "bob", expires_at="2026-10-08T12:00:00+00:00", disabled=True, warp_key="wk=", warp_ipv6="2606::1/128")
-    _add_entry(client, "root", admin=True, ts_auth_key="ts-key")
-    store.update("alice", last_fetch="2026-10-01T00:00:00+00:00")  # not exported
+def test_export_is_a_csv_download(client):
     r = client.get("/ssm/export", headers=ADMIN)
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/csv")
-    assert r.headers["content-disposition"].startswith("attachment")
+    assert r.headers["content-disposition"] == 'attachment; filename="users.csv"'
     assert r.headers["cache-control"] == "no-store"
-    assert r.text.splitlines() == [
-        "name,password,admin,expires_at,disabled,ts_auth_key,warp_key,warp_ipv6",
-        f"alice,{'a' * 20}==,false,,false,,,",
-        f"bob,{store.get('bob')['password']},false,2026-10-08T12:00:00+00:00,true,,wk=,2606::1/128",
-        f"root,{store.get('root')['password']},true,,false,ts-key,,",
-    ]
+    assert r.text == lifecycle.export_csv()
 
 
 def test_dashboard_links_export(client, monkeypatch):
@@ -369,7 +361,7 @@ def test_dashboard_links_export(client, monkeypatch):
 
 # --- User import ------------------------------------------------------------
 
-HEADER = ",".join(ssm.CSV_FIELDS)
+HEADER = ",".join(lifecycle.CSV_FIELDS)
 BOB = f"bob,{'b' * 20}==,false,,false,,,"
 
 
@@ -380,62 +372,26 @@ def _import(client, *lines, headers=JSON):
     )
 
 
-def test_import_adds_users_and_live_ones_reach_ssm_api(client, frozen):
-    r = _import(
-        client,
-        HEADER,
-        BOB,
-        f"carol,{'c' * 20}==,false,2026-01-01T00:00:00+00:00,false,,,",  # Expired
-        f"dave,{'d' * 20}==,false,,true,,,",  # Disabled
-        f"erin,{'e' * 20}==,true,2027-01-01T00:00:00+00:00,false,ts-key,{WG_KEY},2606::1",  # a bare address is stored as /128
-    )
-    assert r.status_code == 200
-    assert r.json() == {"added": ["bob", "carol", "dave", "erin"]}
-    assert _store_names(client) == ["alice", "bob", "carol", "dave", "erin"]
-    assert {n: u["uPSK"] for n, u in client.ssm.users.items() if n != "alice"} == {
-        "bob": ssm_key("b" * 20 + "=="), "erin": ssm_key("e" * 20 + "==")
-    }
-    erin = store.get("erin")
-    assert erin["admin"] is True and erin["ts_auth_key"] == "ts-key" and erin["warp_ipv6"] == "2606::1/128"
-    assert store.get("dave")["disabled"] is True and store.get("bob")["warp_key"] is None
+def test_import_answers_the_added_names(client):
+    r = _import(client, HEADER, BOB)
+    assert (r.status_code, r.json()) == (200, {"added": ["bob"]})
+    assert "bob" in client.ssm.users
 
 
-@pytest.mark.parametrize(
-    "lines,error",
-    [
-        ([HEADER + ",extra", BOB + ","], "row 1: unknown column 'extra'"),
-        ([HEADER.replace(",warp_ipv6", ""), BOB[:-1]], "row 1: missing column 'warp_ipv6'"),
-        ([HEADER + ",name", BOB + ",x"], "row 1: repeated column 'name'"),
-        ([HEADER, BOB.replace("bob", "-bob")], "row 2: bad username '-bob'"),
-        ([HEADER, BOB.replace("b" * 20, "b" * 19)], "row 2: bad PSK"),
-        ([HEADER, BOB.replace(",,false", ",tomorrow,false")], "row 2: bad Expiry 'tomorrow'"),
-        ([HEADER, BOB.replace("false", "yes", 1)], "row 2: bad admin 'yes', use true or false"),
-        ([HEADER, BOB, BOB.replace("bob,", "bobby,")], "row 3: PSK repeats row 2"),
-        ([HEADER, BOB, BOB.replace("b" * 20, "c" * 20)], "row 3: name 'bob' repeats row 2"),
-        ([HEADER, BOB.replace("bob", "alice")], "row 2: name 'alice' already exists"),
-        ([HEADER, BOB.replace("bob,", "bobby,").replace("b" * 20, "a" * 20)], "row 2: PSK already exists"),
-        ([HEADER, BOB + ","], "row 2: wrong number of cells, expected 8"),
-    ],
-)
-def test_import_rejects_whole_file(client, lines, error):
-    r = _import(client, *lines, f"zed,{'z' * 20}==,false,,false,,,")
-    assert r.status_code == 400
-    assert error in r.json()["detail"]
-    assert _store_names(client) == ["alice"] and set(client.ssm.users) == {"alice"}
+@pytest.mark.parametrize("body", ["name,password\n".encode("utf-16"), b"\xff\xfe bad"])
+def test_import_not_utf8_is_a_row_1_error(client, body):
+    r = client.post("/ssm/import", files={"file": ("u.csv", body)}, headers=JSON)
+    assert (r.status_code, r.json()) == (400, {"detail": ["row 1: file is not UTF-8 text"]})
 
 
-def test_import_reports_every_bad_row(client):
-    r = _import(client, HEADER, BOB.replace("bob", "-x"), BOB, BOB.replace("bob", "alice").replace("b" * 20, "c" * 20))
-    assert r.json()["detail"] == ["row 2: bad username '-x'", "row 3: PSK repeats row 2", "row 4: name 'alice' already exists"]
+def test_import_allows_a_bom(client):
+    body = ("\ufeff" + HEADER + "\n" + BOB + "\n").encode()
+    r = client.post("/ssm/import", files={"file": ("u.csv", body)}, headers=JSON)
+    assert r.json() == {"added": ["bob"]}
 
 
 def test_import_needs_admin(client):
     assert _import(client, HEADER, BOB, headers={}).status_code == 401
-
-
-def test_import_keeps_zone_and_defaults_utc(client, frozen):
-    _import(client, HEADER, BOB.replace(",,false", ",2027-01-01T00:00,false"))
-    assert store.get("bob")["expires_at"] == "2027-01-01T00:00:00+00:00"
 
 
 def test_import_html_redirects_to_stats(client):
@@ -539,22 +495,6 @@ def test_clear_warp_drops_it_from_next_profile_config(client):
 def test_set_warp_bad_value_is_400_naming_the_field(client, key, ipv6, field):
     r = _set_warp(client, key, ipv6)
     assert r.status_code == 400 and field in r.text
-
-
-@pytest.mark.parametrize(
-    "key,ipv6,error",
-    [
-        (WG_KEY, "", "row 2: bad warp_ipv6: set both warp_key and warp_ipv6, or neither"),
-        ("", "2606:4700::1/128", "row 2: bad warp_key: set both warp_key and warp_ipv6, or neither"),
-        ("wk=", "2606:4700::1/128", "row 2: bad warp_key: must be a WireGuard private key: base64 of 32 bytes"),
-        (WG_KEY, "2606:4700::1/64", "row 2: bad warp_ipv6: must be an IPv6 address, bare or /128"),
-    ],
-)
-def test_import_rejects_a_warp_key_that_set_warp_rejects(client, key, ipv6, error):
-    r = _import(client, HEADER, BOB[:-1] + f"{key},{ipv6}")
-    assert r.status_code == 400, r.text
-    assert r.json()["detail"] == [error]
-    assert _store_names(client) == ["alice"] and set(client.ssm.users) == {"alice"}
 
 
 def test_set_warp_unknown_is_404(client):

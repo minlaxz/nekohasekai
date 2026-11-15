@@ -396,3 +396,105 @@ def test_key_change_to_a_missing_user_raises_user_not_found(ssm, change):
     for name in ("ghost", "stranger"):
         with pytest.raises(lifecycle.UserNotFound):
             change(name)
+
+
+# --- User import and User export ------------------------------------------------
+
+HEADER = ",".join(lifecycle.CSV_FIELDS)
+BOB = f"bob,{'b' * 20}==,false,,false,,,"
+
+
+def _import(*lines):
+    return asyncio.run(lifecycle.import_csv("\n".join(lines) + "\n"))
+
+
+def _rejected(*lines):
+    with pytest.raises(lifecycle.ImportRejected) as exc:
+        _import(*lines)
+    return exc.value.errors
+
+
+def test_import_adds_every_row_and_live_ones_reach_ssm_api(ssm, frozen):
+    added = _import(
+        HEADER,
+        BOB,
+        f"carol,{'c' * 20}==,false,2026-01-01T00:00:00+00:00,false,,,",  # Expired
+        f"dave,{'d' * 20}==,false,,true,,,",  # Disabled
+        f"erin,{'e' * 20}==,true,2027-01-01T00:00:00+00:00,false,ts-key,{WG_KEY},2606::1",  # bare address stored as /128
+    )
+    assert added == ["bob", "carol", "dave", "erin"]
+    assert [u["name"] for u in store.records()] == ["alice", "bob", "carol", "dave", "erin"]
+    assert {n: u["uPSK"] for n, u in ssm.users.items() if n != "alice"} == {
+        "bob": ssm_key("b" * 20 + "=="), "erin": ssm_key("e" * 20 + "==")
+    }
+    erin = store.get("erin")
+    assert erin is not None and erin["admin"] is True and erin["ts_auth_key"] == "ts-key" and erin["warp_ipv6"] == "2606::1/128"
+    assert store.get("dave")["disabled"] is True and store.get("bob")["warp_key"] is None  # type: ignore[index]
+
+
+@pytest.mark.parametrize(
+    "lines,error",
+    [
+        ([HEADER + ",extra", BOB + ","], "row 1: unknown column 'extra'"),
+        ([HEADER.replace(",warp_ipv6", ""), BOB[:-1]], "row 1: missing column 'warp_ipv6'"),
+        ([HEADER + ",name", BOB + ",x"], "row 1: repeated column 'name'"),
+        ([HEADER, BOB.replace("bob", "-bob")], "row 2: bad username '-bob'"),
+        ([HEADER, BOB.replace("b" * 20, "b" * 19)], "row 2: bad PSK"),
+        ([HEADER, BOB.replace(",,false", ",tomorrow,false")], "row 2: bad Expiry 'tomorrow'"),
+        ([HEADER, BOB.replace("false", "yes", 1)], "row 2: bad admin 'yes', use true or false"),
+        ([HEADER, f"bob,{'b' * 20}==,false,,maybe,,,"], "row 2: bad disabled 'maybe', use true or false"),
+        ([HEADER, BOB, BOB.replace("bob,", "bobby,")], "row 3: PSK repeats row 2"),
+        ([HEADER, BOB, BOB.replace("b" * 20, "c" * 20)], "row 3: name 'bob' repeats row 2"),
+        ([HEADER, BOB.replace("bob", "alice")], "row 2: name 'alice' already exists"),
+        ([HEADER, BOB.replace("bob,", "bobby,").replace("b" * 20, "a" * 20)], "row 2: PSK already exists"),
+        ([HEADER, BOB + ","], "row 2: wrong number of cells, expected 8"),
+        ([HEADER, BOB[:-1] + f"{WG_KEY},"], "row 2: bad warp_ipv6: set both warp_key and warp_ipv6, or neither"),
+        ([HEADER, BOB[:-1] + ",2606:4700::1/128"], "row 2: bad warp_key: set both warp_key and warp_ipv6, or neither"),
+        ([HEADER, BOB[:-1] + "wk=,2606:4700::1/128"], "row 2: bad warp_key: must be a WireGuard private key: base64 of 32 bytes"),
+        ([HEADER, BOB[:-1] + f"{WG_KEY},2606:4700::1/64"], "row 2: bad warp_ipv6: must be an IPv6 address, bare or /128"),
+    ],
+)
+def test_import_rejects_the_whole_file(ssm, lines, error):
+    assert error in _rejected(*lines, f"zed,{'z' * 20}==,false,,false,,,")
+    assert [u["name"] for u in store.records()] == ["alice"] and set(ssm.users) == {"alice"}
+
+
+def test_import_reports_every_bad_row_and_never_echoes_a_psk(ssm):
+    errors = _rejected(HEADER, BOB.replace("bob", "-x"), BOB, BOB.replace("bob", "alice").replace("b" * 20, "c" * 20), BOB.replace("bob,", "bo,").replace("b" * 20, "x" * 19))
+    assert errors == [
+        "row 2: bad username '-x'",
+        "row 3: PSK repeats row 2",
+        "row 4: name 'alice' already exists",
+        "row 5: bad PSK",
+    ]
+    assert not any("x" * 19 in e or "b" * 20 in e for e in errors)
+
+
+def test_import_keeps_zone_and_defaults_utc(ssm):
+    _import(HEADER, BOB.replace(",,false", ",2027-01-01T00:00,false"), f"carol,{'c' * 20}==,,2027-01-01T09:00+09:00,,,,")
+    assert store.get("bob")["expires_at"] == "2027-01-01T00:00:00+00:00"  # type: ignore[index]
+    carol = store.get("carol")
+    assert carol is not None and carol["expires_at"] == "2027-01-01T09:00:00+09:00"
+    assert (carol["admin"], carol["disabled"]) == (False, False)  # empty flags = false
+
+
+def test_export_writes_every_record_without_last_fetch(ssm):
+    _add("bob", expires_at="2026-10-08T12:00:00+00:00", disabled=True, warp_key="wk=", warp_ipv6="2606::1/128")
+    _add("root", admin=True, ts_auth_key="ts-key")
+    store.update("alice", last_fetch="2026-10-01T00:00:00+00:00")
+    assert lifecycle.export_csv().splitlines() == [
+        "name,password,admin,expires_at,disabled,ts_auth_key,warp_key,warp_ipv6",
+        f"alice,{'a' * 20}==,false,,false,,,",
+        f"bob,{'b' * 20}==,false,2026-10-08T12:00:00+00:00,true,,wk=,2606::1/128",
+        f"root,{'r' * 20}==,true,,false,ts-key,,",
+    ]
+
+
+def test_export_then_import_round_trips(ssm):
+    _add("bob", expires_at="2026-10-08T12:00:00+00:00", disabled=True, warp_key=WG_KEY, warp_ipv6="2606::1/128")
+    _add("root", admin=True, ts_auth_key="ts-key")
+    exported = lifecycle.export_csv()
+    for u in store.records():
+        store.delete(u["name"])
+    assert asyncio.run(lifecycle.import_csv(exported)) == ["alice", "bob", "root"]
+    assert lifecycle.export_csv() == exported
