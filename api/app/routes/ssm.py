@@ -1,14 +1,10 @@
 import asyncio
-import csv
-import io
 import os
-import re
 from datetime import datetime
 from typing import Annotated, Any, Dict, List, Optional
 
 from app import lifecycle, ssm_api, store
 from app.auth import require_admin
-from app.utils import ssm_key
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -160,15 +156,6 @@ async def proxy_server_users(request: Request):
 
 # --- User export ------------------------------------------------------------
 
-# The CSV shape User import accepts too (ADR 0006); Last fetch is runtime data, not exported.
-CSV_FIELDS = ["name", "password", "admin", "expires_at", "disabled", "ts_auth_key", "warp_key", "warp_ipv6"]
-
-
-def _csv_cell(v: Any) -> str:
-    if isinstance(v, bool):
-        return "true" if v else "false"
-    return "" if v is None else str(v)
-
 
 @router.get(
     "/export",
@@ -176,13 +163,8 @@ def _csv_cell(v: Any) -> str:
     description="Every User record as CSV (Last fetch excluded). Holds every PSK, Mesh key and WARP key in plain text.",
 )
 async def export_users():
-    buf = io.StringIO()
-    w = csv.writer(buf, lineterminator="\n")
-    w.writerow(CSV_FIELDS)
-    for u in store.records():
-        w.writerow([_csv_cell(u[f]) for f in CSV_FIELDS])
     return Response(
-        buf.getvalue(),
+        lifecycle.export_csv(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="users.csv"', "Cache-Control": "no-store"},
     )
@@ -193,71 +175,6 @@ async def export_users():
 
 class ImportedUsers(BaseModel):
     added: List[str]
-
-
-def _parse_bool(value: str, column: str) -> bool:
-    if value not in ("true", "false", ""):  # empty = false, for hand-made files
-        raise ValueError(f"bad {column} '{value}', use true or false")
-    return value == "true"
-
-
-def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
-    """One CSV row as a User record; ValueError says what is wrong."""
-    if None in row or None in row.values():
-        raise ValueError(f"wrong number of cells, expected {len(CSV_FIELDS)}")
-    if not re.fullmatch(lifecycle.USERNAME_PATTERN, row["name"]):
-        raise ValueError(f"bad username '{row['name']}'")
-    try:
-        ssm_key(row["password"])
-    except ValueError:
-        raise ValueError("bad PSK") from None  # the value is a secret: not echoed
-    try:
-        expires_at = lifecycle.parse_expiry(row["expires_at"])
-    except lifecycle.InvalidField:  # the same rule as /ssm/expiry
-        raise ValueError(f"bad Expiry '{row['expires_at'].strip()}'") from None
-    try:
-        warp_key, warp_ipv6 = lifecycle.parse_warp_key(row["warp_key"], row["warp_ipv6"])
-    except lifecycle.InvalidField as exc:  # the same checks as /ssm/warp
-        raise ValueError(f"bad {exc.field}: {exc.msg}") from None
-    return {
-        "name": row["name"],
-        "password": row["password"],
-        "admin": _parse_bool(row["admin"], "admin"),
-        "expires_at": expires_at,
-        "disabled": _parse_bool(row["disabled"], "disabled"),
-        "ts_auth_key": row["ts_auth_key"] or None,
-        "warp_key": warp_key,
-        "warp_ipv6": warp_ipv6,
-    }
-
-
-def _parse_csv(text: str) -> tuple[List[Dict[str, Any]], List[str]]:
-    """User records and `row N: reason` errors; the header is row 1."""
-    reader = csv.DictReader(io.StringIO(text))
-    header = reader.fieldnames or []
-    errors = [f"row 1: unknown column '{c}'" for c in header if c not in CSV_FIELDS]
-    errors += [f"row 1: missing column '{c}'" for c in CSV_FIELDS if c not in header]
-    errors += [f"row 1: repeated column '{c}'" for c in CSV_FIELDS if header.count(c) > 1]
-    if errors:
-        return [], errors
-    # Store only, not ssm-api: on upgrade ssm-api already holds every user being imported (ADR 0006).
-    existing = store.records()
-    name_taken = {u["name"]: "already exists" for u in existing}
-    psk_taken = {u["password"]: "already exists" for u in existing}
-    rows = []
-    for n, raw in enumerate(reader, start=2):
-        name, psk = raw["name"], raw["password"]
-        try:
-            if name in name_taken:
-                raise ValueError(f"name '{name}' {name_taken[name]}")
-            if psk in psk_taken:
-                raise ValueError(f"PSK {psk_taken[psk]}")
-            rows.append(_parse_row(raw))
-        except ValueError as exc:
-            errors.append(f"row {n}: {exc}")
-        name_taken.setdefault(name, f"repeats row {n}")
-        psk_taken.setdefault(psk, f"repeats row {n}")
-    return rows, errors
 
 
 @router.post(
@@ -278,14 +195,10 @@ async def import_users(request: Request, file: UploadFile):
         text = (await file.read()).decode("utf-8-sig")  # -sig: spreadsheet apps prepend a BOM
     except UnicodeDecodeError:
         raise HTTPException(status_code=400, detail=["row 1: file is not UTF-8 text"])
-    rows, errors = _parse_csv(text)
-    if errors:
-        raise lifecycle.ImportRejected(errors)
-    store.add_many(rows)
-    await lifecycle.reconcile()
+    added = await lifecycle.import_csv(text)
     if wants_html(request):
         return RedirectResponse("/ssm/server/v1/users", status_code=303)
-    return ImportedUsers(added=[r["name"] for r in rows])
+    return ImportedUsers(added=added)
 
 
 # --- Admin routes -----------------------------------------------------------

@@ -3,8 +3,11 @@ Knows nothing about HTTP; main.py maps the domain errors below to responses."""
 
 import base64
 import calendar
+import csv
+import io
 import ipaddress
 import logging
+import re
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
@@ -227,6 +230,104 @@ def set_mesh_key(username: str, key: str) -> Dict[str, Any]:
     if any(c.isspace() for c in key):  # loose on purpose: headscale's key format changes between versions
         raise InvalidField("ts_auth_key", "must not contain whitespace")
     return _update(username, ts_auth_key=key or None)
+
+
+# --- User import and User export --------------------------------------------------
+# One CSV shape for both (ADR 0006); Last fetch is runtime data, not exported.
+
+CSV_FIELDS = ["name", "password", "admin", "expires_at", "disabled", "ts_auth_key", "warp_key", "warp_ipv6"]
+
+
+def _csv_cell(v: Any) -> str:
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    return "" if v is None else str(v)
+
+
+def export_csv() -> str:
+    """Every User record, booleans as true/false, empty for none."""
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(CSV_FIELDS)
+    for u in store.records():
+        w.writerow([_csv_cell(u[f]) for f in CSV_FIELDS])
+    return buf.getvalue()
+
+
+def _parse_bool(value: str, column: str) -> bool:
+    if value not in ("true", "false", ""):  # empty = false, for hand-made files
+        raise ValueError(f"bad {column} '{value}', use true or false")
+    return value == "true"
+
+
+def _parse_row(row: Dict[str, str]) -> Dict[str, Any]:
+    """One CSV row as a User record; ValueError says what is wrong."""
+    if None in row or None in row.values():
+        raise ValueError(f"wrong number of cells, expected {len(CSV_FIELDS)}")
+    if not re.fullmatch(USERNAME_PATTERN, row["name"]):
+        raise ValueError(f"bad username '{row['name']}'")
+    try:
+        ssm_key(row["password"])
+    except ValueError:
+        raise ValueError("bad PSK") from None  # the value is a secret: not echoed
+    try:
+        expires_at = parse_expiry(row["expires_at"])
+    except InvalidField:
+        raise ValueError(f"bad Expiry '{row['expires_at'].strip()}'") from None  # not the generic `bad <field>:` form: the 400 body is fixed
+    try:
+        warp_key, warp_ipv6 = parse_warp_key(row["warp_key"], row["warp_ipv6"])
+    except InvalidField as exc:
+        raise ValueError(f"bad {exc.field}: {exc.msg}") from None
+    return {
+        "name": row["name"],
+        "password": row["password"],
+        "admin": _parse_bool(row["admin"], "admin"),
+        "expires_at": expires_at,
+        "disabled": _parse_bool(row["disabled"], "disabled"),
+        "ts_auth_key": row["ts_auth_key"] or None,
+        "warp_key": warp_key,
+        "warp_ipv6": warp_ipv6,
+    }
+
+
+def _parse_csv(text: str) -> tuple[List[Dict[str, Any]], List[str]]:
+    """User records and `row N: reason` errors; the header is row 1."""
+    reader = csv.DictReader(io.StringIO(text))
+    header = reader.fieldnames or []
+    errors = [f"row 1: unknown column '{c}'" for c in header if c not in CSV_FIELDS]
+    errors += [f"row 1: missing column '{c}'" for c in CSV_FIELDS if c not in header]
+    errors += [f"row 1: repeated column '{c}'" for c in CSV_FIELDS if header.count(c) > 1]
+    if errors:
+        return [], errors
+    # Store only, not ssm-api: on upgrade ssm-api already holds every user being imported (ADR 0006).
+    existing = store.records()
+    name_taken = {u["name"]: "already exists" for u in existing}
+    psk_taken = {u["password"]: "already exists" for u in existing}
+    rows = []
+    for n, raw in enumerate(reader, start=2):
+        name, psk = raw["name"], raw["password"]
+        try:
+            if name in name_taken:
+                raise ValueError(f"name '{name}' {name_taken[name]}")
+            if psk in psk_taken:
+                raise ValueError(f"PSK {psk_taken[psk]}")
+            rows.append(_parse_row(raw))
+        except ValueError as exc:
+            errors.append(f"row {n}: {exc}")
+        name_taken.setdefault(name, f"repeats row {n}")
+        psk_taken.setdefault(psk, f"repeats row {n}")
+    return rows, errors
+
+
+async def import_csv(text: str) -> List[str]:
+    """Add-only and all-or-nothing: every row is checked first, then all are added in one transaction
+    and Reconcile runs. Returns the added names."""
+    rows, errors = _parse_csv(text)
+    if errors:
+        raise ImportRejected(errors)
+    store.add_many(rows)
+    await reconcile()
+    return [r["name"] for r in rows]
 
 
 # --- Last fetch -------------------------------------------------------------------
